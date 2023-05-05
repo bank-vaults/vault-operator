@@ -25,6 +25,7 @@ operator/go.sum
 /.licensei.cache
 bin/*
 /build/
+/bin/
 
 # Helm
 **/*.tgz
