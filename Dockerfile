@@ -1,0 +1,23 @@
+FROM golang:1.20.4-alpine AS builder
+
+RUN apk add --update --no-cache build-base git mercurial
+
+RUN mkdir -p /build
+WORKDIR /build
+
+COPY go.* /build/
+RUN go mod download
+
+COPY . /build
+RUN go install ./cmd/manager
+
+
+FROM alpine:3.17.3
+
+RUN apk add --no-cache ca-certificates
+
+COPY --from=builder /go/bin/manager /usr/local/bin/vault-operator
+
+USER 65534
+
+ENTRYPOINT ["/usr/local/bin/vault-operator"]

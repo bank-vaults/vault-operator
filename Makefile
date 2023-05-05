@@ -65,41 +65,6 @@ build-debug: GOARGS += -gcflags "all=-N -l"
 build-debug: BINARY_NAME_SUFFIX += debug
 build-debug: build ## Build a binary with remote debugging capabilities
 
-.PHONY: docker
-docker: ## Build a Docker image
-	docker build ${DOCKER_BUILD_EXTRA_ARGS} -t ${DOCKER_IMAGE}:${DOCKER_TAG} -f Dockerfile .
-ifeq (${DOCKER_LATEST}, 1)
-	docker tag ${DOCKER_IMAGE}:${DOCKER_TAG} ${DOCKER_IMAGE}:latest
-endif
-
-.PHONY: image
-image: ## Build an OCI image with buildah
-	buildah bud -t ${DOCKER_IMAGE}:${DOCKER_TAG} -f Dockerfile .
-ifeq (${IMAGE_LATEST}, 1)
-	buildah tag ${DOCKER_IMAGE}:${DOCKER_TAG} ${DOCKER_IMAGE}:latest
-endif
-
-.PHONY: docker-webhook
-docker-webhook: ## Build a Docker-webhook image
-	docker build ${DOCKER_BUILD_EXTRA_ARGS} -t ${WEBHOOK_DOCKER_IMAGE}:${DOCKER_TAG} -f Dockerfile.webhook .
-ifeq (${DOCKER_LATEST}, 1)
-	docker tag ${WEBHOOK_DOCKER_IMAGE}:${DOCKER_TAG} ${WEBHOOK_DOCKER_IMAGE}:latest
-endif
-
-.PHONY: image-webhook
-image-webhook: ## Build a webhook OCI image
-	buildah bud -t ${WEBHOOK_DOCKER_IMAGE}:${DOCKER_TAG} -f Dockerfile.webhook .
-ifeq (${IMAGE_LATEST}, 1)
-	buildah tag ${WEBHOOK_DOCKER_IMAGE}:${DOCKER_TAG} ${WEBHOOK_DOCKER_IMAGE}:latest
-endif
-
-.PHONY: docker-vault-env
-docker-vault-env: ## Build a Docker-vault-env image
-	docker build -t ${VAULT_ENV_DOCKER_IMAGE}:${DOCKER_TAG} -f Dockerfile.vault-env .
-ifeq (${DOCKER_LATEST}, 1)
-	docker tag ${VAULT_ENV_DOCKER_IMAGE}:${DOCKER_TAG} ${VAULT_ENV_DOCKER_IMAGE}:latest
-endif
-
 .PHONY: image-vault-env
 image-vault-env: ## Build an OCI vault-env image
 	buildah bud -t ${VAULT_ENV_DOCKER_IMAGE}:${DOCKER_TAG} -f Dockerfile.vault-env .
@@ -134,48 +99,13 @@ test-%: ## Run a specific test suite
 	@${MAKE} VERBOSE=0 GOTAGS=$* test
 
 
-release-%: ## Release a new version
-	git tag -m 'Release $*' $*
-
-	@echo "Version updated to $*!"
-	@echo
-	@echo "To push the changes execute the following:"
-	@echo
-	@echo "git push; git push origin $*"
-
-.PHONY: patch
-patch: ## Release a new patch version
-	@${MAKE} release-$(shell git describe --abbrev=0 --tags | awk -F'[ .]' '{print $$1"."$$2"."$$3+1}')
-
-.PHONY: minor
-minor: ## Release a new minor version
-	@${MAKE} release-$(shell git describe --abbrev=0 --tags | awk -F'[ .]' '{print $$1"."$$2+1".0"}')
-
-.PHONY: major
-major: ## Release a new major version
-	@${MAKE} release-$(shell git describe --abbrev=0 --tags | awk -F'[ .]' '{print $$1+1".0.0"}')
-
 .PHONY: operator-up
 operator-up:
-	kubectl replace -f operator/deploy/crd.yaml || kubectl create -f operator/deploy/crd.yaml
-	kubectl apply -f operator/deploy/rbac.yaml
-	OPERATOR_NAME=vault-dev go run operator/cmd/manager/main.go -verbose
+	kubectl replace -f deploy/crd.yaml || kubectl create -f deploy/crd.yaml
+	kubectl apply -f deploy/rbac.yaml
+	OPERATOR_NAME=vault-dev go run cmd/manager/main.go -verbose
 
 .PHONY: operator-down
 operator-down:
-	kubectl delete -f operator/deploy/crd.yaml
-	kubectl delete -f operator/deploy/rbac.yaml
-
-.PHONY: webhook-forward
-webhook-forward: ## Install the webhook chart and kurun to port-forward the local webhook into Kubernetes
-	kubectl create namespace vault-infra --dry-run -o yaml | kubectl apply -f -
-	kubectl label namespaces vault-infra name=vault-infra --overwrite
-	helm upgrade --install vault-secrets-webhook charts/vault-secrets-webhook --namespace vault-infra --set replicaCount=0 --set podsFailurePolicy=Fail --set secretsFailurePolicy=Fail --set configMapMutation=true --set configMapFailurePolicy=Fail
-	kurun port-forward localhost:8443 --namespace vault-infra --servicename vault-secrets-webhook --tlssecret vault-secrets-webhook-webhook-tls
-
-.PHONY: webhook-run ## Run run the webhook locally
-webhook-run:
-	KUBERNETES_NAMESPACE=vault-infra go run ./cmd/vault-secrets-webhook
-
-.PHONY: webhook-up ## Run the webhook and `kurun port-forward` in foreground. Use with make -j webhook-up
-webhook-up: webhook-run webhook-forward
+	kubectl delete -f deploy/crd.yaml
+	kubectl delete -f deploy/rbac.yaml
