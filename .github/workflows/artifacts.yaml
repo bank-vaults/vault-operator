@@ -104,6 +104,12 @@ jobs:
         run: skopeo --insecure-policy copy docker://${{ steps.image-ref.outputs.value }} oci-archive:image.tar
         if: inputs.publish
 
+      - name: Upload image as artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: "[${{ github.job }}] OCI tarball"
+          path: image.tar
+
       - name: Extract OCI tarball
         run: |
           mkdir -p image
@@ -127,7 +133,7 @@ jobs:
           path: trivy-results.sarif
           retention-days: 5
 
-      - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@8662eabe0e9f338a07350b7fd050732745f93848 # v2.3.1
-        with:
-          sarif_file: trivy-results.sarif
+      # - name: Upload Trivy scan results to GitHub Security tab
+      #   uses: github/codeql-action/upload-sarif@8662eabe0e9f338a07350b7fd050732745f93848 # v2.3.1
+      #   with:
+      #     sarif_file: trivy-results.sarif

@@ -61,31 +61,6 @@ jobs:
       env:
         VAULT_TOKEN: 227e1cce-6bf7-30bb-2d2a-acc854318caf
 
-  build-vault-operator:
-    name: Build operator
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-
-      - name: Build and push
-        uses: docker/build-push-action@v4
-        with:
-          context: .
-          file: ./Dockerfile.operator
-          tags: vault-operator:latest
-          outputs: type=docker,dest=/tmp/vault-operator.tar
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: vault-operator
-          path: /tmp/vault-operator.tar
-
   artifacts:
     name: Artifacts
     uses: ./.github/workflows/artifacts.yaml
@@ -112,7 +87,7 @@ jobs:
   acceptance-test:
     name: Acceptance test
     runs-on: ubuntu-latest
-    needs: [build-vault-operator]
+    needs: [artifacts]
     strategy:
       matrix:
         k8s_version: ["v1.25.8", "v1.24.12", "v1.23.17"]
@@ -138,36 +113,14 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v2
 
-    - name: Download Bank-Vaults docker image
-      uses: actions/download-artifact@v3
-      with:
-        name: bank-vaults
-        path: /tmp
-
     - name: Download operator docker image
       uses: actions/download-artifact@v3
       with:
-        name: vault-operator
-        path: /tmp
-
-    - name: Download vault-env docker image
-      uses: actions/download-artifact@v3
-      with:
-        name: vault-env
-        path: /tmp
-
-    - name: Download webhook docker image
-      uses: actions/download-artifact@v3
-      with:
-        name: vault-secrets-webhook
-        path: /tmp
+        name: "[container-image] OCI tarball"
 
     - name: Load Docker images to kind
       run: |
-        kind load image-archive /tmp/bank-vaults.tar
-        kind load image-archive /tmp/vault-operator.tar
-        kind load image-archive /tmp/vault-env.tar
-        kind load image-archive /tmp/vault-secrets-webhook.tar
+        kind load image-archive image.tar
 
     - name: Install kurun
       run: |
@@ -181,7 +134,7 @@ jobs:
   multi-cluster-acceptance-test:
     name: Operator multi-cluster acceptance test
     runs-on: ubuntu-latest
-    needs: build-vault-operator
+    needs: artifacts
     env:
       GO_VERSION: "1.19.2"
       K8S_VERSION: "v1.23.4"
