@@ -32,9 +32,9 @@ fi
 
 function waitfor {
     WAIT_MAX=0
-    until "$@" &> /dev/null || [ $WAIT_MAX -eq 45 ]; do
+    until "$@" &>/dev/null || [ $WAIT_MAX -eq 45 ]; do
         sleep 1
-        (( WAIT_MAX = WAIT_MAX + 1 ))
+        ((WAIT_MAX = WAIT_MAX + 1))
     done
 }
 
@@ -43,7 +43,7 @@ function metallb_setup {
     kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/${METALLB_VERSION}/manifests/namespace.yaml
     kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/${METALLB_VERSION}/manifests/metallb.yaml
     kubectl create secret generic -n metallb-system memberlist --from-literal=secretkey="$(openssl rand -base64 128)"
-    envtpl operator/deploy/multi-dc/test/metallb-config.yaml | kubectl apply -f -
+    envtpl deploy/multi-dc/test/metallb-config.yaml | kubectl apply -f -
 }
 
 function cidr_range {
@@ -77,12 +77,12 @@ function infra_setup {
 function install_instance {
     local INSTANCE=$1
 
-    kind load image-archive /tmp/vault-operator.tar --name "${INSTANCE}"
+    kind load image-archive image.tar --name "${INSTANCE}"
 
     helm upgrade --install vault-operator ./charts/vault-operator --wait --set image.tag=latest --set image.pullPolicy=IfNotPresent --set image.bankVaultsTag=latest
 
-    kubectl apply -f operator/deploy/rbac.yaml
-    envtpl operator/deploy/multi-dc/test/cr-"${INSTANCE}".yaml | kubectl apply -f -
+    kubectl apply -f deploy/rbac.yaml
+    envtpl deploy/multi-dc/test/cr-"${INSTANCE}".yaml | kubectl apply -f -
 
     echo "Waiting for for ${INSTANCE} vault instance..."
     waitfor kubectl get pod/vault-"${INSTANCE}"-0
@@ -107,7 +107,7 @@ if [ "$COMMAND" = "install" ]; then
     RAFT_LEADER_ADDRESS=$(kubectl get service vault-primary -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
     export RAFT_LEADER_ADDRESS
 
-    kubectl get secrets vault-primary-tls -o json | jq 'del(.metadata.ownerReferences)' | jq 'del(.metadata.resourceVersion)' | jq 'del(.metadata.uid)' > vault-primary-tls.json
+    kubectl get secrets vault-primary-tls -o json | jq 'del(.metadata.ownerReferences)' | jq 'del(.metadata.resourceVersion)' | jq 'del(.metadata.uid)' >vault-primary-tls.json
 
     ## Secondary
     kubectl config use-context kind-secondary
