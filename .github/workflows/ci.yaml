@@ -130,6 +130,7 @@ jobs:
       run: go test -v -timeout 900s -tags kubeall ./test
       env:
         VAULT_VERSION: ${{ matrix.vault_version }}
+        OPERATOR_VERSION: ${{ needs.artifacts.outputs.container-image-tag }}
 
   multi-cluster-acceptance-test:
     name: Operator multi-cluster acceptance test
@@ -179,5 +180,6 @@ jobs:
         helm dep build ./charts/vault-operator
 
     - name: Operator Multi-DC Raft test
-      run: |
-        ./deploy/multi-dc/test/multi-dc-raft.sh install
+      run: ./deploy/multi-dc/test/multi-dc-raft.sh install
+      env:
+        OPERATOR_VERSION: ${{ needs.artifacts.outputs.container-image-tag }}
