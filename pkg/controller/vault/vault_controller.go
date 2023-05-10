@@ -30,6 +30,8 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	internalVault "github.com/bank-vaults/vault-operator/internal/vault"
+	vaultv1alpha1 "github.com/bank-vaults/vault-operator/pkg/apis/vault/v1alpha1"
 	bvtls "github.com/bank-vaults/vault-sdk/tls"
 	"github.com/bank-vaults/vault-sdk/vault"
 	"github.com/cisco-open/k8s-objectmatcher/patch"
@@ -56,9 +58,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-
-	internalVault "github.com/bank-vaults/vault-operator/internal/vault"
-	vaultv1alpha1 "github.com/bank-vaults/vault-operator/pkg/apis/vault/v1alpha1"
 )
 
 var log = logf.Log.WithName("controller_vault")
@@ -403,7 +402,6 @@ func (r *ReconcileVault) Reconcile(ctx context.Context, request reconcile.Reques
 	externalSecretsToWatchItems := []corev1.Secret{}
 
 	if len(externalSecretsToWatchLabelsSelector) != 0 || len(externalSecretsToWatchAnnotationsSelector) != 0 {
-
 		externalSecretsInNamespace := corev1.SecretList{}
 		// Get all Secrets for the Vault CRD Namespace
 		externalSecretsInNamespaceFilter := client.ListOptions{
@@ -607,7 +605,7 @@ func serviceForVault(v *vaultv1alpha1.Vault) *corev1.Service {
 
 	annotations := withVaultAnnotations(v, getCommonAnnotations(v, map[string]string{}))
 
-	// On GKE we need to specifiy the backend protocol on the service if TLS is enabled
+	// On GKE we need to specify the backend protocol on the service if TLS is enabled
 	if ingress := v.GetIngress(); ingress != nil && !v.Spec.IsTLSDisabled() {
 		annotations["cloud.google.com/app-protocols"] = fmt.Sprintf("{\"%s\":\"HTTPS\"}", v.Spec.GetAPIPortName())
 	}
@@ -746,7 +744,6 @@ func perInstanceServicesForVault(v *vaultv1alpha1.Vault) []*corev1.Service {
 	servicePorts = append(servicePorts, corev1.ServicePort{Name: "metrics", Port: 9091})
 
 	for i := 0; i < int(v.Spec.Size); i++ {
-
 		podName := perInstanceVaultServiceName(v.Name, i)
 
 		ls := v.LabelsForVault()
@@ -1193,7 +1190,8 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 						Scheme: getVaultURIScheme(v),
 						Port:   intstr.FromString(v.Spec.GetAPIPortName()),
 						Path:   "/v1/sys/init",
-					}},
+					},
+				},
 				PeriodSeconds:    10,
 				FailureThreshold: 18,
 			},
@@ -1205,7 +1203,8 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 						Scheme: getVaultURIScheme(v),
 						Port:   intstr.FromString(v.Spec.GetAPIPortName()),
 						Path:   "/v1/sys/init",
-					}},
+					},
+				},
 			},
 			// This probe makes sure that only the active Vault instance gets traffic
 			// See: https://www.vaultproject.io/api/system/health.html
@@ -1215,7 +1214,8 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 						Scheme: getVaultURIScheme(v),
 						Port:   intstr.FromString(v.Spec.GetAPIPortName()),
 						Path:   "/v1/sys/health?standbyok=true&perfstandbyok=true&drsecondarycode=299",
-					}},
+					},
+				},
 				PeriodSeconds:    5,
 				FailureThreshold: 2,
 			},
@@ -1471,7 +1471,6 @@ func withTLSEnv(v *vaultv1alpha1.Vault, localhost bool, envs []corev1.EnvVar) []
 		}...)
 	} else {
 		envs = append(envs, corev1.EnvVar{
-
 			Name:  api.EnvVaultAddress,
 			Value: fmt.Sprintf("http://%s:8200", host),
 		})
@@ -1918,7 +1917,7 @@ func withPodSecurityContext(v *vaultv1alpha1.Vault) *corev1.PodSecurityContext {
 // Extend Labels with Vault User defined ones
 // Does not change original labels object but return a new one
 func withVaultLabels(v *vaultv1alpha1.Vault, labels map[string]string) map[string]string {
-	var l = map[string]string{}
+	l := map[string]string{}
 	for key, value := range labels {
 		l[key] = value
 	}
@@ -1932,7 +1931,7 @@ func withVaultLabels(v *vaultv1alpha1.Vault, labels map[string]string) map[strin
 // Extend Labels with Vault Configurer User defined ones
 // Does not change original labels object but return a new one
 func withVaultConfigurerLabels(v *vaultv1alpha1.Vault, labels map[string]string) map[string]string {
-	var l = map[string]string{}
+	l := map[string]string{}
 	for key, value := range labels {
 		l[key] = value
 	}

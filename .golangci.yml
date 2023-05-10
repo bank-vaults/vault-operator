@@ -1,6 +1,9 @@
 run:
     skip-dirs:
-        - operator
+        - pkg/apis
+
+        # TODO: fixme
+        - pkg/controller
     timeout: 5m
 
 linters-settings:

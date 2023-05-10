@@ -39,17 +39,9 @@ bin/golangci-lint-${GOLANGCI_VERSION}:
 lint: bin/golangci-lint ## Run linter
 	bin/golangci-lint run --disable varnamelen,ireturn,nosnakecase,exhaustruct,nonamedreturns,nilnil,contextcheck,maintidx,dupword,gosec,gomoddirectives,gci,gofumpt,gofmt,goimports,revive,staticcheck
 
-.PHONY: lint-sdk
-lint-sdk: bin/golangci-lint ## Run linter
-	cd pkg/sdk && ../../bin/golangci-lint run --disable varnamelen,ireturn,nosnakecase,exhaustruct,nonamedreturns,nilnil,contextcheck,maintidx,dupword,gosec,gomoddirectives,gci,gofumpt,gofmt,goimports,revive,staticcheck
-
 .PHONY: fix
 fix: bin/golangci-lint ## Fix lint violations
 	bin/golangci-lint run --fix --disable varnamelen,ireturn,nosnakecase,exhaustruct,nonamedreturns,nilnil,contextcheck,maintidx,dupword,gosec,gomoddirectives,gci,gofumpt,gofmt,goimports,revive,staticcheck
-
-.PHONY: fix-sdk
-fix-sdk: bin/golangci-lint ## Fix lint violations
-	cd pkg/sdk && ../../bin/golangci-lint run --fix --disable varnamelen,ireturn,nosnakecase,exhaustruct,nonamedreturns,nilnil,contextcheck,maintidx,dupword,gosec,gomoddirectives,gci,gofumpt,gofmt,goimports,revive,staticcheck
 
 bin/licensei: bin/licensei-${LICENSEI_VERSION}
 	@ln -sf licensei-${LICENSEI_VERSION} bin/licensei
@@ -68,7 +60,7 @@ license-cache: bin/licensei ## Generate license cache
 	bin/licensei cache
 
 .PHONY: check
-check: lint lint-sdk test-integration test-sdk-integration ## Run tests and linters
+check: lint test-integration ## Run tests and linters
 
 bin/gotestsum: bin/gotestsum-${GOTESTSUM_VERSION}
 	@ln -sf gotestsum-${GOTESTSUM_VERSION} bin/gotestsum
@@ -85,13 +77,6 @@ test: SHELL = /bin/bash
 test: bin/gotestsum ## Run tests
 	@mkdir -p ${BUILD_DIR}/test_results/${TEST_REPORT}
 	bin/gotestsum --no-summary=skipped --junitfile ${BUILD_DIR}/test_results/${TEST_REPORT}/${TEST_REPORT_NAME} --format ${TEST_FORMAT} -- $(filter-out -v,${GOARGS}) $(if ${TEST_PKGS},${TEST_PKGS},./...)
-
-test-sdk: TEST_REPORT ?= sdk
-test-sdk: TEST_FORMAT ?= short
-test-sdk: SHELL = /bin/bash
-test-sdk: bin/gotestsum ## Run SDK tests
-	@mkdir -p ${BUILD_DIR}/test_results/${TEST_REPORT}
-	cd pkg/sdk && ../../bin/gotestsum --no-summary=skipped --junitfile ../../${BUILD_DIR}/test_results/${TEST_REPORT}/${TEST_REPORT_NAME} --format ${TEST_FORMAT} -- $(filter-out -v,${GOARGS}) $(if ${TEST_PKGS},${TEST_PKGS},./...)
 
 .PHONY: test-all
 test-all: ## Run all tests
