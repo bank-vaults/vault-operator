@@ -1,7 +1,6 @@
-Dockerfile*
-.circleci/
-.git/
-bin/
+Dockerfile
+/.github/
+/bin/
 docs/
 operator/build/
 vendor/

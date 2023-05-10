@@ -308,7 +308,6 @@ func (v *vault) Init() error {
 	}
 
 	resp, err := v.cl.Sys().Init(&initRequest)
-
 	if err != nil {
 		return errors.Wrap(err, "error initializing vault")
 	}

@@ -25,24 +25,16 @@ operator/go.sum
 /.licensei.cache
 bin/*
 /build/
+/bin/
 
 # Helm
 **/*.tgz
 **/*.lock
+!flake.lock
 
 # Certificates
 *.csr
 *.pem
-
-# IDE integration
-/.idea/*
-!/.idea/copyright/
-!/.idea/*.iml
-!/.idea/externalDependencies.xml
-!/.idea/go.imports.xml
-!/.idea/modules.xml
-!/.idea/runConfigurations/
-!/.idea/scopes/
 
 vault-config.yaml
 
@@ -54,3 +46,5 @@ dist/
 
 # VS Code config
 .vscode/
+
+/.direnv/
