@@ -6,7 +6,7 @@ replicaCount: 1
 
 image:
   bankVaultsRepository: ghcr.io/banzaicloud/bank-vaults
-  repository: ghcr.io/banzaicloud/vault-operator
+  repository: ghcr.io/bank-vaults/vault-operator
   # tag: ""
   pullPolicy: IfNotPresent
   imagePullSecrets: []  # global.imagePullSecrets is also supported

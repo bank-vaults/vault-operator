@@ -15,6 +15,9 @@ on:
       container-image-digest:
         description: Container image digest
         value: ${{ jobs.container-image.outputs.digest }}
+      container-image-tag:
+        description: Container image tag
+        value: ${{ jobs.container-image.outputs.tag }}
       container-image-ref:
         description: Container image ref
         value: ${{ jobs.container-image.outputs.ref }}
@@ -36,6 +39,7 @@ jobs:
     outputs:
       name: ${{ steps.image-name.outputs.value }}
       digest: ${{ steps.build.outputs.digest }}
+      tag: ${{ steps.meta.outputs.version }}
       ref: ${{ steps.image-ref.outputs.value }}
 
     steps:

@@ -62,13 +62,18 @@ func TestMain(m *testing.M) {
 	releaseName := "vault-operator"
 	defaultKubectlOptions := k8s.NewKubectlOptions("", "", "default")
 
+	operatorVersion := "latest"
+	if v := os.Getenv("OPERATOR_VERSION"); v != "" {
+		operatorVersion = v
+	}
+
 	// Setup args for helm.
 	helmOptions := &helm.Options{
 		KubectlOptions: defaultKubectlOptions,
 		SetValues: map[string]string{
-			"image.tag":           "latest",
+			"image.tag":           operatorVersion,
 			"image.bankVaultsTag": "latest",
-			"image.pullPolicy":    "IfNotPresent",
+			"image.pullPolicy":    "Never",
 		},
 	}
 
