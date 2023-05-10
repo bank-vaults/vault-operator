@@ -7,7 +7,7 @@ require (
 	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/bank-vaults/vault-sdk v0.9.0
 	github.com/cisco-open/k8s-objectmatcher v1.9.0
-	github.com/cristalhq/jwt/v3 v3.0.14
+	github.com/cristalhq/jwt/v3 v3.1.0
 	github.com/gruntwork-io/terratest v0.41.16
 	github.com/hashicorp/go-uuid v1.0.2
 	github.com/hashicorp/hcl v1.0.0
