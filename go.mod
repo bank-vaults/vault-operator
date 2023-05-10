@@ -12,7 +12,7 @@ require (
 	github.com/Azure/go-autorest/autorest/azure/auth v0.5.12
 	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/Masterminds/sprig/v3 v3.2.3
-	github.com/aliyun/alibaba-cloud-sdk-go v1.61.193
+	github.com/aliyun/alibaba-cloud-sdk-go v1.62.308
 	github.com/aliyun/aliyun-oss-go-sdk v2.0.4+incompatible
 	github.com/aws/aws-sdk-go v1.44.248
 	github.com/bank-vaults/vault-sdk v0.9.0
