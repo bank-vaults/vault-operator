@@ -47,7 +47,10 @@ import (
 	"github.com/gruntwork-io/terratest/modules/retry"
 )
 
-var vaultVersion = "latest"
+var (
+	vaultVersion      = "latest"
+	bankVaultsVersion = "1.19.0" // TODO: Make it work locally with latest
+)
 
 // Installing the operator helm chart before testing
 func TestMain(m *testing.M) {
@@ -72,7 +75,7 @@ func TestMain(m *testing.M) {
 		KubectlOptions: defaultKubectlOptions,
 		SetValues: map[string]string{
 			"image.tag":           operatorVersion,
-			"image.bankVaultsTag": "latest",
+			"image.bankVaultsTag": bankVaultsVersion,
 			"image.pullPolicy":    "Never",
 		},
 	}
