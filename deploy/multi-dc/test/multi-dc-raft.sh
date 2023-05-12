@@ -14,6 +14,7 @@ set -xeo pipefail
 
 METALLB_VERSION=v0.12.1
 VAULT_VERSION=1.6.2
+BANK_VAULTS_VERSION=1.19.0
 VAULT_TOKEN=$(uuidgen)
 export VAULT_TOKEN
 
@@ -79,7 +80,7 @@ function install_instance {
 
     kind load image-archive image.tar --name "${INSTANCE}"
 
-    helm upgrade --install vault-operator ./charts/vault-operator --wait --set image.tag=${OPERATOR_VERSION} --set image.pullPolicy=Never --set image.bankVaultsTag=latest
+    helm upgrade --install vault-operator ./charts/vault-operator --wait --set image.tag=${OPERATOR_VERSION} --set image.pullPolicy=Never --set image.bankVaultsTag=${BANK_VAULTS_VERSION}
 
     kubectl apply -f deploy/rbac.yaml
     envtpl deploy/multi-dc/test/cr-"${INSTANCE}".yaml | kubectl apply -f -
