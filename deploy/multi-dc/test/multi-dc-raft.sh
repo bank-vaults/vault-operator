@@ -78,7 +78,7 @@ function infra_setup {
 function install_instance {
     local INSTANCE=$1
 
-    kind load image-archive image.tar --name "${INSTANCE}"
+    kind load image-archive docker.tar --name "${INSTANCE}"
 
     helm upgrade --install vault-operator ./charts/vault-operator --wait --set image.tag=${OPERATOR_VERSION} --set image.pullPolicy=Never --set image.bankVaultsTag=${BANK_VAULTS_VERSION}
 

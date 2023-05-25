@@ -116,11 +116,11 @@ jobs:
     - name: Download operator docker image
       uses: actions/download-artifact@v3
       with:
-        name: "[container-image] OCI tarball"
+        name: "[container-image] Docker tarball"
 
     - name: Load Docker images to kind
       run: |
-        kind load image-archive image.tar
+        kind load image-archive docker.tar
 
     - name: Install kurun
       run: |
@@ -167,7 +167,7 @@ jobs:
     - name: Download operator docker image
       uses: actions/download-artifact@v3
       with:
-        name: "[container-image] OCI tarball"
+        name: "[container-image] Docker tarball"
 
     - name: Install envtpl
       run: go install github.com/subfuzion/envtpl/...@428c2d7
