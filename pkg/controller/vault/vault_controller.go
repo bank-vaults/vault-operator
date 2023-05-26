@@ -30,7 +30,6 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	internalVault "github.com/bank-vaults/vault-operator/internal/vault"
 	vaultv1alpha1 "github.com/bank-vaults/vault-operator/pkg/apis/vault/v1alpha1"
 	bvtls "github.com/bank-vaults/vault-sdk/tls"
 	"github.com/bank-vaults/vault-sdk/vault"
@@ -974,6 +973,8 @@ func deprecatedConfigMapForConfigurer(v *vaultv1alpha1.Vault) *corev1.ConfigMap 
 	}
 }
 
+const defaultConfigFile = "vault-config.yml"
+
 func secretForConfigurer(v *vaultv1alpha1.Vault) *corev1.Secret {
 	ls := v.LabelsForVaultConfigurer()
 	return &corev1.Secret{
@@ -982,7 +983,7 @@ func secretForConfigurer(v *vaultv1alpha1.Vault) *corev1.Secret {
 			Namespace: v.Namespace,
 			Labels:    withVaultConfigurerLabels(v, ls),
 		},
-		Data: map[string][]byte{internalVault.DefaultConfigFile: v.Spec.ExternalConfigJSON()},
+		Data: map[string][]byte{defaultConfigFile: v.Spec.ExternalConfigJSON()},
 	}
 }
 
