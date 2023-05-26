@@ -143,7 +143,84 @@ jobs:
           path: trivy-results.sarif
           retention-days: 5
 
-      # - name: Upload Trivy scan results to GitHub Security tab
-      #   uses: github/codeql-action/upload-sarif@8662eabe0e9f338a07350b7fd050732745f93848 # v2.3.1
-      #   with:
-      #     sarif_file: trivy-results.sarif
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@8662eabe0e9f338a07350b7fd050732745f93848 # v2.3.1
+        with:
+          sarif_file: trivy-results.sarif
+
+  helm-chart:
+    name: Helm chart
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      security-events: write
+
+    outputs:
+      name: ${{ steps.oci-chart-name.outputs.value }}
+      tag: ${{ github.ref_name }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v3.5
+        with:
+          version: v3.12.0
+
+      - name: Set OCI chart name
+        id: oci-chart-name
+        run: echo "value=ghcr.io/${{ github.repository_owner }}/helm-charts/vault-operator" >> "$GITHUB_OUTPUT"
+
+      - name: Helm lint
+        run: helm lint charts/vault-operator
+
+      - name: Helm package
+        id: build
+        run: |
+          #helm package charts/vault-operator --version ${{ github.ref_name }} --app-version ${{ github.ref_name }}
+          helm package charts/vault-operator
+          echo "package=vault-operator-${{ github.ref_name }}.tgz" >> "$GITHUB_OUTPUT"
+
+      - name: Upload chart as artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: "[${{ github.job }}] Helm chart"
+          path: ${{ steps.build.outputs.package }}
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@f4ef78c080cd8ba55a85445d5b36e214a81df20a # v2.1.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+        if: inputs.publish
+
+      - name: Helm push
+        run: helm push ${{ steps.build.outputs.package }} oci://${{ steps.oci-chart-name.outputs.vaule }}
+        env:
+          HELM_REGISTRY_CONFIG: ~/.docker/config.json
+        if: inputs.publish
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@e5f43133f6e8736992c9f3c1b3296e24b37e17f2 # 0.10.0
+        with:
+          scan-type: config
+          scan-ref: ${{ steps.build.outputs.package }}
+          format: sarif
+          output: trivy-results.sarif
+
+      - name: Upload Trivy scan results as artifact
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
+        with:
+          name: "[${{ github.job }}] Trivy scan results"
+          path: trivy-results.sarif
+          retention-days: 5
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@8662eabe0e9f338a07350b7fd050732745f93848 # v2.3.1
+        with:
+          sarif_file: trivy-results.sarif
