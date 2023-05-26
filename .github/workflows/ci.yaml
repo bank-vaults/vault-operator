@@ -87,8 +87,8 @@ jobs:
     needs: [artifacts]
     strategy:
       matrix:
-        k8s_version: ["v1.24.13", "v1.25.9", "v1.26.4" ]
-        vault_version: ["1.10.11", "1.11.10", "1.12.6", "1.13.2"] # https://hub.docker.com/_/vault
+        k8s_version: ["v1.24.13", "v1.25.9", "v1.26.4", "v1.27.1" ]
+        vault_version: ["1.10.11", "1.11.10", "1.12.6", "1.13.2"]
     env:
       KURUN_VERSION: "0.6.4"
 
