@@ -3,21 +3,31 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-    flake-utils.url = "github:numtide/flake-utils";
+    flake-parts.url = "github:hercules-ci/flake-parts";
+    devenv.url = "github:cachix/devenv";
   };
 
-  outputs = { self, nixpkgs, flake-utils }:
-    flake-utils.lib.eachDefaultSystem (system:
-      let
-        pkgs = import nixpkgs { inherit system; };
-      in
-      {
-        devShells.default = pkgs.mkShell {
-          buildInputs = with pkgs; [
-            git
+  outputs = inputs@{ flake-parts, ... }:
+    flake-parts.lib.mkFlake { inherit inputs; } {
+      imports = [
+        inputs.devenv.flakeModule
+      ];
+
+      systems = [ "x86_64-linux" "x86_64-darwin" "aarch64-darwin" ];
+
+      perSystem = { config, self', inputs', pkgs, system, ... }: {
+        devenv.shells.default = {
+          languages = {
+            go.enable = true;
+          };
+
+          services = {
+            vault.enable = true;
+          };
+
+          packages = with pkgs; [
             gnumake
 
-            go_1_20
             golangci-lint
 
             kind
@@ -27,10 +37,26 @@
             kubernetes-helm
 
             buildah
-
-            vault
           ];
+
+          scripts = {
+            versions.exec = ''
+              go version
+              golangci-lint version
+              kind version
+              kubectl version --client
+              echo kustomize $(kustomize version --short)
+              echo helm $(helm version --short)
+            '';
+          };
+
+          enterShell = ''
+            versions
+          '';
+
+          # https://github.com/cachix/devenv/issues/528#issuecomment-1556108767
+          containers = pkgs.lib.mkForce { };
         };
-      }
-    );
+      };
+    };
 }

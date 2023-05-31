@@ -53,6 +53,26 @@ jobs:
           sudo pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --keypairgen --key-type rsa:2048 --pin banzai --token-label bank-vaults --label bank-vaults
           sudo chown -R runner:docker /etc/softhsm /var/lib/softhsm
 
+  dev:
+    name: Developer environment
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
+
+      - name: Set up Nix
+        uses: cachix/install-nix-action@4b933aa7ebcc94a6174cf1364864e957b4910265 # v21
+        with:
+          extra_nix_config: |
+            access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check
+        run: nix flake check --impure
+
+      - name: Dev shell
+        run: nix develop --impure
+
       - name: Run verification
         run: make check
         env:
