@@ -3,12 +3,17 @@ type: application
 name: vault-operator
 version: 1.20.0-dev.1
 appVersion: 1.19.0
-description: A Helm chart for banzaicloud/bank-vaults Vault operator
+description: Kubernetes operator for Hashicorp Vault
 icon: https://raw.githubusercontent.com/banzaicloud/bank-vaults/main/docs/images/logo/bank-vaults-logo.svg
-home: https://banzaicloud.com/products/bank-vaults/
+keywords:
+  - vault
+  - hashicorp
+  - secret
+  - operator
+home: https://bank-vaults.dev
 sources:
   - https://github.com/hashicorp/vault
-  - https://github.com/banzaicloud/bank-vaults
+  - https://github.com/bank-vaults/vault-operator
 maintainers:
-  - name: Banzai Cloud
-    email: info@banzaicloud.com
+  - name: Bank Vaults Maintainers
+    email: team@bank-vaults.dev
