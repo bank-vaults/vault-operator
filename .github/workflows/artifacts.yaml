@@ -236,7 +236,7 @@ jobs:
         uses: aquasecurity/trivy-action@e5f43133f6e8736992c9f3c1b3296e24b37e17f2 # 0.10.0
         with:
           scan-type: config
-          scan-ref: ${{ steps.build.outputs.package }}
+          scan-ref: charts/${{ steps.chart-name.outputs.value }}
           format: sarif
           output: trivy-results.sarif
 
