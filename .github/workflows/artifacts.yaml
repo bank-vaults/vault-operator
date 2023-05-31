@@ -8,6 +8,11 @@ on:
         default: false
         required: false
         type: boolean
+      release:
+        description: Whether this is a release build
+        default: false
+        required: false
+        type: boolean
     outputs:
       container-image-name:
         description: Container image name
@@ -171,19 +176,41 @@ jobs:
         with:
           version: v3.12.0
 
+      - name: Set chart base name
+        id: chart-name
+        run: echo "value=vault-operator" >> "$GITHUB_OUTPUT"
+
+      - name: Set OCI registry name
+        id: oci-registry-name
+        run: echo "value=ghcr.io/${{ github.repository_owner }}/helm-charts" >> "$GITHUB_OUTPUT"
+
       - name: Set OCI chart name
         id: oci-chart-name
-        run: echo "value=ghcr.io/${{ github.repository_owner }}/helm-charts/vault-operator" >> "$GITHUB_OUTPUT"
+        run: echo "value=${{ steps.oci-registry-name.outputs.value }}/${{ steps.chart-name.outputs.value }}" >> "$GITHUB_OUTPUT"
 
       - name: Helm lint
         run: helm lint charts/vault-operator
 
+      - name: Determine build output
+        uses: haya14busa/action-cond@1d6e8a12b20cdb4f1954feef9aa475b9c390cab5 # v1.1.1
+        id: raw-version
+        with:
+          cond: ${{ inputs.release }}
+          if_true: ${{ github.ref_name }}
+          if_false: 0.0.0
+
+      - name: Determine version
+        uses: madhead/semver-utils@v3.1.0
+        id: version
+        with:
+          version: ${{ steps.raw-version.outputs.value }}
+          lenient: false
+
       - name: Helm package
         id: build
         run: |
-          #helm package charts/vault-operator --version ${{ github.ref_name }} --app-version ${{ github.ref_name }}
-          helm package charts/vault-operator
-          echo "package=vault-operator-${{ github.ref_name }}.tgz" >> "$GITHUB_OUTPUT"
+          helm package charts/${{ steps.chart-name.outputs.value }} --version ${{ steps.version.outputs.release }} --app-version ${{ steps.version.outputs.release }}
+          echo "package=${{ steps.chart-name.outputs.value }}-${{ steps.version.outputs.release }}.tgz" >> "$GITHUB_OUTPUT"
 
       - name: Upload chart as artifact
         uses: actions/upload-artifact@v3
@@ -197,13 +224,13 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ github.token }}
-        if: inputs.publish
+        if: inputs.publish && inputs.release
 
       - name: Helm push
-        run: helm push ${{ steps.build.outputs.package }} oci://${{ steps.oci-chart-name.outputs.vaule }}
+        run: helm push ${{ steps.build.outputs.package }} oci://${{ steps.oci-registry-name.outputs.vaule }}
         env:
           HELM_REGISTRY_CONFIG: ~/.docker/config.json
-        if: inputs.publish
+        if: inputs.publish && inputs.release
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@e5f43133f6e8736992c9f3c1b3296e24b37e17f2 # 0.10.0
