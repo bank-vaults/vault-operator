@@ -191,26 +191,25 @@ jobs:
       - name: Helm lint
         run: helm lint charts/vault-operator
 
-      - name: Determine build output
+      - name: Determine raw version
         uses: haya14busa/action-cond@1d6e8a12b20cdb4f1954feef9aa475b9c390cab5 # v1.1.1
         id: raw-version
         with:
           cond: ${{ inputs.release }}
           if_true: ${{ github.ref_name }}
-          if_false: 0.0.0
+          if_false: v0.0.0
 
       - name: Determine version
-        uses: madhead/semver-utils@e9a61b5a9d5e0e2455bf934c1a59997a90bee7ed # v3.1.0
         id: version
-        with:
-          version: ${{ steps.raw-version.outputs.value }}
-          lenient: false
+        run: |
+          VERSION=${{ steps.raw-version.outputs.value }}
+          echo "value=${VERSION#v}" >> "$GITHUB_OUTPUT"
 
       - name: Helm package
         id: build
         run: |
-          helm package charts/${{ steps.chart-name.outputs.value }} --version ${{ steps.version.outputs.release }} --app-version ${{ steps.version.outputs.release }}
-          echo "package=${{ steps.chart-name.outputs.value }}-${{ steps.version.outputs.release }}.tgz" >> "$GITHUB_OUTPUT"
+          helm package charts/${{ steps.chart-name.outputs.value }} --version ${{ steps.version.outputs.value }} --app-version ${{ steps.version.outputs.value }}
+          echo "package=${{ steps.chart-name.outputs.value }}-${{ steps.version.outputs.value }}.tgz" >> "$GITHUB_OUTPUT"
 
       - name: Upload chart as artifact
         uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
