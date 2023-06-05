@@ -37,9 +37,7 @@ Overrideable version for container image tags.
 {{- define "vault-operator.vault-operator.version" -}}
 {{- .Values.image.tag | default (printf "%s" .Chart.AppVersion) -}}
 {{- end -}}
-{{- define "vault-operator.bank-vaults.version" -}}
-{{- .Values.image.bankVaultsTag | default (printf "%s" .Chart.AppVersion) -}}
-{{- end -}}
+
 
 {{/*
 Image pull secrets
@@ -75,3 +73,17 @@ Create the name of the service account to use
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
+
+{{/*
+Bank-Vaults image repository template to support backward compatibility with the old value.
+*/}}
+{{- define "vault-operator.bank-vaults.imageRepository" -}}
+{{- .Values.image.bankVaultsRepository | default .Values.bankVaults.image.repository -}}
+{{- end -}}
+
+{{/*
+Bank-Vaults image tag template to support backward compatibility with the old value.
+*/}}
+{{- define "vault-operator.bank-vaults.imageTag" -}}
+{{- .Values.image.bankVaultsTag | default .Values.bankVaults.image.tag -}}
+{{- end -}}

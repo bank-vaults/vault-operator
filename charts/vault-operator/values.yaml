@@ -5,11 +5,24 @@
 replicaCount: 1
 
 image:
-  bankVaultsRepository: ghcr.io/banzaicloud/bank-vaults
   repository: ghcr.io/bank-vaults/vault-operator
   # tag: ""
   pullPolicy: IfNotPresent
   imagePullSecrets: []  # global.imagePullSecrets is also supported
+
+  # -- Bank-Vaults image repository (deprecated: use bankVaults.image.repository instead)
+  bankVaultsRepository: ""
+
+  # -- Bank-Vaults image tag (deprecated: use bankVaults.image.tag instead)
+  bankVaultsTag: ""
+
+bankVaults:
+  image:
+    # -- Bank-Vaults image repository
+    repository: ghcr.io/banzaicloud/bank-vaults
+
+    # -- Bank-Vaults image tag (pinned to supported Bank-Vaults version)
+    tag: "1.19.0"
 
 service:
   name: ""
