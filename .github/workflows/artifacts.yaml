@@ -226,7 +226,7 @@ jobs:
         if: inputs.publish && inputs.release
 
       - name: Helm push
-        run: helm push ${{ steps.build.outputs.package }} oci://${{ steps.oci-registry-name.outputs.vaule }}
+        run: helm push ${{ steps.build.outputs.package }} oci://${{ steps.oci-registry-name.outputs.value }}
         env:
           HELM_REGISTRY_CONFIG: ~/.docker/config.json
         if: inputs.publish && inputs.release
