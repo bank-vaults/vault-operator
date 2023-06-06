@@ -56,7 +56,7 @@ helm install --generate-name --wait ghcr.io/bank-vaults/helm-charts/vault-operat
 | readinessProbe.timeoutSeconds | int | `1` |  |
 | psp.enabled | bool | `false` |  |
 | psp.vaultSA | string | `"vault"` |  |
-| monitoring.enabled | bool | `false` | Enable Prometheus ServiceMonitor. See the [documentation](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/design.md#servicemonitor) and the [API reference](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api.md#servicemonitor) for details. |
-| monitoring.additionalLabels | object | `{}` |  |
-| monitoring.metricRelabelings | list | `[]` |  |
-| monitoring.relabelings | list | `[]` |  |
+| monitoring.serviceMonitor.enabled | bool | `false` | Enable Prometheus ServiceMonitor. See the [documentation](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/design.md#servicemonitor) and the [API reference](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api.md#servicemonitor) for details. |
+| monitoring.serviceMonitor.additionalLabels | object | `{}` |  |
+| monitoring.serviceMonitor.metricRelabelings | list | `[]` |  |
+| monitoring.serviceMonitor.relabelings | list | `[]` |  |
