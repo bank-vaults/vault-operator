@@ -2,54 +2,92 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
+# -- Number of replicas (pods) to launch.
 replicaCount: 1
 
 image:
+  # -- Name of the image repository to pull the container image from.
   repository: ghcr.io/bank-vaults/vault-operator
-  # tag: ""
-  pullPolicy: IfNotPresent
-  imagePullSecrets: []  # global.imagePullSecrets is also supported
 
-  # -- Bank-Vaults image repository (deprecated: use bankVaults.image.repository instead)
+  # -- [Image pull policy](https://kubernetes.io/docs/concepts/containers/images/#updating-images) for updating already existing images on a node.
+  pullPolicy: IfNotPresent
+
+  # -- Image tag override for the default value (chart appVersion).
+  tag: ""
+
+  # -- Reference to one or more secrets to be used when [pulling images](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/#create-a-pod-that-uses-your-secret) (from private registries).
+  # (`global.imagePullSecrets` is also supported)
+  imagePullSecrets: []
+
+  # -- Bank-Vaults image repository
+  # **Deprecated:** use `bankVaults.image.repository` instead.
   bankVaultsRepository: ""
 
-  # -- Bank-Vaults image tag (deprecated: use bankVaults.image.tag instead)
+  # -- Bank-Vaults image tag
+  # **Deprecated:** use `bankVaults.image.tag` instead.
   bankVaultsTag: ""
 
 bankVaults:
   image:
-    # -- Bank-Vaults image repository
+    # -- Bank-Vaults image repository.
     repository: ghcr.io/banzaicloud/bank-vaults
 
-    # -- Bank-Vaults image tag (pinned to supported Bank-Vaults version)
+    # -- Bank-Vaults image tag (pinned to supported Bank-Vaults version).
     tag: "1.19.0"
 
-service:
-  name: ""
-  type: ClusterIP
-  externalPort: 80
-  internalPort: 8080
-  annotations: {}
-
+# -- A name in place of the chart name for `app:` labels.
 nameOverride: ""
+
+# -- A name to substitute for the full names of resources.
 fullnameOverride: ""
 
-crdAnnotations: {}
-
-# The namespace where the operator watches for vault CRD objects, if not defined
-# all namespaces are watched
+# -- The namespace where the operator watches for vault CR objects.
+# If not defined all namespaces are watched.
 watchNamespace: ""
 syncPeriod: "1m"
 
+# -- Annotations to be added to CRDs.
+crdAnnotations: {}
+
+# -- Labels to be added to deployments.
 labels: {}
-  #  team: banzai
+  # team: banzai
 
+# -- Labels to be added to pods.
 podLabels: {}
-  #  team: banzai
+  # team: banzai
 
+# -- Annotations to be added to pods.
 podAnnotations: {}
-  #  team: banzai
+  # team: banzai
 
+serviceAccount:
+  # -- Enable service account creation.
+  create: true
+
+  # -- Annotations to be added to the service account.
+  annotations: {}
+
+  # -- The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template.
+  name: ""
+
+service:
+  # -- Annotations to be added to the service.
+  annotations: {}
+
+  # -- Kubernetes [service type](https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types).
+  type: ClusterIP
+
+  # -- The name of the service to use.
+  # If not set, a name is generated using the fullname template.
+  name: ""
+
+  externalPort: 80
+  internalPort: 8080
+
+# -- Container resource [requests and limits](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/).
+# See the [API reference](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#resources) for details.
 resources:
   limits:
     cpu: 100m
@@ -58,25 +96,27 @@ resources:
     cpu: 100m
     memory: 128Mi
 
+# -- [Node selector](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#nodeselector) configuration.
+nodeSelector: {}
+
+# -- [Tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) for node taints.
+# See the [API reference](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#scheduling) for details.
+tolerations: []
+
+# -- [Affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity) configuration.
+# See the [API reference](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#scheduling) for details.
 affinity: {}
 
-# # if tolerations are used inside cluster, define tolerations as well
-tolerations: []
-#   - effect: NoSchedule
-#     key: node_role
-#     operator: Equal
-#     value: custom_worker
+# -- Specify a priority class name to set [pod priority](https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/#pod-priority).
+priorityClassName: ""
 
-# # If needed, define nodeSelector for vault operator
-nodeSelector: {}
-#   "node-role.kubernetes.io/custom_worker": "true"
-
+# -- Pod [security context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod).
+# See the [API reference](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#security-context) for details.
 podSecurityContext: {}
 
+# -- Container [security context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container).
+# See the [API reference](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#security-context-1) for details.
 securityContext: {}
-
-## Assign a PriorityClassName to pods if set
-priorityClassName: ""
 
 terminationGracePeriodSeconds: 10
 
@@ -94,18 +134,11 @@ psp:
   enabled: false
   vaultSA: "vault"
 
-serviceAccount:
-  # Specifies whether a service account should be created
-  create: true
-  # Annotations to add to the service account
-  annotations: {}
-  # The name of the service account to use.
-  # If not set and create is true, a name is generated using the fullname template
-  name: ""
 monitoring:
-  # Create a Vault Operator ServiceMonitor object
-  serviceMonitor:
+    # -- Enable Prometheus ServiceMonitor.
+    # See the [documentation](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/design.md#servicemonitor) and the [API reference](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api.md#servicemonitor) for details.
     enabled: false
+
     additionalLabels: {}
     metricRelabelings: []
     relabelings: []

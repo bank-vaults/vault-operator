@@ -109,3 +109,7 @@ operator-up:
 operator-down:
 	kubectl delete -f deploy/crd.yaml
 	kubectl delete -f deploy/rbac.yaml
+
+.PHONY: helm-docs
+helm-docs:
+	helm-docs -s file -c charts/ -t README.md.gotmpl

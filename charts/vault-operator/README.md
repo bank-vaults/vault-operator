@@ -1,40 +1,62 @@
-# Vault Operator
+# vault-operator
 
-![kube version: >=1.22.0-0](https://img.shields.io/badge/kube%20version->=1.22.0--0-informational?style=flat-square)
+Kubernetes operator for Hashicorp Vault
 
-Kubernetes operator for [Hashicorp Vault](https://www.vaultproject.io/).
-
-**Homepage:** <https://bank-vaults.dev/>
+**Homepage:** <https://bank-vaults.dev>
 
 ## TL;DR;
 
 ```bash
-helm install --generate-name --wait oci://ghcr.io/bank-vaults/helm-charts/vault-operator
+helm install --generate-name --wait ghcr.io/bank-vaults/helm-charts/vault-operator
 ```
 
 ## Values
 
-| Parameter                     | Description                                                     | Default                              |
-|-------------------------------|-----------------------------------------------------------------|--------------------------------------|
-| `image.pullPolicy`            | Container pull policy                                           | `IfNotPresent`                       |
-| `image.repository`            | Container image to use                                          | `ghcr.io/bank-vaults/vault-operator` |
-| `image.tag`                   | Container image tag to deploy operator in                       | `.Chart.AppVersion`                  |
-| `image.imagePullSecrets`      | Image pull secrets for private repositories                     | `[]`                                 |
-| `image.bankVaultsRepository`  | Container image to use for Bank-Vaults (deprecated)             |                                      |
-| `image.bankVaultsTag`         | Container image tag to use for Bank-Vaults (deprecated)         |                                      |
-| `bankVaults.image.repository` | Bank-Vaults image repository                                    | `ghcr.io/banzaicloud/bank-vaults`    |
-| `bankVaults.image.tag`        | Bank-Vaults image tag (pinned to supported Bank-Vaults version) | `1.19.0`                             |
-| `replicaCount`                | k8s replicas                                                    | `1`                                  |
-| `resources.requests.cpu`      | Container requested CPU                                         | `100m`                               |
-| `resources.requests.memory`   | Container requested memory                                      | `128Mi`                              |
-| `resources.limits.cpu`        | Container CPU limit                                             | `100m`                               |
-| `resources.limits.memory`     | Container memory limit                                          | `256Mi`                              |
-| `crdAnnotations`              | Annotations for the Vault CRD                                   | `{}`                                 |
-| `securityContext`             | Container security context for vault-operator deployment        | `{}`                                 |
-| `podSecurityContext`          | Pod security context for vault-operator deployment              | `{}`                                 |
-| `psp.enabled`                 | Deploy PSP resources                                            | `false`                              |
-| `psp.vaultSA`                 | Used service account for vault                                  | `vault`                              |
-
-## Credits
-
-Thanks to Cosmin Cojocar for the original Vault Operator Helm chart!
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| replicaCount | int | `1` | Number of replicas (pods) to launch. |
+| image.repository | string | `"ghcr.io/bank-vaults/vault-operator"` | Name of the image repository to pull the container image from. |
+| image.pullPolicy | string | `"IfNotPresent"` | [Image pull policy](https://kubernetes.io/docs/concepts/containers/images/#updating-images) for updating already existing images on a node. |
+| image.tag | string | `""` | Image tag override for the default value (chart appVersion). |
+| image.imagePullSecrets | list | `[]` | Reference to one or more secrets to be used when [pulling images](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/#create-a-pod-that-uses-your-secret) (from private registries). (`global.imagePullSecrets` is also supported) |
+| image.bankVaultsRepository | string | `""` | Bank-Vaults image repository **Deprecated:** use `bankVaults.image.repository` instead. |
+| image.bankVaultsTag | string | `""` | Bank-Vaults image tag **Deprecated:** use `bankVaults.image.tag` instead. |
+| bankVaults.image.repository | string | `"ghcr.io/banzaicloud/bank-vaults"` | Bank-Vaults image repository. |
+| bankVaults.image.tag | string | `"1.19.0"` | Bank-Vaults image tag (pinned to supported Bank-Vaults version). |
+| nameOverride | string | `""` | A name in place of the chart name for `app:` labels. |
+| fullnameOverride | string | `""` | A name to substitute for the full names of resources. |
+| watchNamespace | string | `""` | The namespace where the operator watches for vault CR objects. If not defined all namespaces are watched. |
+| syncPeriod | string | `"1m"` |  |
+| crdAnnotations | object | `{}` | Annotations to be added to CRDs. |
+| labels | object | `{}` | Labels to be added to deployments. |
+| podLabels | object | `{}` | Labels to be added to pods. |
+| podAnnotations | object | `{}` | Annotations to be added to pods. |
+| serviceAccount.create | bool | `true` | Enable service account creation. |
+| serviceAccount.annotations | object | `{}` | Annotations to be added to the service account. |
+| serviceAccount.name | string | `""` | The name of the service account to use. If not set and create is true, a name is generated using the fullname template. |
+| service.annotations | object | `{}` | Annotations to be added to the service. |
+| service.type | string | `"ClusterIP"` | Kubernetes [service type](https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types). |
+| service.name | string | `""` | The name of the service to use. If not set, a name is generated using the fullname template. |
+| service.externalPort | int | `80` |  |
+| service.internalPort | int | `8080` |  |
+| resources | object | `{"limits":{"cpu":"100m","memory":"256Mi"},"requests":{"cpu":"100m","memory":"128Mi"}}` | Container resource [requests and limits](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/). See the [API reference](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#resources) for details. |
+| nodeSelector | object | `{}` | [Node selector](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#nodeselector) configuration. |
+| tolerations | list | `[]` | [Tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) for node taints. See the [API reference](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#scheduling) for details. |
+| affinity | object | `{}` | [Affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity) configuration. See the [API reference](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#scheduling) for details. |
+| priorityClassName | string | `""` | Specify a priority class name to set [pod priority](https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/#pod-priority). |
+| podSecurityContext | object | `{}` | Pod [security context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod). See the [API reference](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#security-context) for details. |
+| securityContext | object | `{}` | Container [security context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container). See the [API reference](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#security-context-1) for details. |
+| terminationGracePeriodSeconds | int | `10` |  |
+| livenessProbe.initialDelaySeconds | int | `60` |  |
+| livenessProbe.periodSeconds | int | `10` |  |
+| livenessProbe.successThreshold | int | `1` |  |
+| livenessProbe.timeoutSeconds | int | `1` |  |
+| readinessProbe.periodSeconds | int | `10` |  |
+| readinessProbe.successThreshold | int | `1` |  |
+| readinessProbe.timeoutSeconds | int | `1` |  |
+| psp.enabled | bool | `false` |  |
+| psp.vaultSA | string | `"vault"` |  |
+| monitoring.enabled | bool | `false` | Enable Prometheus ServiceMonitor. See the [documentation](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/design.md#servicemonitor) and the [API reference](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api.md#servicemonitor) for details. |
+| monitoring.additionalLabels | object | `{}` |  |
+| monitoring.metricRelabelings | list | `[]` |  |
+| monitoring.relabelings | list | `[]` |  |

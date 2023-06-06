@@ -35,6 +35,7 @@
             kubectl-images
             kustomize
             kubernetes-helm
+            helm-docs
 
             buildah
           ];
