@@ -1,8 +1,7 @@
 Dockerfile
 /.github/
 /bin/
-docs/
-operator/build/
+build/
 vendor/
 test/
 *.yaml
