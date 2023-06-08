@@ -12,8 +12,8 @@ set -xeo pipefail
 # - vault
 #
 
-METALLB_VERSION=v0.12.1
-VAULT_VERSION=1.6.2
+METALLB_VERSION=v0.13.10
+VAULT_VERSION=1.13.2
 BANK_VAULTS_VERSION=1.19.0
 VAULT_TOKEN=$(uuidgen)
 export VAULT_TOKEN
@@ -41,9 +41,10 @@ function waitfor {
 
 function metallb_setup {
     export METALLB_ADDRESS_RANGE=$1
-    kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/${METALLB_VERSION}/manifests/namespace.yaml
-    kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/${METALLB_VERSION}/manifests/metallb.yaml
-    kubectl create secret generic -n metallb-system memberlist --from-literal=secretkey="$(openssl rand -base64 128)"
+    # kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/${METALLB_VERSION}/manifests/namespace.yaml
+    kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/${METALLB_VERSION}/config/manifests/metallb-native.yaml
+    kubectl wait --namespace metallb-system --for condition=Available=true deploy --selector=app=metallb --timeout=90s
+    kubectl wait --namespace metallb-system --for=condition=ready pod --selector=app=metallb --timeout=90s
     envtpl deploy/multi-dc/test/metallb-config.yaml | kubectl apply -f -
 }
 

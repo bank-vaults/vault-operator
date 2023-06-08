@@ -20,8 +20,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/bank-vaults/vault-operator/pkg/apis"
-	"github.com/bank-vaults/vault-operator/pkg/controller"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -29,6 +27,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+
+	"github.com/bank-vaults/vault-operator/pkg/apis"
+	"github.com/bank-vaults/vault-operator/pkg/controller"
 )
 
 var log = ctrl.Log.WithName("cmd")

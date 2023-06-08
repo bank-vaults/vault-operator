@@ -8,49 +8,103 @@ on:
 permissions:
   contents: read
 
-env:
-  GO_VERSION: 1.19.2
-
 jobs:
-  checks:
-    name: Checks
+  build:
+    name: Build
     runs-on: ubuntu-latest
 
-    services:
-      vault:
-        image: vault:1.6.2
-        env:
-          SKIP_SETCAP: true
-          VAULT_DEV_ROOT_TOKEN_ID: 227e1cce-6bf7-30bb-2d2a-acc854318caf
-        ports:
-          - 8200:8200
-
     steps:
-      - name: Set up Go
-        uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
-        with:
-          go-version: ${{ env.GO_VERSION }}
-
       - name: Checkout repository
         uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
 
-      - name: Check licenses
+      - name: Set up Nix
+        uses: cachix/install-nix-action@4b933aa7ebcc94a6174cf1364864e957b4910265 # v21
+        with:
+          extra_nix_config: |
+            access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
+
+      - name: Prepare Nix shell
+        run: nix develop --impure .#ci
+
+      - name: Build
+        run: nix develop --impure .#ci -c make build
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
+
+      - name: Set up Nix
+        uses: cachix/install-nix-action@4b933aa7ebcc94a6174cf1364864e957b4910265 # v21
+        with:
+          extra_nix_config: |
+            access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
+
+      - name: Prepare Nix shell
+        run: nix develop --impure .#ci
+
+      - name: Test
+        run: nix develop --impure .#ci -c make test
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
+
+      - name: Set up Nix
+        uses: cachix/install-nix-action@4b933aa7ebcc94a6174cf1364864e957b4910265 # v21
+        with:
+          extra_nix_config: |
+            access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
+
+      - name: Prepare Nix shell
+        run: nix develop --impure .#ci
+
+      - name: Lint
+        run: nix develop --impure .#ci -c make lint
+
+  license-check:
+    name: License check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
+
+      - name: Set up Nix
+        uses: cachix/install-nix-action@4b933aa7ebcc94a6174cf1364864e957b4910265 # v21
+        with:
+          extra_nix_config: |
+            access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
+
+      - name: Cache license information
+        uses: actions/cache@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8 # v3.3.1
+        with:
+          path: .licensei.cache
+          key: licensei-v1-${{ github.ref_name }}-${{ hashFiles('go.sum') }}
+          restore-keys: |
+            licensei-v1-${{ github.ref_name }}
+            licensei-v1-main
+            licensei-v1
+
+      - name: Prepare Nix shell
+        run: nix develop --impure .#ci
+
+      - name: Populate license cache
+        run: nix develop --impure .#ci -c licensei cache
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: make license-check
 
-      - name: Setup test dependencies
-        run: |
-          sudo apt install opensc softhsm
-          sudo mkdir -p /var/lib/softhsm/tokens/
-          sudo softhsm2-util --init-token --free --label bank-vaults --so-pin banzai --pin banzai
-          sudo pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --keypairgen --key-type rsa:2048 --pin banzai --token-label bank-vaults --label bank-vaults
-          sudo chown -R runner:docker /etc/softhsm /var/lib/softhsm
-
-      - name: Run verification
-        run: make check
+      - name: Check licenses
+        run: nix develop --impure .#ci -c make license-check
         env:
-          VAULT_TOKEN: 227e1cce-6bf7-30bb-2d2a-acc854318caf
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   dev:
     name: Developer environment
@@ -103,22 +157,22 @@ jobs:
       matrix:
         k8s_version: ["v1.24.13", "v1.25.9", "v1.26.4", "v1.27.1" ]
         vault_version: ["1.10.11", "1.11.10", "1.12.6", "1.13.2"]
-    env:
-      KURUN_VERSION: "0.6.4"
 
     steps:
-      - name: Set up Go
-        uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
-        with:
-          go-version: ${{ env.GO_VERSION }}
-
       - name: Checkout repository
         uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
 
+      - name: Set up Nix
+        uses: cachix/install-nix-action@4b933aa7ebcc94a6174cf1364864e957b4910265 # v21
+        with:
+          extra_nix_config: |
+            access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
+
+      - name: Prepare Nix shell
+        run: nix develop --impure .#ci
+
       - name: Start kind cluster
-        run: |
-          kind version
-          kind create cluster --config test/kind.yaml --image kindest/node:${{ matrix.k8s_version }} --wait 1m
+        run: kind create cluster --config test/kind.yaml --image kindest/node:${{ matrix.k8s_version }} --wait 1m
 
       - name: Download operator docker image
         uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
@@ -129,12 +183,8 @@ jobs:
         run: |
           kind load image-archive docker.tar
 
-      - name: Install kurun
-        run: |
-          curl -Lo kurun https://github.com/banzaicloud/kurun/releases/download/${KURUN_VERSION}/kurun-linux-amd64 && chmod +x kurun && sudo mv kurun /usr/local/bin/
-
       - name: Acceptance test
-        run: go test -v -timeout 900s -tags kubeall ./test
+        run: nix develop --impure .#ci -c make test-acceptance
         env:
           VAULT_VERSION: ${{ matrix.vault_version }}
           OPERATOR_VERSION: ${{ needs.artifacts.outputs.container-image-tag }}
@@ -143,45 +193,29 @@ jobs:
     name: Operator multi-cluster acceptance test
     runs-on: ubuntu-latest
     needs: artifacts
-    env:
-      K8S_VERSION: "v1.23.4"
-      HELM_VERSION: "v3.8.0"
-      KIND_VERSION: "v0.12.0"
 
     steps:
-      - name: Set up Go
-        uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
-        with:
-          go-version: ${{ env.GO_VERSION }}
-
       - name: Checkout repository
         uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
 
-      - uses: azure/setup-helm@5119fcb9089d432beecbf79bb2c7915207344b78 # v3.5
+      - name: Set up Nix
+        uses: cachix/install-nix-action@4b933aa7ebcc94a6174cf1364864e957b4910265 # v21
         with:
-          version: ${{ env.HELM_VERSION }}
-          token: ${{ secrets.GITHUB_TOKEN }}
+          extra_nix_config: |
+            access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
 
-      - uses: engineerd/setup-kind@aa272fe2a7309878ffc2a81c56cfe3ef108ae7d0 # v0.5.0
-        with:
-          version: ${{ env.KIND_VERSION }}
+      - name: Prepare Nix shell
+        run: nix develop --impure .#ci
 
       - name: Download operator docker image
         uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
         with:
           name: "[container-image] Docker tarball"
 
-      - name: Install envtpl
-        run: go install github.com/subfuzion/envtpl/...@428c2d7
-
-      - name: Install cidr
-        run: go install github.com/hankjacobs/cidr@master
-
       - name: Build the Helm charts
-        run: |
-          helm dep build ./charts/vault-operator
+        run: nix develop --impure .#ci -c helm dep build ./charts/vault-operator
 
       - name: Operator Multi-DC Raft test
-        run: ./deploy/multi-dc/test/multi-dc-raft.sh install
+        run: nix develop --impure .#ci -c ./deploy/multi-dc/test/multi-dc-raft.sh install
         env:
           OPERATOR_VERSION: ${{ needs.artifacts.outputs.container-image-tag }}
