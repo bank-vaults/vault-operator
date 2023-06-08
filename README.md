@@ -11,7 +11,58 @@ The official documentation for the operator is available at [https://bank-vaults
 
 ## Development
 
-For the best developer experience, install [Nix](https://nixos.org/download.html) and [direnv](https://direnv.net/docs/installation.html).
+**For an optimal developer experience, it is recommended to install [Nix](https://nixos.org/download.html) and [direnv](https://direnv.net/docs/installation.html).**
+
+_Alternatively, install [Go](https://go.dev/dl/) on your computer then run `make deps` to install the rest of the dependencies._
+
+Make sure Docker is installed with Compose and Buildx.
+
+Run project dependencies:
+
+```shell
+make up
+```
+
+Run the operator:
+
+```shell
+make run
+```
+
+Run the test suite:
+
+```shell
+make test
+make test-acceptance
+```
+
+Run the linter:
+
+```shell
+make lint
+```
+
+Some linter violations can automatically be fixed:
+
+```shell
+make fmt
+```
+
+Build artifacts locally:
+
+```shell
+make artifacts
+```
+
+Once you are done either stop or tear down dependencies:
+
+```shell
+make stop
+
+# OR
+
+make down
+```
 
 ## License
 
