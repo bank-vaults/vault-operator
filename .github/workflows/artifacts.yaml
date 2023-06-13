@@ -26,6 +26,15 @@ on:
       container-image-ref:
         description: Container image ref
         value: ${{ jobs.container-image.outputs.ref }}
+      helm-chart-name:
+        description: Helm chart OCI name
+        value: ${{ jobs.helm-chart.outputs.name }}
+      helm-chart-tag:
+        description: Helm chart tag
+        value: ${{ jobs.helm-chart.outputs.tag }}
+      helm-chart-package:
+        description: Helm chart package name
+        value: ${{ jobs.helm-chart.outputs.package }}
 
 permissions:
   contents: read
@@ -165,7 +174,8 @@ jobs:
 
     outputs:
       name: ${{ steps.oci-chart-name.outputs.value }}
-      tag: ${{ github.ref_name }}
+      tag: ${{ steps.version.outputs.value }}
+      package: ${{ steps.build.outputs.package }}
 
     steps:
       - name: Checkout repository
@@ -176,9 +186,9 @@ jobs:
         with:
           version: v3.12.0
 
-      - name: Set chart base name
+      - name: Set chart name
         id: chart-name
-        run: echo "value=vault-operator" >> "$GITHUB_OUTPUT"
+        run: echo "value=${{ github.event.repository.name }}" >> "$GITHUB_OUTPUT"
 
       - name: Set OCI registry name
         id: oci-registry-name
@@ -230,6 +240,12 @@ jobs:
         env:
           HELM_REGISTRY_CONFIG: ~/.docker/config.json
         if: inputs.publish && inputs.release
+
+      - name: Upload package as artifact
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
+        with:
+          name: "[${{ github.job }}] package"
+          path: ${{ steps.build.outputs.package }}
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@b43daad0c3c96202fc5800b511dfae8e6ecce864 # 0.11.0

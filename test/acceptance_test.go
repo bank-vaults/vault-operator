@@ -80,8 +80,13 @@ func TestMain(m *testing.M) {
 		},
 	}
 
+	chart := "../charts/vault-operator"
+	if v := os.Getenv("HELM_CHART"); v != "" {
+		chart = v
+	}
+
 	// Deploy the chart using `helm install` and wait until the pod comes up
-	helm.Install(t, helmOptions, "../charts/vault-operator", releaseName)
+	helm.Install(t, helmOptions, chart, releaseName)
 	operatorPods := waitUntilPodsCreated(t, defaultKubectlOptions, releaseName, 10, 5*time.Second)
 	k8s.WaitUntilPodAvailable(t, defaultKubectlOptions, operatorPods[0].GetName(), 5, 10*time.Second)
 
