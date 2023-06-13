@@ -1,10 +1,10 @@
 apiVersion: v2
 type: application
 name: vault-operator
-version: 1.20.0-dev.1
-appVersion: 1.19.0
+version: 0.0.0
+appVersion: latest
 description: Kubernetes operator for Hashicorp Vault
-icon: https://raw.githubusercontent.com/banzaicloud/bank-vaults/main/docs/images/logo/bank-vaults-logo.svg
+icon: https://raw.githubusercontent.com/bank-vaults/bank-vaults.dev/main/assets/icons/logo.svg
 keywords:
   - vault
   - hashicorp
