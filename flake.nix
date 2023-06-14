@@ -26,6 +26,12 @@
               vault.enable = true;
             };
 
+            pre-commit.hooks = {
+              nixpkgs-fmt.enable = true;
+              yamllint.enable = true;
+              hadolint.enable = true;
+            };
+
             packages = with pkgs; [
               gnumake
 
@@ -40,6 +46,9 @@
               kustomize
               kubernetes-helm
               helm-docs
+
+              yamllint
+              hadolint
             ] ++ [
               self'.packages.licensei
               self'.packages.kurun
