@@ -68,7 +68,7 @@ test-acceptance: ## Run acceptance tests
 
 .PHONY: lint
 lint: lint-go lint-helm lint-docker lint-yaml
-lint: ## Run linter
+lint: ## Run linters
 
 .PHONY: lint-go
 lint-go:

@@ -1,0 +1,32 @@
+name: Flake lock
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 5 * * 1'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update:
+    name: Update
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+
+      - name: Set up Nix
+        uses: cachix/install-nix-action@4b933aa7ebcc94a6174cf1364864e957b4910265 # v21
+        with:
+          extra_nix_config: |
+            access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update flake.lock
+        uses: DeterminateSystems/update-flake-lock@v19
+        with:
+          pr-labels: |
+            dependencies
+            nix
