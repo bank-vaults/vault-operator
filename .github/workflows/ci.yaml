@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
 
 permissions:
@@ -155,7 +155,7 @@ jobs:
     needs: [artifacts]
     strategy:
       matrix:
-        k8s_version: ["v1.24.13", "v1.25.9", "v1.26.4", "v1.27.1" ]
+        k8s_version: ["v1.24.13", "v1.25.9", "v1.26.4", "v1.27.1"]
         vault_version: ["1.10.11", "1.11.10", "1.12.6", "1.13.2"]
 
     steps:
@@ -180,8 +180,7 @@ jobs:
           name: "[container-image] Docker tarball"
 
       - name: Load Docker images to kind
-        run: |
-          kind load image-archive docker.tar
+        run: kind load image-archive docker.tar
 
       - name: Download helm chart
         uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2

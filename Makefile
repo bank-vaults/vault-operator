@@ -2,6 +2,8 @@
 
 export PATH := $(abspath bin/):${PATH}
 
+CONTAINER_IMAGE_REF = ghcr.io/bank-vaults/vault-operator:dev
+
 # Dependency versions
 GOLANGCI_VERSION = 1.53.1
 LICENSEI_VERSION = 0.8.0
@@ -41,12 +43,17 @@ clean: ## Clean operator resources from a Kubernetes cluster
 	kubectl delete -f deploy/rbac.yaml
 
 .PHONY: artifacts
-artifacts: container-image
+artifacts: container-image helm-chart
 artifacts: ## Build artifacts
 
 .PHONY: container-image
 container-image: ## Build container image
-	docker build .
+	docker build -t ${CONTAINER_IMAGE_REF} .
+
+.PHONY: helm-chart
+helm-chart: ## Build Helm chart
+	@mkdir -p build
+	helm package -d build/ charts/vault-operator
 
 .PHONY: check
 check: test lint ## Run checks (tests and linters)
@@ -60,8 +67,24 @@ test-acceptance: ## Run acceptance tests
 	go test -race -v -timeout 900s -tags kubeall ./test
 
 .PHONY: lint
+lint: lint-go lint-helm lint-docker lint-yaml
 lint: ## Run linter
-	golangci-lint run ${LINT_ARGS}
+
+.PHONY: lint-go
+lint-go:
+	golangci-lint run $(if ${CI},--out-format github-actions,)
+
+.PHONY: lint-helm
+lint-helm:
+	helm lint charts/vault-operator
+
+.PHONY: lint-docker
+lint-docker:
+	hadolint Dockerfile
+
+.PHONY: lint-yaml
+lint-yaml:
+	yamllint $(if ${CI},-f github,) --no-warnings .
 
 .PHONY: fmt
 fmt: ## Format code
