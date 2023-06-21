@@ -155,8 +155,8 @@ jobs:
     needs: [artifacts]
     strategy:
       matrix:
-        k8s_version: ["v1.24.13", "v1.25.9", "v1.26.4", "v1.27.1"]
-        vault_version: ["1.10.11", "1.11.10", "1.12.6", "1.13.2"]
+        k8s_version: ["v1.24.15", "v1.25.11", "v1.26.6", "v1.27.3"]
+        vault_version: ["1.10.11", "1.11.11", "1.12.7", "1.13.3"]
 
     steps:
       - name: Checkout repository
