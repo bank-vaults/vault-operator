@@ -96,7 +96,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch for changes to primary resource Vault
-	err = c.Watch(&source.Kind{Type: &vaultv1alpha1.Vault{}}, &handler.EnqueueRequestForObject{})
+	err = c.Watch(source.Kind(mgr.GetCache(), &vaultv1alpha1.Vault{}), &handler.EnqueueRequestForObject{})
 	if err != nil {
 		return err
 	}
@@ -903,7 +903,7 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 
 	podSpec := corev1.PodSpec{
 		ServiceAccountName:           v.Spec.GetServiceAccount(),
-		AutomountServiceAccountToken: pointer.BoolPtr(true),
+		AutomountServiceAccountToken: pointer.Bool(true),
 
 		Containers: []corev1.Container{
 			{
@@ -949,7 +949,7 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 			Selector: &metav1.LabelSelector{
 				MatchLabels: ls,
 			},
-			RevisionHistoryLimit: pointer.Int32Ptr(0),
+			RevisionHistoryLimit: pointer.Int32(0),
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels:      withVaultConfigurerLabels(v, ls),
@@ -1258,8 +1258,8 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 			VolumeMounts:    withHSMVolumeMount(v, nil),
 			Resources:       getHSMDaemonResource(v),
 			SecurityContext: &corev1.SecurityContext{
-				Privileged: pointer.BoolPtr(true),
-				RunAsUser:  pointer.Int64Ptr(0),
+				Privileged: pointer.Bool(true),
+				RunAsUser:  pointer.Int64(0),
 			},
 		})
 	}
@@ -1277,7 +1277,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 		Affinity: affinity,
 
 		ServiceAccountName:           v.Spec.GetServiceAccount(),
-		AutomountServiceAccountToken: pointer.BoolPtr(true),
+		AutomountServiceAccountToken: pointer.Bool(true),
 
 		InitContainers: withVaultInitContainers(v, []corev1.Container{
 			{
@@ -1668,7 +1668,7 @@ func withVeleroContainer(v *vaultv1alpha1.Vault, containers []corev1.Container) 
 			Command:         []string{"/bin/bash", "-c", "sleep infinity"},
 			VolumeMounts:    withVaultVolumeMounts(v, nil),
 			SecurityContext: &corev1.SecurityContext{
-				Privileged: pointer.BoolPtr(true),
+				Privileged: pointer.Bool(true),
 			},
 			Resources: corev1.ResourceRequirements{
 				Requests: corev1.ResourceList{
@@ -1796,7 +1796,7 @@ func withHSMVolumeMount(v *vaultv1alpha1.Vault, volumeMounts []corev1.VolumeMoun
 }
 
 func getPodAntiAffinity(v *vaultv1alpha1.Vault) *corev1.PodAntiAffinity {
-	if v.Spec.PodAntiAffinity == "" {
+	if v.Spec.Affinity == nil || v.Spec.Affinity.PodAntiAffinity == nil {
 		return nil
 	}
 
@@ -1807,17 +1807,17 @@ func getPodAntiAffinity(v *vaultv1alpha1.Vault) *corev1.PodAntiAffinity {
 				LabelSelector: &metav1.LabelSelector{
 					MatchLabels: ls,
 				},
-				TopologyKey: v.Spec.PodAntiAffinity,
+				TopologyKey: v.Spec.Affinity.PodAntiAffinity.String(),
 			},
 		},
 	}
 }
 
 func getNodeAffinity(v *vaultv1alpha1.Vault) *corev1.NodeAffinity {
-	if v.Spec.NodeAffinity.Size() == 0 {
+	if v.Spec.Affinity == nil {
 		return nil
 	}
-	return &v.Spec.NodeAffinity
+	return v.Spec.Affinity.NodeAffinity
 }
 
 func getVaultURIScheme(v *vaultv1alpha1.Vault) corev1.URIScheme {

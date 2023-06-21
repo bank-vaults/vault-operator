@@ -18,6 +18,7 @@ import (
 	"flag"
 	"net"
 	"os"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"time"
 
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -53,18 +54,19 @@ func main() {
 	// uniform and structured logs.
 	ctrl.SetLogger(zap.New(zap.UseDevMode(*verbose)))
 
-	var namespace string
-	var err error
+	// Fetch namespace data
 	namespace, isSet := os.LookupEnv(operatorNamespace)
-
 	if !isSet {
 		namespace, isSet = os.LookupEnv(watchNamespaceEnvVar)
-		if !isSet {
-			log.Info("No watched namespace found, watching the entire cluster")
-			namespace = ""
-		}
 	}
-	log.Info("Watched namespace: " + namespace)
+
+	var namespaces []string
+	if !isSet {
+		log.Info("No watched namespace found, watching the entire cluster")
+	} else {
+		log.Info("Watched namespace: " + namespace)
+		namespaces = []string{namespace}
+	}
 
 	// Get a config to talk to the apiserver
 	k8sConfig, err := config.GetConfig()
@@ -80,11 +82,13 @@ func main() {
 
 	// Create a new Cmd to provide shared dependencies and start components
 	mgr, err := manager.New(k8sConfig, manager.Options{
-		Namespace:               namespace,
+		Cache: cache.Options{
+			Namespaces: namespaces,
+			SyncPeriod: syncPeriod,
+		},
 		LeaderElection:          true,
 		LeaderElectionNamespace: leaderElectionNamespace,
 		LeaderElectionID:        "vault-operator-lock",
-		SyncPeriod:              syncPeriod,
 		HealthProbeBindAddress:  healthProbeBindAddress,
 		LivenessEndpointName:    "/",      // For Chart backwards compatibility
 		ReadinessEndpointName:   "/ready", // For Chart backwards compatibility
