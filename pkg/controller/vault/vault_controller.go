@@ -1796,7 +1796,7 @@ func withHSMVolumeMount(v *vaultv1alpha1.Vault, volumeMounts []corev1.VolumeMoun
 }
 
 func getPodAntiAffinity(v *vaultv1alpha1.Vault) *corev1.PodAntiAffinity {
-	if v.Spec.Affinity == nil || v.Spec.Affinity.PodAntiAffinity == nil {
+	if v.Spec.PodAntiAffinity == "" {
 		return nil
 	}
 
@@ -1807,17 +1807,17 @@ func getPodAntiAffinity(v *vaultv1alpha1.Vault) *corev1.PodAntiAffinity {
 				LabelSelector: &metav1.LabelSelector{
 					MatchLabels: ls,
 				},
-				TopologyKey: v.Spec.Affinity.PodAntiAffinity.String(),
+				TopologyKey: v.Spec.PodAntiAffinity,
 			},
 		},
 	}
 }
 
 func getNodeAffinity(v *vaultv1alpha1.Vault) *corev1.NodeAffinity {
-	if v.Spec.Affinity == nil {
+	if v.Spec.NodeAffinity.Size() == 0 {
 		return nil
 	}
-	return v.Spec.Affinity.NodeAffinity
+	return &v.Spec.NodeAffinity
 }
 
 func getVaultURIScheme(v *vaultv1alpha1.Vault) corev1.URIScheme {
