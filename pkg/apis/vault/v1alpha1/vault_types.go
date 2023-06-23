@@ -737,7 +737,7 @@ func (vault *Vault) AsOwnerReference() metav1.OwnerReference {
 		Kind:       vault.Kind,
 		Name:       vault.Name,
 		UID:        vault.UID,
-		Controller: pointer.BoolPtr(true),
+		Controller: pointer.Bool(true),
 	}
 }
 
@@ -973,7 +973,8 @@ type GoogleUnsealConfig struct {
 }
 
 // AlibabaUnsealConfig holds the parameters for Alibaba Cloud KMS based unsealing
-//  --alibaba-kms-region eu-central-1 --alibaba-kms-key-id 9d8063eb-f9dc-421b-be80-15d195c9f148 --alibaba-oss-endpoint oss-eu-central-1.aliyuncs.com --alibaba-oss-bucket bank-vaults
+//
+//	--alibaba-kms-region eu-central-1 --alibaba-kms-key-id 9d8063eb-f9dc-421b-be80-15d195c9f148 --alibaba-oss-endpoint oss-eu-central-1.aliyuncs.com --alibaba-oss-bucket bank-vaults
 type AlibabaUnsealConfig struct {
 	KMSRegion   string `json:"kmsRegion"`
 	KMSKeyID    string `json:"kmsKeyId"`
