@@ -83,7 +83,7 @@ function install_instance {
 
     helm upgrade --install vault-operator ./deploy/charts/vault-operator --wait --set image.tag=${OPERATOR_VERSION} --set image.pullPolicy=Never --set image.bankVaultsTag=${BANK_VAULTS_VERSION}
 
-    kubectl apply -f deploy/rbac.yaml
+    kubectl apply -f deploy/crd/rbac.yaml
     envtpl deploy/multi-dc/test/cr-"${INSTANCE}".yaml | kubectl apply -f -
 
     echo "Waiting for for ${INSTANCE} vault instance..."
