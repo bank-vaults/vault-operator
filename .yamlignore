@@ -1,7 +1,9 @@
-/deploy/
+/test/
+
 /e2e/deploy/
 /e2e/test/
 
-/charts/
-/examples/
-/test/
+/deploy/crd/
+/deploy/charts/
+/deploy/examples/
+/deploy/multi-dc/

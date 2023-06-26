@@ -38,4 +38,4 @@ cd ${CODEGEN_DIR} && git checkout $VERSION && cd -
 ${CODEGEN_DIR}/generate-groups.sh all \
   github.com/banzaicloud/bank-vaults/vault-operator/pkg/client github.com/banzaicloud/bank-vaults/vault-operator/pkg/apis \
   vault:v1alpha1 \
-  --go-header-file ./scripts/custom-boilerplate.go.txt
+  --go-header-file ./hack/scripts/custom-boilerplate.go.txt

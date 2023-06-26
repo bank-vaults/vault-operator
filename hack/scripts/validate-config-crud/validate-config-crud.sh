@@ -13,7 +13,7 @@ if [ "${log_level,,}" == 'debug' ]; then
 fi
 
 bank_vaults_config_key="${1}"
-bank_vaults_config_file_orig="scripts/validate-config-crud/vault-config.yml"
+bank_vaults_config_file_orig="hack/scripts/validate-config-crud/vault-config.yml"
 bank_vaults_config_file="${BANK_VAULTS_CONFIG_FILE:-/tmp/vault-config.yml}"
 
 # A hacky way to use "yq" to get a section from a YAML and keeping the key used in the query.

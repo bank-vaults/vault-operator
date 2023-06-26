@@ -25,5 +25,5 @@ you should be able to see your image now.
 
 Finally, you can deploy the operator using:
 ```bash
-helm upgrade --install vault-operator charts/vault-operator --set=image.repository=ghcr.io/banzaicloud/vault-operator --set=image.tag=<your_branch_name>
+helm upgrade --install vault-operator deploy/charts/vault-operator --set=image.repository=ghcr.io/banzaicloud/vault-operator --set=image.tag=<your_branch_name>
 ```
