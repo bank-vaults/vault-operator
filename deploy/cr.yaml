@@ -106,6 +106,12 @@ spec:
       # The storeRootToken flag enables storing of root token in chosen storage
       # This is true by default
       storeRootToken: true
+      # The secretShares represents the total number of unseal key shares
+      # This is 5 by default
+      secretShares: 5
+      # The secretThreshold represents the minimum number of shares required to reconstruct the unseal key
+      # This is 3 by default
+      secretThreshold: 3
     kubernetes:
       secretNamespace: default
 

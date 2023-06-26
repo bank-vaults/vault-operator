@@ -765,6 +765,8 @@ type UnsealConfig struct {
 type UnsealOptions struct {
 	PreFlightChecks *bool `json:"preFlightChecks,omitempty"`
 	StoreRootToken  *bool `json:"storeRootToken,omitempty"`
+	SecretThreshold *uint `json:"secretThreshold,omitempty"`
+	SecretShares    *uint `json:"secretShares,omitempty"`
 }
 
 // ToArgs returns the UnsealConfig as and argument array for bank-vaults
@@ -778,6 +780,16 @@ func (usc *UnsealConfig) ToArgs(vault *Vault) []string {
 	// StoreRootToken is true by default
 	if usc.Options.StoreRootToken != nil && !*usc.Options.StoreRootToken {
 		args = append(args, "--store-root-token=false")
+	}
+
+	// SecretShares is 5 by default
+	if usc.Options.SecretShares != nil && *usc.Options.SecretShares > 0 {
+		args = append(args, "--secret-shares", fmt.Sprint(*usc.Options.SecretShares))
+	}
+
+	// SecretThreshold is 3 by default
+	if usc.Options.SecretThreshold != nil && *usc.Options.SecretThreshold > 0 {
+		args = append(args, "--secret-threshold", fmt.Sprint(*usc.Options.SecretThreshold))
 	}
 
 	if usc.Google != nil {

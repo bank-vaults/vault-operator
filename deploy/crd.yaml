@@ -1163,6 +1163,10 @@ spec:
                         type: boolean
                       storeRootToken:
                         type: boolean
+                      secretShares:
+                        type: integer
+                      secretThreshold:
+                        type: integer
                     type: object
                   vault:
                     properties:
