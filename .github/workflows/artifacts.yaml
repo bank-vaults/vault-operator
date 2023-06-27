@@ -199,7 +199,7 @@ jobs:
         run: echo "value=${{ steps.oci-registry-name.outputs.value }}/${{ steps.chart-name.outputs.value }}" >> "$GITHUB_OUTPUT"
 
       - name: Helm lint
-        run: helm lint charts/${{ steps.chart-name.outputs.value }}
+        run: helm lint deploy/charts/${{ steps.chart-name.outputs.value }}
 
       - name: Determine raw version
         uses: haya14busa/action-cond@1d6e8a12b20cdb4f1954feef9aa475b9c390cab5 # v1.1.1
@@ -218,7 +218,7 @@ jobs:
       - name: Helm package
         id: build
         run: |
-          helm package charts/${{ steps.chart-name.outputs.value }} --version ${{ steps.version.outputs.value }} --app-version ${{ steps.raw-version.outputs.value }}
+          helm package deploy/charts/${{ steps.chart-name.outputs.value }} --version ${{ steps.version.outputs.value }} --app-version ${{ steps.raw-version.outputs.value }}
           echo "package=${{ steps.chart-name.outputs.value }}-${{ steps.version.outputs.value }}.tgz" >> "$GITHUB_OUTPUT"
 
       - name: Upload chart as artifact
@@ -251,7 +251,7 @@ jobs:
         uses: aquasecurity/trivy-action@41f05d9ecffa2ed3f1580af306000f734b733e54 # 0.11.2
         with:
           scan-type: config
-          scan-ref: charts/${{ steps.chart-name.outputs.value }}
+          scan-ref: deploy/charts/${{ steps.chart-name.outputs.value }}
           format: sarif
           output: trivy-results.sarif
 

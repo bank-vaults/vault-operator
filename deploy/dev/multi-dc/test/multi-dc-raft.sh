@@ -45,7 +45,7 @@ function metallb_setup {
     kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/${METALLB_VERSION}/config/manifests/metallb-native.yaml
     kubectl wait --namespace metallb-system --for condition=Available=true deploy --selector=app=metallb --timeout=90s
     kubectl wait --namespace metallb-system --for=condition=ready pod --selector=app=metallb --timeout=90s
-    envtpl deploy/multi-dc/test/metallb-config.yaml | kubectl apply -f -
+    envtpl deploy/dev/multi-dc/test/metallb-config.yaml | kubectl apply -f -
 }
 
 function cidr_range {
@@ -81,10 +81,10 @@ function install_instance {
 
     kind load image-archive docker.tar --name "${INSTANCE}"
 
-    helm upgrade --install vault-operator ./charts/vault-operator --wait --set image.tag=${OPERATOR_VERSION} --set image.pullPolicy=Never --set image.bankVaultsTag=${BANK_VAULTS_VERSION}
+    helm upgrade --install vault-operator ./deploy/charts/vault-operator --wait --set image.tag=${OPERATOR_VERSION} --set image.pullPolicy=Never --set image.bankVaultsTag=${BANK_VAULTS_VERSION}
 
-    kubectl apply -f deploy/rbac.yaml
-    envtpl deploy/multi-dc/test/cr-"${INSTANCE}".yaml | kubectl apply -f -
+    kubectl apply -f deploy/default/rbac.yaml
+    envtpl deploy/dev/multi-dc/test/cr-"${INSTANCE}".yaml | kubectl apply -f -
 
     echo "Waiting for for ${INSTANCE} vault instance..."
     waitfor kubectl get pod/vault-"${INSTANCE}"-0

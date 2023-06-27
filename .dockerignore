@@ -6,8 +6,5 @@
 /deploy/
 /Dockerfile
 /e2e/
-
-/charts/
-/examples/
-/scripts/
+/hack/
 /test/

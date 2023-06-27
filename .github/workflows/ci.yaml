@@ -218,9 +218,9 @@ jobs:
           name: "[container-image] Docker tarball"
 
       - name: Build the Helm charts
-        run: nix develop --impure .#ci -c helm dep build ./charts/vault-operator
+        run: nix develop --impure .#ci -c helm dep build ./deploy/charts/vault-operator
 
       - name: Operator Multi-DC Raft test
-        run: nix develop --impure .#ci -c ./deploy/multi-dc/test/multi-dc-raft.sh install
+        run: nix develop --impure .#ci -c ./deploy/dev/multi-dc/test/multi-dc-raft.sh install
         env:
           OPERATOR_VERSION: ${{ needs.artifacts.outputs.container-image-tag }}

@@ -80,7 +80,7 @@ func TestMain(m *testing.M) {
 		},
 	}
 
-	chart := "../charts/vault-operator"
+	chart := "../deploy/charts/vault-operator"
 	if v := os.Getenv("HELM_CHART"); v != "" {
 		chart = v
 	}
@@ -121,7 +121,12 @@ func TestKvv2(t *testing.T) {
 	defer k8s.DeleteNamespace(t, kubectlOptions, kubectlOptions.Namespace)
 
 	// Prepare and apply resources
-	resources, err := prepareResources(kubectlOptions.Namespace, vaultVersion, "../deploy/cr-kvv2.yaml", "rbac.yaml")
+	resources, err := prepareResources(
+		kubectlOptions.Namespace,
+		vaultVersion,
+		"../deploy/default/rbac.yaml",
+		"../deploy/examples/cr-kvv2.yaml",
+	)
 	require.NoError(t, err)
 	for _, resource := range resources {
 		k8s.KubectlApplyFromString(t, kubectlOptions, string(resource))
@@ -138,7 +143,12 @@ func TestStatsd(t *testing.T) {
 	defer k8s.DeleteNamespace(t, kubectlOptions, kubectlOptions.Namespace)
 
 	// Prepare and apply resources
-	resources, err := prepareResources(kubectlOptions.Namespace, vaultVersion, "../deploy/cr-statsd.yaml", "rbac.yaml")
+	resources, err := prepareResources(
+		kubectlOptions.Namespace,
+		vaultVersion,
+		"../deploy/default/rbac.yaml",
+		"../deploy/examples/cr-statsd.yaml",
+	)
 	require.NoError(t, err)
 	for _, resource := range resources {
 		k8s.KubectlApplyFromString(t, kubectlOptions, string(resource))
@@ -155,7 +165,12 @@ func TestExternalSecretsWatcherDeployment(t *testing.T) {
 	defer k8s.DeleteNamespace(t, kubectlOptions, kubectlOptions.Namespace)
 
 	// Prepare and apply resources
-	resources, err := prepareResources(kubectlOptions.Namespace, vaultVersion, "deploy/test-external-secrets-watch-deployment.yaml", "rbac.yaml")
+	resources, err := prepareResources(
+		kubectlOptions.Namespace,
+		vaultVersion,
+		"deploy/test-external-secrets-watch-deployment.yaml",
+		"../deploy/default/rbac.yaml",
+	)
 	require.NoError(t, err)
 	for _, resource := range resources {
 		k8s.KubectlApplyFromString(t, kubectlOptions, string(resource))
@@ -178,7 +193,12 @@ func TestExternalSecretsWatcherSecrets(t *testing.T) {
 	k8s.KubectlApply(t, kubectlOptions, "deploy/test-external-secrets-watch-secrets.yaml")
 
 	// Prepare and apply resources
-	resources, err := prepareResources(kubectlOptions.Namespace, vaultVersion, "deploy/test-external-secrets-watch-deployment.yaml", "rbac.yaml")
+	resources, err := prepareResources(
+		kubectlOptions.Namespace,
+		vaultVersion,
+		"deploy/test-external-secrets-watch-deployment.yaml",
+		"../deploy/default/rbac.yaml",
+	)
 	require.NoError(t, err)
 	for _, resource := range resources {
 		k8s.KubectlApplyFromString(t, kubectlOptions, string(resource))
@@ -202,7 +222,12 @@ func TestRaft(t *testing.T) {
 	defer k8s.DeleteNamespace(t, kubectlOptions, kubectlOptions.Namespace)
 
 	// Prepare and apply resources
-	resources, err := prepareResources(kubectlOptions.Namespace, vaultVersion, "../deploy/cr-raft.yaml", "rbac.yaml")
+	resources, err := prepareResources(
+		kubectlOptions.Namespace,
+		vaultVersion,
+		"../deploy/default/rbac.yaml",
+		"../deploy/examples/cr-raft.yaml",
+	)
 	require.NoError(t, err)
 	for _, resource := range resources {
 		k8s.KubectlApplyFromString(t, kubectlOptions, string(resource))
@@ -221,7 +246,12 @@ func TestSoftHSM(t *testing.T) {
 	defer k8s.DeleteNamespace(t, kubectlOptions, kubectlOptions.Namespace)
 
 	// Prepare and apply resources
-	resources, err := prepareResources(kubectlOptions.Namespace, vaultVersion, "../deploy/cr-hsm-softhsm.yaml", "rbac.yaml")
+	resources, err := prepareResources(
+		kubectlOptions.Namespace,
+		vaultVersion,
+		"../deploy/default/rbac.yaml",
+		"../deploy/examples/cr-hsm-softhsm.yaml",
+	)
 	require.NoError(t, err)
 	for _, resource := range resources {
 		k8s.KubectlApplyFromString(t, kubectlOptions, string(resource))
@@ -238,7 +268,12 @@ func TestDisabledRootTokenStorage(t *testing.T) {
 	defer k8s.DeleteNamespace(t, kubectlOptions, kubectlOptions.Namespace)
 
 	// Prepare and apply resources
-	resources, err := prepareResources(kubectlOptions.Namespace, vaultVersion, "../deploy/cr-disabled-root-token-storage.yaml", "rbac.yaml")
+	resources, err := prepareResources(
+		kubectlOptions.Namespace,
+		vaultVersion,
+		"../deploy/default/rbac.yaml",
+		"../deploy/examples/cr-disabled-root-token-storage.yaml",
+	)
 	require.NoError(t, err)
 	for _, resource := range resources {
 		k8s.KubectlApplyFromString(t, kubectlOptions, string(resource))
@@ -276,9 +311,8 @@ func TestPriorityClass(t *testing.T) {
 	resources, err := prepareResources(
 		kubectlOptions.Namespace,
 		vaultVersion,
-		"../deploy/priorityclass.yaml",
-		"../deploy/cr-priority.yaml",
-		"rbac.yaml",
+		"../deploy/default/rbac.yaml",
+		"../deploy/examples/cr-priority.yaml",
 	)
 	require.NoError(t, err)
 	for _, resource := range resources {
@@ -308,7 +342,12 @@ func TestOIDC(t *testing.T) {
 	kubectlOptions := k8s.NewKubectlOptions("", "", "default")
 
 	// Prepare and apply resources
-	resources, err := prepareResources(kubectlOptions.Namespace, vaultVersion, "../deploy/cr-oidc.yaml", "rbac.yaml")
+	resources, err := prepareResources(
+		kubectlOptions.Namespace,
+		vaultVersion,
+		"../deploy/default/rbac.yaml",
+		"../deploy/examples/cr-oidc.yaml",
+	)
 	require.NoError(t, err)
 	for _, resource := range resources {
 		k8s.KubectlApplyFromString(t, kubectlOptions, string(resource))
@@ -326,7 +365,7 @@ func TestOIDC(t *testing.T) {
 	waitUntilPodSucceeded(t, kubectlOptions, "oidc", 60, 10*time.Second)
 
 	// Clean up
-	k8s.KubectlDelete(t, kubectlOptions, "../deploy/cr-oidc.yaml")
+	k8s.KubectlDelete(t, kubectlOptions, "../deploy/examples/cr-oidc.yaml")
 	k8s.RunKubectl(t, kubectlOptions, "delete", "secret", "vault-unseal-keys")
 	k8s.KubectlDelete(t, kubectlOptions, oidcPodFilePath)
 }

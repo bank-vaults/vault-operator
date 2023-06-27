@@ -33,14 +33,14 @@ build: ## Build binary
 
 .PHONY: run
 run: ## Run the operator locally talking to a Kubernetes cluster
-	kubectl replace -f deploy/crd.yaml || kubectl create -f deploy/crd.yaml
-	kubectl apply -f deploy/rbac.yaml
+	kubectl replace -f deploy/default/crd.yaml || kubectl create -f deploy/default/crd.yaml
+	kubectl apply -f deploy/default/rbac.yaml
 	OPERATOR_NAME=vault-dev go run cmd/manager/main.go -verbose
 
 .PHONY: clean
 clean: ## Clean operator resources from a Kubernetes cluster
-	kubectl delete -f deploy/crd.yaml
-	kubectl delete -f deploy/rbac.yaml
+	kubectl delete -f deploy/default/crd.yaml
+	kubectl delete -f deploy/default/rbac.yaml
 
 .PHONY: artifacts
 artifacts: container-image helm-chart
@@ -53,7 +53,7 @@ container-image: ## Build container image
 .PHONY: helm-chart
 helm-chart: ## Build Helm chart
 	@mkdir -p build
-	helm package -d build/ charts/vault-operator
+	helm package -d build/ deploy/charts/vault-operator
 
 .PHONY: check
 check: test lint ## Run checks (tests and linters)
@@ -76,7 +76,7 @@ lint-go:
 
 .PHONY: lint-helm
 lint-helm:
-	helm lint charts/vault-operator
+	helm lint deploy/charts/vault-operator
 
 .PHONY: lint-docker
 lint-docker:
@@ -101,18 +101,18 @@ generate: ## Run generation jobs
 
 .PHONY: generate-code
 generate-code: ## Regenerate clientset, deepcopy funcs, listers and informers
-	./scripts/update-codegen.sh v${CODE_GENERATOR_VERSION}
+	./hack/scripts/update-codegen.sh v${CODE_GENERATOR_VERSION}
 
 .PHONY: generate-crds
 generate-crds: ## Regenerate CRDs in the Helm chart and examples
-	controller-gen crd:maxDescLen=0 paths=./pkg/... output:crd:artifacts:config=./deploy/
-	cp deploy/vault.banzaicloud.com_vaults.yaml charts/vault-operator/crds/crd.yaml
-	cp deploy/vault.banzaicloud.com_vaults.yaml deploy/crd.yaml
-	rm deploy/vault.banzaicloud.com_vaults.yaml
+	controller-gen crd:maxDescLen=0 paths=./pkg/... output:crd:artifacts:config=./deploy/default
+	cp deploy/default/vault.banzaicloud.com_vaults.yaml deploy/charts/vault-operator/crds/crd.yaml
+	cp deploy/default/vault.banzaicloud.com_vaults.yaml deploy/default/crd.yaml
+	rm deploy/default/vault.banzaicloud.com_vaults.yaml
 
 .PHONY: generate-helm-docs
 generate-helm-docs:
-	helm-docs -s file -c charts/ -t README.md.gotmpl
+	helm-docs -s file -c deploy/charts/ -t README.md.gotmpl
 
 deps: bin/golangci-lint bin/licensei bin/kind bin/kurun bin/controller-gen bin/helm-docs
 deps: ## Install dependencies
