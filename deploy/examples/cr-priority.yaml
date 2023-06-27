@@ -200,3 +200,12 @@ spec:
 #   persistentVolumeReclaimPolicy: Recycle
 #   hostPath:
 #     path: /vault/file
+
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: high-priority
+value: 1000000
+globalDefault: false
+description: "test priority class"

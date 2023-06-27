@@ -33,14 +33,14 @@ build: ## Build binary
 
 .PHONY: run
 run: ## Run the operator locally talking to a Kubernetes cluster
-	kubectl replace -f deploy/crd/crd.yaml || kubectl create -f deploy/crd/crd.yaml
-	kubectl apply -f deploy/crd/rbac.yaml
+	kubectl replace -f deploy/examples/base/crd.yaml || kubectl create -f deploy/examples/base/crd.yaml
+	kubectl apply -f deploy/examples/base/rbac.yaml
 	OPERATOR_NAME=vault-dev go run cmd/manager/main.go -verbose
 
 .PHONY: clean
 clean: ## Clean operator resources from a Kubernetes cluster
-	kubectl delete -f deploy/crd/crd.yaml
-	kubectl delete -f deploy/crd/rbac.yaml
+	kubectl delete -f deploy/examples/base/crd.yaml
+	kubectl delete -f deploy/examples/base/rbac.yaml
 
 .PHONY: artifacts
 artifacts: container-image helm-chart
@@ -105,10 +105,10 @@ generate-code: ## Regenerate clientset, deepcopy funcs, listers and informers
 
 .PHONY: generate-crds
 generate-crds: ## Regenerate CRDs in the Helm chart and examples
-	controller-gen crd:maxDescLen=0 paths=./pkg/... output:crd:artifacts:config=./deploy/crd
-	cp deploy/crd/vault.banzaicloud.com_vaults.yaml deploy/charts/vault-operator/crds/crd.yaml
-	cp deploy/crd/vault.banzaicloud.com_vaults.yaml deploy/crd/crd.yaml
-	rm deploy/crd/vault.banzaicloud.com_vaults.yaml
+	controller-gen crd:maxDescLen=0 paths=./pkg/... output:crd:artifacts:config=./deploy/examples/base
+	cp deploy/examples/base/vault.banzaicloud.com_vaults.yaml deploy/charts/vault-operator/crds/crd.yaml
+	cp deploy/examples/base/vault.banzaicloud.com_vaults.yaml deploy/examples/base/crd.yaml
+	rm deploy/examples/base/vault.banzaicloud.com_vaults.yaml
 
 .PHONY: generate-helm-docs
 generate-helm-docs:

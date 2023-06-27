@@ -3,14 +3,9 @@
 /.github/
 /bin/
 /build/
-/Dockerfile
-
 /e2e/
 /test/
+/hack/
+/deploy/
 
-/hack/scripts/
-
-/deploy/crd/
-/deploy/charts/
-/deploy/examples/
-/deploy/multi-dc/
+/Dockerfile
