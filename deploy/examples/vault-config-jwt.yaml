@@ -4,7 +4,7 @@ metadata:
   labels:
     app.kubernetes.io/name: vault-configurator
     vault_cr: vault
-  name: jwt-full-example
+  name: config-jwt-example
 data:
   vault-config.yml: |
     auth:
