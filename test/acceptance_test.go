@@ -124,7 +124,7 @@ func TestKvv2(t *testing.T) {
 	resources, err := prepareResources(
 		kubectlOptions.Namespace,
 		vaultVersion,
-		"../deploy/examples/default/rbac.yaml",
+		"../deploy/default/rbac.yaml",
 		"../deploy/examples/cr-kvv2.yaml",
 	)
 	require.NoError(t, err)
@@ -146,7 +146,7 @@ func TestStatsd(t *testing.T) {
 	resources, err := prepareResources(
 		kubectlOptions.Namespace,
 		vaultVersion,
-		"../deploy/examples/default/rbac.yaml",
+		"../deploy/default/rbac.yaml",
 		"../deploy/examples/cr-statsd.yaml",
 	)
 	require.NoError(t, err)
@@ -169,7 +169,7 @@ func TestExternalSecretsWatcherDeployment(t *testing.T) {
 		kubectlOptions.Namespace,
 		vaultVersion,
 		"deploy/test-external-secrets-watch-deployment.yaml",
-		"../deploy/examples/default/rbac.yaml",
+		"../deploy/default/rbac.yaml",
 	)
 	require.NoError(t, err)
 	for _, resource := range resources {
@@ -197,7 +197,7 @@ func TestExternalSecretsWatcherSecrets(t *testing.T) {
 		kubectlOptions.Namespace,
 		vaultVersion,
 		"deploy/test-external-secrets-watch-deployment.yaml",
-		"../deploy/examples/default/rbac.yaml",
+		"../deploy/default/rbac.yaml",
 	)
 	require.NoError(t, err)
 	for _, resource := range resources {
@@ -225,7 +225,7 @@ func TestRaft(t *testing.T) {
 	resources, err := prepareResources(
 		kubectlOptions.Namespace,
 		vaultVersion,
-		"../deploy/examples/default/rbac.yaml",
+		"../deploy/default/rbac.yaml",
 		"../deploy/examples/cr-raft.yaml",
 	)
 	require.NoError(t, err)
@@ -249,7 +249,7 @@ func TestSoftHSM(t *testing.T) {
 	resources, err := prepareResources(
 		kubectlOptions.Namespace,
 		vaultVersion,
-		"../deploy/examples/default/rbac.yaml",
+		"../deploy/default/rbac.yaml",
 		"../deploy/examples/cr-hsm-softhsm.yaml",
 	)
 	require.NoError(t, err)
@@ -271,7 +271,7 @@ func TestDisabledRootTokenStorage(t *testing.T) {
 	resources, err := prepareResources(
 		kubectlOptions.Namespace,
 		vaultVersion,
-		"../deploy/examples/default/rbac.yaml",
+		"../deploy/default/rbac.yaml",
 		"../deploy/examples/cr-disabled-root-token-storage.yaml",
 	)
 	require.NoError(t, err)
@@ -311,7 +311,7 @@ func TestPriorityClass(t *testing.T) {
 	resources, err := prepareResources(
 		kubectlOptions.Namespace,
 		vaultVersion,
-		"../deploy/examples/default/rbac.yaml",
+		"../deploy/default/rbac.yaml",
 		"../deploy/examples/cr-priority.yaml",
 	)
 	require.NoError(t, err)
@@ -345,7 +345,7 @@ func TestOIDC(t *testing.T) {
 	resources, err := prepareResources(
 		kubectlOptions.Namespace,
 		vaultVersion,
-		"../deploy/examples/default/rbac.yaml",
+		"../deploy/default/rbac.yaml",
 		"../deploy/examples/cr-oidc.yaml",
 	)
 	require.NoError(t, err)
