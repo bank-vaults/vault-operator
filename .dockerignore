@@ -3,9 +3,8 @@
 /.github/
 /bin/
 /build/
-/e2e/
-/test/
-/hack/
 /deploy/
-
 /Dockerfile
+/e2e/
+/hack/
+/test/
