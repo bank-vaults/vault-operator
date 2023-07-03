@@ -17,8 +17,8 @@
 package vault
 
 import (
-	internalinterfaces "github.com/bank-vaults/vault-operator/pkg/client/informers/externalversions/internalinterfaces"
-	v1alpha1 "github.com/bank-vaults/vault-operator/pkg/client/informers/externalversions/vault/v1alpha1"
+	internalinterfaces "github.com/bank-vaults/vault-operator/v2/pkg/client/informers/externalversions/internalinterfaces"
+	v1alpha1 "github.com/bank-vaults/vault-operator/v2/pkg/client/informers/externalversions/vault/v1alpha1"
 )
 
 // Interface provides access to each of this group's versions.

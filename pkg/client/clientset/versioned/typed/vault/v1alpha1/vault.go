@@ -20,8 +20,8 @@ import (
 	"context"
 	"time"
 
-	v1alpha1 "github.com/bank-vaults/vault-operator/pkg/apis/vault/v1alpha1"
-	scheme "github.com/bank-vaults/vault-operator/pkg/client/clientset/versioned/scheme"
+	v1alpha1 "github.com/bank-vaults/vault-operator/v2/pkg/apis/vault/v1alpha1"
+	scheme "github.com/bank-vaults/vault-operator/v2/pkg/client/clientset/versioned/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"

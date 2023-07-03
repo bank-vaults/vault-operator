@@ -21,9 +21,9 @@ import (
 	sync "sync"
 	time "time"
 
-	versioned "github.com/bank-vaults/vault-operator/pkg/client/clientset/versioned"
-	internalinterfaces "github.com/bank-vaults/vault-operator/pkg/client/informers/externalversions/internalinterfaces"
-	vault "github.com/bank-vaults/vault-operator/pkg/client/informers/externalversions/vault"
+	versioned "github.com/bank-vaults/vault-operator/v2/pkg/client/clientset/versioned"
+	internalinterfaces "github.com/bank-vaults/vault-operator/v2/pkg/client/informers/externalversions/internalinterfaces"
+	vault "github.com/bank-vaults/vault-operator/v2/pkg/client/informers/externalversions/vault"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"

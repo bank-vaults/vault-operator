@@ -17,8 +17,8 @@
 package v1alpha1
 
 import (
-	v1alpha1 "github.com/bank-vaults/vault-operator/pkg/apis/vault/v1alpha1"
-	"github.com/bank-vaults/vault-operator/pkg/client/clientset/versioned/scheme"
+	v1alpha1 "github.com/bank-vaults/vault-operator/v2/pkg/apis/vault/v1alpha1"
+	"github.com/bank-vaults/vault-operator/v2/pkg/client/clientset/versioned/scheme"
 	rest "k8s.io/client-go/rest"
 )
 

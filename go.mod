@@ -1,4 +1,4 @@
-module github.com/bank-vaults/vault-operator
+module github.com/bank-vaults/vault-operator/v2
 
 go 1.20
 

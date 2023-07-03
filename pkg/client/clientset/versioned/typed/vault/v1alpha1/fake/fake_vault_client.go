@@ -17,7 +17,7 @@
 package fake
 
 import (
-	v1alpha1 "github.com/bank-vaults/vault-operator/pkg/client/clientset/versioned/typed/vault/v1alpha1"
+	v1alpha1 "github.com/bank-vaults/vault-operator/v2/pkg/client/clientset/versioned/typed/vault/v1alpha1"
 	rest "k8s.io/client-go/rest"
 	testing "k8s.io/client-go/testing"
 )

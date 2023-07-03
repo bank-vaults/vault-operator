@@ -29,8 +29,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	"github.com/bank-vaults/vault-operator/pkg/apis"
-	"github.com/bank-vaults/vault-operator/pkg/controller"
+	"github.com/bank-vaults/vault-operator/v2/pkg/apis"
+	"github.com/bank-vaults/vault-operator/v2/pkg/controller"
 )
 
 var log = ctrl.Log.WithName("cmd")

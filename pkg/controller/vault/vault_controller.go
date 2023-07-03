@@ -30,7 +30,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	vaultv1alpha1 "github.com/bank-vaults/vault-operator/pkg/apis/vault/v1alpha1"
+	vaultv1alpha1 "github.com/bank-vaults/vault-operator/v2/pkg/apis/vault/v1alpha1"
 	bvtls "github.com/bank-vaults/vault-sdk/tls"
 	"github.com/bank-vaults/vault-sdk/vault"
 	"github.com/cisco-open/k8s-objectmatcher/patch"

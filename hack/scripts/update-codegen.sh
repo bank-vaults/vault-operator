@@ -28,7 +28,7 @@ CODEGEN_DIR=$(mktemp -d)
 
 VERSION=$1
 
-git clone git@github.com:kubernetes/code-generator.git ${CODEGEN_DIR}
+git clone https://github.com/kubernetes/code-generator.git ${CODEGEN_DIR}
 cd ${CODEGEN_DIR} && git checkout $VERSION && cd -
 
 # generate the code with:
@@ -36,6 +36,7 @@ cd ${CODEGEN_DIR} && git checkout $VERSION && cd -
 #                  k8s.io/kubernetes. The output-base is needed for the generators to output into the vendor dir
 #                  instead of the $GOPATH directly. For normal projects this can be dropped.
 ${CODEGEN_DIR}/generate-groups.sh all \
-  github.com/banzaicloud/bank-vaults/vault-operator/pkg/client github.com/banzaicloud/bank-vaults/vault-operator/pkg/apis \
-  vault:v1alpha1 \
+  github.com/bank-vaults/vault-operator/v2/pkg/client \
+  github.com/bank-vaults/vault-operator/v2/pkg/apis \
+  vault:v1alpha2 \
   --go-header-file ./hack/scripts/custom-boilerplate.go.txt
