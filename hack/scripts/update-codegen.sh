@@ -40,3 +40,10 @@ ${CODEGEN_DIR}/generate-groups.sh all \
   github.com/bank-vaults/vault-operator/v2/pkg/apis \
   "vault:v1alpha1,v1alpha2" \
   --go-header-file ./hack/scripts/custom-boilerplate.go.txt
+
+${CODEGEN_DIR}/generate-internal-groups.sh "defaulter" \
+  github.com/bank-vaults/vault-operator/v2/pkg/client \
+  github.com/bank-vaults/vault-operator/v2/pkg/apis \
+  "" \
+  "vault:v1alpha1,v1alpha2" \
+  --go-header-file ./hack/scripts/custom-boilerplate.go.txt

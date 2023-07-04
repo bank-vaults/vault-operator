@@ -48,7 +48,6 @@ func init() {
 // +genclient
 // +genclient:noStatus
 // +k8s:openapi-gen=true
-// +k8s:defaulter-gen=TypeMeta
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // Vault is the Schema for the vaults API

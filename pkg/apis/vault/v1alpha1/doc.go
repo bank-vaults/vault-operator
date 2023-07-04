@@ -13,6 +13,7 @@
 // limitations under the License.
 
 // +k8s:deepcopy-gen=package,register
+// +k8s:defaulter-gen=TypeMeta
 // +groupName=vault.banzaicloud.com
 
 // Package v1alpha1 contains API Schema definitions for the vault v1alpha1 API group

@@ -13,6 +13,8 @@
 // limitations under the License.
 
 // +k8s:deepcopy-gen=package,register
+// +k8s:defaulter-gen=TypeMeta
+// +k8s:conversion-gen-external-types=github.com/bank-vaults/vault-operator/pkg/apis
 // +groupName=vault.banzaicloud.com
 
 // Package v1alpha2 contains API Schema definitions for the vault v1alpha1 API group
