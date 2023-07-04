@@ -16,8 +16,10 @@ package main
 
 import (
 	"flag"
+	"github.com/bank-vaults/vault-operator/v2/pkg/webhook/admission"
 	"net"
 	"os"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"time"
 
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -80,6 +82,17 @@ func main() {
 		leaderElectionNamespace = "default"
 	}
 
+	// Get webhook data
+	var webhookPort int
+	var webhookCertDir, webhookCertName, webhookCertKey string
+	if os.Getenv("WEBHOOK_TLS") == "true" {
+		webhookPort = 8443
+		webhookCertDir = "/etc/admission-webhook/tls"
+		webhookCertName, webhookCertKey = "tls.crt", "tls.key"
+	} else {
+		webhookPort = webhook.DefaultPort
+	}
+
 	// Create a new Cmd to provide shared dependencies and start components
 	mgr, err := manager.New(k8sConfig, manager.Options{
 		Cache: cache.Options{
@@ -93,6 +106,13 @@ func main() {
 		LivenessEndpointName:    "/",      // For Chart backwards compatibility
 		ReadinessEndpointName:   "/ready", // For Chart backwards compatibility
 		MetricsBindAddress:      metricsBindAddress,
+		WebhookServer: webhook.NewServer(webhook.Options{
+			Port:       webhookPort,
+			CertDir:    webhookCertDir,
+			CertName:   webhookCertName,
+			KeyName:    webhookCertKey,
+			WebhookMux: admission.NewHandler(),
+		}),
 	})
 	if err != nil {
 		log.Error(err, "Unable to create manager as defined")
