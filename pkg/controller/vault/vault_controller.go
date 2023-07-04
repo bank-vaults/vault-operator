@@ -30,7 +30,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	vaultv1alpha1 "github.com/bank-vaults/vault-operator/v2/pkg/apis/vault/v1alpha1"
+	vaultv1alpha2 "github.com/bank-vaults/vault-operator/v2/pkg/apis/vault/v1alpha2"
 	bvtls "github.com/bank-vaults/vault-sdk/tls"
 	"github.com/bank-vaults/vault-sdk/vault"
 	"github.com/cisco-open/k8s-objectmatcher/patch"
@@ -96,7 +96,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch for changes to primary resource Vault
-	err = c.Watch(source.Kind(mgr.GetCache(), &vaultv1alpha1.Vault{}), &handler.EnqueueRequestForObject{})
+	err = c.Watch(source.Kind(mgr.GetCache(), &vaultv1alpha2.Vault{}), &handler.EnqueueRequestForObject{})
 	if err != nil {
 		return err
 	}
@@ -234,7 +234,7 @@ func (r *ReconcileVault) Reconcile(ctx context.Context, request reconcile.Reques
 	reqLogger.Info("Reconciling Vault")
 
 	// Fetch the Vault instance
-	v := &vaultv1alpha1.Vault{}
+	v := &vaultv1alpha2.Vault{}
 	err := r.client.Get(ctx, request.NamespacedName, v)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -524,7 +524,7 @@ func (r *ReconcileVault) Reconcile(ctx context.Context, request reconcile.Reques
 
 	// Fetch the Vault instance again to minimize the possibility of updating a stale object
 	// see https://github.com/bank-vaults/vault-operator/issues/364
-	v = &vaultv1alpha1.Vault{}
+	v = &vaultv1alpha2.Vault{}
 	err = r.client.Get(ctx, request.NamespacedName, v)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -572,7 +572,7 @@ func newHTTPClient() *http.Client {
 	}
 }
 
-func secretForRawVaultConfig(v *vaultv1alpha1.Vault) (*corev1.Secret, string, error) {
+func secretForRawVaultConfig(v *vaultv1alpha2.Vault) (*corev1.Secret, string, error) {
 	configJSON, err := v.ConfigJSON()
 	if err != nil {
 		return nil, "", err
@@ -589,7 +589,7 @@ func secretForRawVaultConfig(v *vaultv1alpha1.Vault) (*corev1.Secret, string, er
 	return &secret, fmt.Sprintf("%x", sha256.Sum256(configJSON)), nil
 }
 
-func serviceForVault(v *vaultv1alpha1.Vault) *corev1.Service {
+func serviceForVault(v *vaultv1alpha2.Vault) *corev1.Service {
 	ls := v.LabelsForVault()
 	// label to differentiate per-instance service and global service via label selection
 	ls["global_service"] = "true"
@@ -633,7 +633,7 @@ func serviceForVault(v *vaultv1alpha1.Vault) *corev1.Service {
 	return service
 }
 
-func serviceMonitorForVault(v *vaultv1alpha1.Vault) *monitorv1.ServiceMonitor {
+func serviceMonitorForVault(v *vaultv1alpha2.Vault) *monitorv1.ServiceMonitor {
 	ls := v.LabelsForVault()
 	serviceMonitor := &monitorv1.ServiceMonitor{
 		ObjectMeta: metav1.ObjectMeta{
@@ -687,7 +687,7 @@ func serviceMonitorForVault(v *vaultv1alpha1.Vault) *monitorv1.ServiceMonitor {
 	return serviceMonitor
 }
 
-func getServicePorts(v *vaultv1alpha1.Vault) ([]corev1.ServicePort, []corev1.ContainerPort) {
+func getServicePorts(v *vaultv1alpha2.Vault) ([]corev1.ServicePort, []corev1.ContainerPort) {
 	var servicePorts []corev1.ServicePort
 	var containerPorts []corev1.ContainerPort
 
@@ -737,7 +737,7 @@ func perInstanceVaultServiceName(svc string, i int) string {
 	return fmt.Sprintf("%s-%d", svc, i)
 }
 
-func perInstanceServicesForVault(v *vaultv1alpha1.Vault) []*corev1.Service {
+func perInstanceServicesForVault(v *vaultv1alpha2.Vault) []*corev1.Service {
 	var services []*corev1.Service
 	servicePorts, _ := getServicePorts(v)
 	servicePorts = append(servicePorts, corev1.ServicePort{Name: "metrics", Port: 9091})
@@ -769,7 +769,7 @@ func perInstanceServicesForVault(v *vaultv1alpha1.Vault) []*corev1.Service {
 	return services
 }
 
-func serviceForVaultConfigurer(v *vaultv1alpha1.Vault) *corev1.Service {
+func serviceForVaultConfigurer(v *vaultv1alpha2.Vault) *corev1.Service {
 	var servicePorts []corev1.ServicePort
 
 	ls := v.LabelsForVaultConfigurer()
@@ -793,7 +793,7 @@ func serviceForVaultConfigurer(v *vaultv1alpha1.Vault) *corev1.Service {
 	return service
 }
 
-func ingressForVault(v *vaultv1alpha1.Vault) *netv1.Ingress {
+func ingressForVault(v *vaultv1alpha2.Vault) *netv1.Ingress {
 	if ingress := v.GetIngress(); ingress != nil {
 		return &netv1.Ingress{
 			ObjectMeta: metav1.ObjectMeta{
@@ -808,7 +808,7 @@ func ingressForVault(v *vaultv1alpha1.Vault) *netv1.Ingress {
 	return nil
 }
 
-func serviceType(v *vaultv1alpha1.Vault) corev1.ServiceType {
+func serviceType(v *vaultv1alpha2.Vault) corev1.ServiceType {
 	switch v.Spec.ServiceType {
 	case string(corev1.ServiceTypeClusterIP):
 		return corev1.ServiceTypeClusterIP
@@ -823,7 +823,7 @@ func serviceType(v *vaultv1alpha1.Vault) corev1.ServiceType {
 	}
 }
 
-func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMapList, secrets corev1.SecretList, tlsAnnotations map[string]string) (*appsv1.Deployment, error) {
+func deploymentForConfigurer(v *vaultv1alpha2.Vault, configmaps corev1.ConfigMapList, secrets corev1.SecretList, tlsAnnotations map[string]string) (*appsv1.Deployment, error) {
 	ls := v.LabelsForVaultConfigurer()
 
 	volumes := []corev1.Volume{}
@@ -962,7 +962,7 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 	return dep, nil
 }
 
-func deprecatedConfigMapForConfigurer(v *vaultv1alpha1.Vault) *corev1.ConfigMap {
+func deprecatedConfigMapForConfigurer(v *vaultv1alpha2.Vault) *corev1.ConfigMap {
 	ls := v.LabelsForVaultConfigurer()
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -975,7 +975,7 @@ func deprecatedConfigMapForConfigurer(v *vaultv1alpha1.Vault) *corev1.ConfigMap 
 
 const defaultConfigFile = "vault-config.yml"
 
-func secretForConfigurer(v *vaultv1alpha1.Vault) *corev1.Secret {
+func secretForConfigurer(v *vaultv1alpha2.Vault) *corev1.Secret {
 	ls := v.LabelsForVaultConfigurer()
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -995,7 +995,7 @@ func hostsForService(svc, namespace string) []string {
 	}
 }
 
-func hostsAndIPsForVault(v *vaultv1alpha1.Vault, service *corev1.Service) []string {
+func hostsAndIPsForVault(v *vaultv1alpha2.Vault, service *corev1.Service) []string {
 	hostsAndIPs := []string{"127.0.0.1"}
 
 	hostsAndIPs = append(hostsAndIPs, hostsForService(v.Name, v.Namespace)...)
@@ -1040,7 +1040,7 @@ func loadBalancerIngressPoints(service *corev1.Service) []string {
 }
 
 // populateTLSSecret will populate a secret containing a TLS chain
-func populateTLSSecret(v *vaultv1alpha1.Vault, service *corev1.Service, secret *corev1.Secret) (time.Time, error) {
+func populateTLSSecret(v *vaultv1alpha2.Vault, service *corev1.Service, secret *corev1.Secret) (time.Time, error) {
 	hostsAndIPs := hostsAndIPsForVault(v, service)
 
 	certMgr, err := bvtls.NewCertificateManager(strings.Join(hostsAndIPs, ","), "8760h")
@@ -1100,7 +1100,7 @@ func populateTLSSecret(v *vaultv1alpha1.Vault, service *corev1.Service, secret *
 }
 
 // statefulSetForVault returns a Vault StatefulSet object
-func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []corev1.Secret, restartAnnotations map[string]string, service *corev1.Service) (*appsv1.StatefulSet, error) {
+func statefulSetForVault(v *vaultv1alpha2.Vault, externalSecretsToWatchItems []corev1.Secret, restartAnnotations map[string]string, service *corev1.Service) (*appsv1.StatefulSet, error) {
 	ls := v.LabelsForVault()
 	replicas := v.Spec.Size
 
@@ -1367,7 +1367,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 
 // Annotations Functions
 
-func getCommonAnnotations(v *vaultv1alpha1.Vault, annotations map[string]string) map[string]string {
+func getCommonAnnotations(v *vaultv1alpha2.Vault, annotations map[string]string) map[string]string {
 	for key, value := range v.Spec.GetAnnotations() {
 		annotations[key] = value
 	}
@@ -1387,7 +1387,7 @@ func withPrometheusAnnotations(prometheusPort string, annotations map[string]str
 	return annotations
 }
 
-func withVaultAnnotations(v *vaultv1alpha1.Vault, annotations map[string]string) map[string]string {
+func withVaultAnnotations(v *vaultv1alpha2.Vault, annotations map[string]string) map[string]string {
 	for key, value := range v.Spec.GetVaultAnnotations() {
 		annotations[key] = value
 	}
@@ -1395,7 +1395,7 @@ func withVaultAnnotations(v *vaultv1alpha1.Vault, annotations map[string]string)
 	return annotations
 }
 
-func withVeleroAnnotations(v *vaultv1alpha1.Vault, annotations map[string]string) map[string]string {
+func withVeleroAnnotations(v *vaultv1alpha2.Vault, annotations map[string]string) map[string]string {
 	if v.Spec.VeleroEnabled {
 		veleroAnnotations := map[string]string{
 			"pre.hook.backup.velero.io/container":  "velero-fsfreeze",
@@ -1412,7 +1412,7 @@ func withVeleroAnnotations(v *vaultv1alpha1.Vault, annotations map[string]string
 	return annotations
 }
 
-func withVaultConfigurerAnnotations(v *vaultv1alpha1.Vault, annotations map[string]string) map[string]string {
+func withVaultConfigurerAnnotations(v *vaultv1alpha2.Vault, annotations map[string]string) map[string]string {
 	for key, value := range v.Spec.GetVaultConfigurerAnnotations() {
 		annotations[key] = value
 	}
@@ -1420,7 +1420,7 @@ func withVaultConfigurerAnnotations(v *vaultv1alpha1.Vault, annotations map[stri
 	return annotations
 }
 
-func withVaultWatchedExternalSecrets(v *vaultv1alpha1.Vault, secrets []corev1.Secret, annotations map[string]string) map[string]string {
+func withVaultWatchedExternalSecrets(_ *vaultv1alpha2.Vault, secrets []corev1.Secret, annotations map[string]string) map[string]string {
 	if len(secrets) == 0 {
 		// No Labels Selector was defined in the spec , return the annotations without changes
 		return annotations
@@ -1454,7 +1454,7 @@ func withRestartAnnotations(restartAnnotations, annotations map[string]string) m
 }
 
 // TLS Functions
-func withTLSEnv(v *vaultv1alpha1.Vault, localhost bool, envs []corev1.EnvVar) []corev1.EnvVar {
+func withTLSEnv(v *vaultv1alpha2.Vault, localhost bool, envs []corev1.EnvVar) []corev1.EnvVar {
 	host := fmt.Sprintf("%s.%s", v.Name, v.Namespace)
 	if localhost {
 		host = "127.0.0.1"
@@ -1479,7 +1479,7 @@ func withTLSEnv(v *vaultv1alpha1.Vault, localhost bool, envs []corev1.EnvVar) []
 	return envs
 }
 
-func withTLSVolume(v *vaultv1alpha1.Vault, volumes []corev1.Volume) []corev1.Volume {
+func withTLSVolume(v *vaultv1alpha2.Vault, volumes []corev1.Volume) []corev1.Volume {
 	if !v.Spec.IsTLSDisabled() {
 		if v.Spec.ExistingTLSSecretName != "" {
 			volumes = append(volumes, corev1.Volume{
@@ -1518,7 +1518,7 @@ func withTLSVolume(v *vaultv1alpha1.Vault, volumes []corev1.Volume) []corev1.Vol
 	return volumes
 }
 
-func withTLSVolumeMount(v *vaultv1alpha1.Vault, volumeMounts []corev1.VolumeMount) []corev1.VolumeMount {
+func withTLSVolumeMount(v *vaultv1alpha2.Vault, volumeMounts []corev1.VolumeMount) []corev1.VolumeMount {
 	if !v.Spec.IsTLSDisabled() {
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{
 			Name:      "vault-tls",
@@ -1528,7 +1528,7 @@ func withTLSVolumeMount(v *vaultv1alpha1.Vault, volumeMounts []corev1.VolumeMoun
 	return volumeMounts
 }
 
-func configMapForStatsD(v *vaultv1alpha1.Vault) *corev1.ConfigMap {
+func configMapForStatsD(v *vaultv1alpha2.Vault) *corev1.ConfigMap {
 	ls := v.LabelsForVault()
 	statsdConfig := v.Spec.StatsdConfig
 	if statsdConfig == "" {
@@ -1550,7 +1550,7 @@ func configMapForStatsD(v *vaultv1alpha1.Vault) *corev1.ConfigMap {
 	return cm
 }
 
-func configMapForFluentD(v *vaultv1alpha1.Vault) *corev1.ConfigMap {
+func configMapForFluentD(v *vaultv1alpha2.Vault) *corev1.ConfigMap {
 	ls := v.LabelsForVault()
 	fluentdConfFile := v.Spec.FluentDConfFile
 	if fluentdConfFile == "" {
@@ -1567,7 +1567,7 @@ func configMapForFluentD(v *vaultv1alpha1.Vault) *corev1.ConfigMap {
 	return cm
 }
 
-func withCredentialsEnv(v *vaultv1alpha1.Vault, envs []corev1.EnvVar) []corev1.EnvVar {
+func withCredentialsEnv(v *vaultv1alpha2.Vault, envs []corev1.EnvVar) []corev1.EnvVar {
 	env := v.Spec.CredentialsConfig.Env
 	path := v.Spec.CredentialsConfig.Path
 	if env != "" {
@@ -1580,7 +1580,7 @@ func withCredentialsEnv(v *vaultv1alpha1.Vault, envs []corev1.EnvVar) []corev1.E
 }
 
 // withClusterAddr overrides cluster_addr with the env var in multi-cluster deployments
-func withClusterAddr(v *vaultv1alpha1.Vault, service *corev1.Service, envs []corev1.EnvVar) []corev1.EnvVar {
+func withClusterAddr(v *vaultv1alpha2.Vault, service *corev1.Service, envs []corev1.EnvVar) []corev1.EnvVar {
 	value := ""
 	ingressPoints := loadBalancerIngressPoints(service)
 
@@ -1606,7 +1606,7 @@ func withClusterAddr(v *vaultv1alpha1.Vault, service *corev1.Service, envs []cor
 	return envs
 }
 
-func withCredentialsVolume(v *vaultv1alpha1.Vault, volumes []corev1.Volume) []corev1.Volume {
+func withCredentialsVolume(v *vaultv1alpha2.Vault, volumes []corev1.Volume) []corev1.Volume {
 	secretName := v.Spec.CredentialsConfig.SecretName
 	if secretName != "" {
 		volumes = append(volumes, corev1.Volume{
@@ -1621,7 +1621,7 @@ func withCredentialsVolume(v *vaultv1alpha1.Vault, volumes []corev1.Volume) []co
 	return volumes
 }
 
-func withCredentialsVolumeMount(v *vaultv1alpha1.Vault, volumeMounts []corev1.VolumeMount) []corev1.VolumeMount {
+func withCredentialsVolumeMount(v *vaultv1alpha2.Vault, volumeMounts []corev1.VolumeMount) []corev1.VolumeMount {
 	secretName := v.Spec.CredentialsConfig.SecretName
 	path := v.Spec.CredentialsConfig.Path
 	if secretName != "" {
@@ -1635,7 +1635,7 @@ func withCredentialsVolumeMount(v *vaultv1alpha1.Vault, volumeMounts []corev1.Vo
 	return volumeMounts
 }
 
-func withStatsdVolume(v *vaultv1alpha1.Vault, volumes []corev1.Volume) []corev1.Volume {
+func withStatsdVolume(v *vaultv1alpha2.Vault, volumes []corev1.Volume) []corev1.Volume {
 	if !v.Spec.IsStatsDDisabled() {
 		volumes = append(volumes, []corev1.Volume{
 			{
@@ -1651,15 +1651,15 @@ func withStatsdVolume(v *vaultv1alpha1.Vault, volumes []corev1.Volume) []corev1.
 	return volumes
 }
 
-func withVaultInitContainers(v *vaultv1alpha1.Vault, containers []corev1.Container) []corev1.Container {
+func withVaultInitContainers(v *vaultv1alpha2.Vault, containers []corev1.Container) []corev1.Container {
 	return append(containers, v.Spec.VaultInitContainers...)
 }
 
-func withVaultContainers(v *vaultv1alpha1.Vault, containers []corev1.Container) []corev1.Container {
+func withVaultContainers(v *vaultv1alpha2.Vault, containers []corev1.Container) []corev1.Container {
 	return append(containers, v.Spec.VaultContainers...)
 }
 
-func withVeleroContainer(v *vaultv1alpha1.Vault, containers []corev1.Container) []corev1.Container {
+func withVeleroContainer(v *vaultv1alpha2.Vault, containers []corev1.Container) []corev1.Container {
 	if v.Spec.VeleroEnabled {
 		containers = append(containers, corev1.Container{
 			Image:           v.Spec.GetVeleroFsfreezeImage(),
@@ -1685,7 +1685,7 @@ func withVeleroContainer(v *vaultv1alpha1.Vault, containers []corev1.Container) 
 	return containers
 }
 
-func withStatsDContainer(v *vaultv1alpha1.Vault, containers []corev1.Container) []corev1.Container {
+func withStatsDContainer(v *vaultv1alpha2.Vault, containers []corev1.Container) []corev1.Container {
 	if !v.Spec.IsStatsDDisabled() {
 		containers = append(containers, corev1.Container{
 			Image:           v.Spec.GetStatsDImage(),
@@ -1712,7 +1712,7 @@ func withStatsDContainer(v *vaultv1alpha1.Vault, containers []corev1.Container) 
 	return containers
 }
 
-func withAuditLogVolume(v *vaultv1alpha1.Vault, volumes []corev1.Volume) []corev1.Volume {
+func withAuditLogVolume(v *vaultv1alpha2.Vault, volumes []corev1.Volume) []corev1.Volume {
 	if v.Spec.IsFluentDEnabled() {
 		volumes = append(volumes, []corev1.Volume{
 			{
@@ -1736,7 +1736,7 @@ func withAuditLogVolume(v *vaultv1alpha1.Vault, volumes []corev1.Volume) []corev
 	return volumes
 }
 
-func withAuditLogVolumeMount(v *vaultv1alpha1.Vault, volumeMounts []corev1.VolumeMount) []corev1.VolumeMount {
+func withAuditLogVolumeMount(v *vaultv1alpha2.Vault, volumeMounts []corev1.VolumeMount) []corev1.VolumeMount {
 	if v.Spec.IsFluentDEnabled() {
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{
 			Name:      "vault-auditlogs",
@@ -1746,7 +1746,7 @@ func withAuditLogVolumeMount(v *vaultv1alpha1.Vault, volumeMounts []corev1.Volum
 	return volumeMounts
 }
 
-func withAuditLogContainer(v *vaultv1alpha1.Vault, containers []corev1.Container) []corev1.Container {
+func withAuditLogContainer(v *vaultv1alpha2.Vault, containers []corev1.Container) []corev1.Container {
 	if v.Spec.IsFluentDEnabled() {
 		containers = append(containers, corev1.Container{
 			Image:           v.Spec.GetFluentDImage(),
@@ -1771,7 +1771,7 @@ func withAuditLogContainer(v *vaultv1alpha1.Vault, containers []corev1.Container
 
 // Share the PCSLite Unix Socket across the host:
 // https://salsa.debian.org/rousseau/PCSC/blob/master/src/pcscd.h.in#L50
-func withHSMVolume(v *vaultv1alpha1.Vault, volumes []corev1.Volume) []corev1.Volume {
+func withHSMVolume(v *vaultv1alpha2.Vault, volumes []corev1.Volume) []corev1.Volume {
 	if v.Spec.UnsealConfig.HSMDaemonNeeded() {
 		volumes = append(volumes, corev1.Volume{
 			Name: "hsm-pcscd",
@@ -1785,7 +1785,7 @@ func withHSMVolume(v *vaultv1alpha1.Vault, volumes []corev1.Volume) []corev1.Vol
 	return volumes
 }
 
-func withHSMVolumeMount(v *vaultv1alpha1.Vault, volumeMounts []corev1.VolumeMount) []corev1.VolumeMount {
+func withHSMVolumeMount(v *vaultv1alpha2.Vault, volumeMounts []corev1.VolumeMount) []corev1.VolumeMount {
 	if v.Spec.UnsealConfig.HSMDaemonNeeded() {
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{
 			Name:      "hsm-pcscd",
@@ -1795,8 +1795,9 @@ func withHSMVolumeMount(v *vaultv1alpha1.Vault, volumeMounts []corev1.VolumeMoun
 	return volumeMounts
 }
 
-func getPodAntiAffinity(v *vaultv1alpha1.Vault) *corev1.PodAntiAffinity {
-	if v.Spec.PodAntiAffinity == "" {
+func getPodAntiAffinity(v *vaultv1alpha2.Vault) *corev1.PodAntiAffinity {
+	podAntiAffinity := v.Spec.Affinity.PodAntiAffinity
+	if podAntiAffinity == nil || podAntiAffinity.String() == "" {
 		return nil
 	}
 
@@ -1807,27 +1808,28 @@ func getPodAntiAffinity(v *vaultv1alpha1.Vault) *corev1.PodAntiAffinity {
 				LabelSelector: &metav1.LabelSelector{
 					MatchLabels: ls,
 				},
-				TopologyKey: v.Spec.PodAntiAffinity,
+				TopologyKey: podAntiAffinity.String(),
 			},
 		},
 	}
 }
 
-func getNodeAffinity(v *vaultv1alpha1.Vault) *corev1.NodeAffinity {
-	if v.Spec.NodeAffinity.Size() == 0 {
+func getNodeAffinity(v *vaultv1alpha2.Vault) *corev1.NodeAffinity {
+	nodeAffinity := v.Spec.Affinity.NodeAffinity
+	if nodeAffinity == nil || nodeAffinity.Size() == 0 {
 		return nil
 	}
-	return &v.Spec.NodeAffinity
+	return nodeAffinity
 }
 
-func getVaultURIScheme(v *vaultv1alpha1.Vault) corev1.URIScheme {
+func getVaultURIScheme(v *vaultv1alpha2.Vault) corev1.URIScheme {
 	if v.Spec.IsTLSDisabled() {
 		return corev1.URISchemeHTTP
 	}
 	return corev1.URISchemeHTTPS
 }
 
-func withBanksVaultsVolumeMounts(v *vaultv1alpha1.Vault, volumeMounts []corev1.VolumeMount) []corev1.VolumeMount {
+func withBanksVaultsVolumeMounts(v *vaultv1alpha2.Vault, volumeMounts []corev1.VolumeMount) []corev1.VolumeMount {
 	index := map[string]corev1.VolumeMount{}
 	for _, v := range append(volumeMounts, v.Spec.BankVaultsVolumeMounts...) {
 		index[v.Name] = v
@@ -1842,7 +1844,7 @@ func withBanksVaultsVolumeMounts(v *vaultv1alpha1.Vault, volumeMounts []corev1.V
 	return volumeMounts
 }
 
-func withVaultVolumes(v *vaultv1alpha1.Vault, volumes []corev1.Volume) []corev1.Volume {
+func withVaultVolumes(v *vaultv1alpha2.Vault, volumes []corev1.Volume) []corev1.Volume {
 	index := map[string]corev1.Volume{}
 	for _, v := range append(volumes, v.Spec.Volumes...) {
 		index[v.Name] = v
@@ -1857,7 +1859,7 @@ func withVaultVolumes(v *vaultv1alpha1.Vault, volumes []corev1.Volume) []corev1.
 	return volumes
 }
 
-func withVaultVolumeMounts(v *vaultv1alpha1.Vault, volumeMounts []corev1.VolumeMount) []corev1.VolumeMount {
+func withVaultVolumeMounts(v *vaultv1alpha2.Vault, volumeMounts []corev1.VolumeMount) []corev1.VolumeMount {
 	index := map[string]corev1.VolumeMount{}
 	for _, v := range append(volumeMounts, v.Spec.VolumeMounts...) {
 		index[v.Name] = v
@@ -1872,19 +1874,19 @@ func withVaultVolumeMounts(v *vaultv1alpha1.Vault, volumeMounts []corev1.VolumeM
 	return volumeMounts
 }
 
-func withVaultEnv(v *vaultv1alpha1.Vault, envs []corev1.EnvVar) []corev1.EnvVar {
+func withVaultEnv(v *vaultv1alpha2.Vault, envs []corev1.EnvVar) []corev1.EnvVar {
 	return append(envs, v.Spec.VaultEnvsConfig...)
 }
 
-func withCommonEnv(v *vaultv1alpha1.Vault, envs []corev1.EnvVar) []corev1.EnvVar {
+func withCommonEnv(v *vaultv1alpha2.Vault, envs []corev1.EnvVar) []corev1.EnvVar {
 	return append(envs, v.Spec.EnvsConfig...)
 }
 
-func withSidecarEnv(v *vaultv1alpha1.Vault, envs []corev1.EnvVar) []corev1.EnvVar {
+func withSidecarEnv(v *vaultv1alpha2.Vault, envs []corev1.EnvVar) []corev1.EnvVar {
 	return append(envs, v.Spec.SidecarEnvsConfig...)
 }
 
-func withNamespaceEnv(v *vaultv1alpha1.Vault, envs []corev1.EnvVar) []corev1.EnvVar {
+func withNamespaceEnv(v *vaultv1alpha2.Vault, envs []corev1.EnvVar) []corev1.EnvVar {
 	return append(envs, []corev1.EnvVar{
 		{
 			Name:  "NAMESPACE",
@@ -1893,7 +1895,7 @@ func withNamespaceEnv(v *vaultv1alpha1.Vault, envs []corev1.EnvVar) []corev1.Env
 	}...)
 }
 
-func withContainerSecurityContext(v *vaultv1alpha1.Vault) *corev1.SecurityContext {
+func withContainerSecurityContext(v *vaultv1alpha2.Vault) *corev1.SecurityContext {
 	config := v.Spec.GetVaultConfig()
 	if cast.ToBool(config["disable_mlock"]) {
 		return &corev1.SecurityContext{}
@@ -1905,7 +1907,7 @@ func withContainerSecurityContext(v *vaultv1alpha1.Vault) *corev1.SecurityContex
 	}
 }
 
-func withPodSecurityContext(v *vaultv1alpha1.Vault) *corev1.PodSecurityContext {
+func withPodSecurityContext(v *vaultv1alpha2.Vault) *corev1.PodSecurityContext {
 	if v.Spec.SecurityContext.Size() == 0 {
 		vaultGID := int64(1000)
 		return &corev1.PodSecurityContext{
@@ -1917,7 +1919,7 @@ func withPodSecurityContext(v *vaultv1alpha1.Vault) *corev1.PodSecurityContext {
 
 // Extend Labels with Vault User defined ones
 // Does not change original labels object but return a new one
-func withVaultLabels(v *vaultv1alpha1.Vault, labels map[string]string) map[string]string {
+func withVaultLabels(v *vaultv1alpha2.Vault, labels map[string]string) map[string]string {
 	l := map[string]string{}
 	for key, value := range labels {
 		l[key] = value
@@ -1931,7 +1933,7 @@ func withVaultLabels(v *vaultv1alpha1.Vault, labels map[string]string) map[strin
 
 // Extend Labels with Vault Configurer User defined ones
 // Does not change original labels object but return a new one
-func withVaultConfigurerLabels(v *vaultv1alpha1.Vault, labels map[string]string) map[string]string {
+func withVaultConfigurerLabels(v *vaultv1alpha2.Vault, labels map[string]string) map[string]string {
 	l := map[string]string{}
 	for key, value := range labels {
 		l[key] = value
@@ -1964,7 +1966,7 @@ func getPodNames(pods []corev1.Pod) []string {
 }
 
 // getVaultResource return resource in spec or return pre-defined resource if not configurated
-func getVaultResource(v *vaultv1alpha1.Vault) corev1.ResourceRequirements {
+func getVaultResource(v *vaultv1alpha2.Vault) corev1.ResourceRequirements {
 	if v.Spec.Resources != nil && v.Spec.Resources.Vault != nil {
 		return *v.Spec.Resources.Vault
 	}
@@ -1982,7 +1984,7 @@ func getVaultResource(v *vaultv1alpha1.Vault) corev1.ResourceRequirements {
 }
 
 // getBankVaultsResource return resource in spec or return pre-defined resource if not configurated
-func getBankVaultsResource(v *vaultv1alpha1.Vault) corev1.ResourceRequirements {
+func getBankVaultsResource(v *vaultv1alpha2.Vault) corev1.ResourceRequirements {
 	if v.Spec.Resources != nil && v.Spec.Resources.BankVaults != nil {
 		return *v.Spec.Resources.BankVaults
 	}
@@ -2000,7 +2002,7 @@ func getBankVaultsResource(v *vaultv1alpha1.Vault) corev1.ResourceRequirements {
 }
 
 // getHSMDaemonResource return resource in spec or return pre-defined resource if not configurated
-func getHSMDaemonResource(v *vaultv1alpha1.Vault) corev1.ResourceRequirements {
+func getHSMDaemonResource(v *vaultv1alpha2.Vault) corev1.ResourceRequirements {
 	if v.Spec.Resources != nil && v.Spec.Resources.HSMDaemon != nil {
 		return *v.Spec.Resources.HSMDaemon
 	}
@@ -2018,7 +2020,7 @@ func getHSMDaemonResource(v *vaultv1alpha1.Vault) corev1.ResourceRequirements {
 }
 
 // getPrometheusExporterResource return resource in spec or return pre-defined resource if not configurated
-func getPrometheusExporterResource(v *vaultv1alpha1.Vault) corev1.ResourceRequirements {
+func getPrometheusExporterResource(v *vaultv1alpha2.Vault) corev1.ResourceRequirements {
 	if v.Spec.Resources != nil && v.Spec.Resources.PrometheusExporter != nil {
 		return *v.Spec.Resources.PrometheusExporter
 	}
@@ -2036,7 +2038,7 @@ func getPrometheusExporterResource(v *vaultv1alpha1.Vault) corev1.ResourceRequir
 }
 
 // getFluentDResource return resource in spec or return pre-defined resource if not configurated
-func getFluentDResource(v *vaultv1alpha1.Vault) corev1.ResourceRequirements {
+func getFluentDResource(v *vaultv1alpha2.Vault) corev1.ResourceRequirements {
 	if v.Spec.Resources != nil && v.Spec.Resources.FluentD != nil {
 		return *v.Spec.Resources.FluentD
 	}
@@ -2053,7 +2055,7 @@ func getFluentDResource(v *vaultv1alpha1.Vault) corev1.ResourceRequirements {
 	}
 }
 
-func (r *ReconcileVault) distributeCACertificate(ctx context.Context, v *vaultv1alpha1.Vault, caSecretKey client.ObjectKey) error {
+func (r *ReconcileVault) distributeCACertificate(ctx context.Context, v *vaultv1alpha2.Vault, caSecretKey client.ObjectKey) error {
 	// Get the current version of the TLS Secret
 	var currentSecret corev1.Secret
 	err := r.client.Get(ctx, caSecretKey, &currentSecret)
@@ -2112,12 +2114,12 @@ func (r *ReconcileVault) distributeCACertificate(ctx context.Context, v *vaultv1
 	return nil
 }
 
-func certHostsAndIPsChanged(v *vaultv1alpha1.Vault, service *corev1.Service, cert *x509.Certificate) bool {
+func certHostsAndIPsChanged(v *vaultv1alpha2.Vault, service *corev1.Service, cert *x509.Certificate) bool {
 	// TODO very weak check for now
 	return len(cert.DNSNames)+len(cert.IPAddresses) != len(hostsAndIPsForVault(v, service))
 }
 
-func (r *ReconcileVault) deployConfigurer(ctx context.Context, v *vaultv1alpha1.Vault, tlsAnnotations map[string]string) error {
+func (r *ReconcileVault) deployConfigurer(ctx context.Context, v *vaultv1alpha2.Vault, tlsAnnotations map[string]string) error {
 	// Create the default config secret if it doesn't exist
 	configSecret := secretForConfigurer(v)
 

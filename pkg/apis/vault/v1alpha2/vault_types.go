@@ -45,13 +45,9 @@ func init() {
 	}
 }
 
-// Vault is the Schema for the vaults API
-
-// +genclient
-// +genclient:noStatus
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-// +k8s:openapi-gen=true
-// +k8s:defaulter-gen=true
+
+// Vault is the Schema for the vaults API
 type Vault struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -60,9 +56,9 @@ type Vault struct {
 	Status VaultStatus `json:"status,omitempty"`
 }
 
-// VaultList contains a list of Vault
-
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// VaultList contains a list of Vault
 type VaultList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

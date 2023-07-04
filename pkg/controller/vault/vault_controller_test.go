@@ -17,14 +17,14 @@ package vault
 import (
 	"testing"
 
-	vaultv1alpha1 "github.com/bank-vaults/vault-operator/v2/pkg/apis/vault/v1alpha1"
+	vaultv1alpha2 "github.com/bank-vaults/vault-operator/v2/pkg/apis/vault/v1alpha2"
 )
 
 func TestFluentDConfFile(t *testing.T) {
 	testFilename := "test.conf"
 
-	v := &vaultv1alpha1.Vault{
-		Spec: vaultv1alpha1.VaultSpec{
+	v := &vaultv1alpha2.Vault{
+		Spec: vaultv1alpha2.VaultSpec{
 			FluentDConfFile: testFilename,
 		},
 	}
@@ -44,8 +44,8 @@ func TestFluentDConfFile(t *testing.T) {
 func TestFluentDConfFileDefault(t *testing.T) {
 	defaultFilename := "fluent.conf"
 
-	v := &vaultv1alpha1.Vault{
-		Spec: vaultv1alpha1.VaultSpec{},
+	v := &vaultv1alpha2.Vault{
+		Spec: vaultv1alpha2.VaultSpec{},
 	}
 
 	configMap := configMapForFluentD(v)
