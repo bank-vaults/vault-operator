@@ -12,12 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// +genclient
-// +genclient:noStatus
 // +k8s:deepcopy-gen=package,register
 // +groupName=vault.banzaicloud.com
-// +k8s:openapi-gen=true
-// +k8s:defaulter-gen=TypeMeta
 
 // Package v1alpha2 contains API Schema definitions for the vault v1alpha1 API group
 package v1alpha2
