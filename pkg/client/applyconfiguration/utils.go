@@ -18,9 +18,7 @@ package applyconfiguration
 
 import (
 	v1alpha1 "github.com/bank-vaults/vault-operator/v2/pkg/apis/vault/v1alpha1"
-	v1alpha2 "github.com/bank-vaults/vault-operator/v2/pkg/apis/vault/v1alpha2"
 	vaultv1alpha1 "github.com/bank-vaults/vault-operator/v2/pkg/client/applyconfiguration/vault/v1alpha1"
-	vaultv1alpha2 "github.com/bank-vaults/vault-operator/v2/pkg/client/applyconfiguration/vault/v1alpha2"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -65,44 +63,6 @@ func ForKind(kind schema.GroupVersionKind) interface{} {
 		return &vaultv1alpha1.VaultStatusApplyConfiguration{}
 	case v1alpha1.SchemeGroupVersion.WithKind("VaultUnsealConfig"):
 		return &vaultv1alpha1.VaultUnsealConfigApplyConfiguration{}
-
-		// Group=vault.banzaicloud.com, Version=v1alpha2
-	case v1alpha2.SchemeGroupVersion.WithKind("AlibabaUnsealConfig"):
-		return &vaultv1alpha2.AlibabaUnsealConfigApplyConfiguration{}
-	case v1alpha2.SchemeGroupVersion.WithKind("AWSUnsealConfig"):
-		return &vaultv1alpha2.AWSUnsealConfigApplyConfiguration{}
-	case v1alpha2.SchemeGroupVersion.WithKind("AzureUnsealConfig"):
-		return &vaultv1alpha2.AzureUnsealConfigApplyConfiguration{}
-	case v1alpha2.SchemeGroupVersion.WithKind("CredentialsConfig"):
-		return &vaultv1alpha2.CredentialsConfigApplyConfiguration{}
-	case v1alpha2.SchemeGroupVersion.WithKind("EmbeddedObjectMetadata"):
-		return &vaultv1alpha2.EmbeddedObjectMetadataApplyConfiguration{}
-	case v1alpha2.SchemeGroupVersion.WithKind("EmbeddedPersistentVolumeClaim"):
-		return &vaultv1alpha2.EmbeddedPersistentVolumeClaimApplyConfiguration{}
-	case v1alpha2.SchemeGroupVersion.WithKind("EmbeddedPodSpec"):
-		return &vaultv1alpha2.EmbeddedPodSpecApplyConfiguration{}
-	case v1alpha2.SchemeGroupVersion.WithKind("GoogleUnsealConfig"):
-		return &vaultv1alpha2.GoogleUnsealConfigApplyConfiguration{}
-	case v1alpha2.SchemeGroupVersion.WithKind("HSMUnsealConfig"):
-		return &vaultv1alpha2.HSMUnsealConfigApplyConfiguration{}
-	case v1alpha2.SchemeGroupVersion.WithKind("Ingress"):
-		return &vaultv1alpha2.IngressApplyConfiguration{}
-	case v1alpha2.SchemeGroupVersion.WithKind("KubernetesUnsealConfig"):
-		return &vaultv1alpha2.KubernetesUnsealConfigApplyConfiguration{}
-	case v1alpha2.SchemeGroupVersion.WithKind("Resources"):
-		return &vaultv1alpha2.ResourcesApplyConfiguration{}
-	case v1alpha2.SchemeGroupVersion.WithKind("UnsealConfig"):
-		return &vaultv1alpha2.UnsealConfigApplyConfiguration{}
-	case v1alpha2.SchemeGroupVersion.WithKind("UnsealOptions"):
-		return &vaultv1alpha2.UnsealOptionsApplyConfiguration{}
-	case v1alpha2.SchemeGroupVersion.WithKind("Vault"):
-		return &vaultv1alpha2.VaultApplyConfiguration{}
-	case v1alpha2.SchemeGroupVersion.WithKind("VaultSpec"):
-		return &vaultv1alpha2.VaultSpecApplyConfiguration{}
-	case v1alpha2.SchemeGroupVersion.WithKind("VaultStatus"):
-		return &vaultv1alpha2.VaultStatusApplyConfiguration{}
-	case v1alpha2.SchemeGroupVersion.WithKind("VaultUnsealConfig"):
-		return &vaultv1alpha2.VaultUnsealConfigApplyConfiguration{}
 
 	}
 	return nil
