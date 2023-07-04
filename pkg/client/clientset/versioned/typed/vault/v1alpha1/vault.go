@@ -1,4 +1,4 @@
-// Copyright © 2019 Banzai Cloud
+// Copyright © 2023 Bank-Vaults
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,9 +18,12 @@ package v1alpha1
 
 import (
 	"context"
+	json "encoding/json"
+	"fmt"
 	"time"
 
 	v1alpha1 "github.com/bank-vaults/vault-operator/v2/pkg/apis/vault/v1alpha1"
+	vaultv1alpha1 "github.com/bank-vaults/vault-operator/v2/pkg/client/applyconfiguration/vault/v1alpha1"
 	scheme "github.com/bank-vaults/vault-operator/v2/pkg/client/clientset/versioned/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -44,6 +47,7 @@ type VaultInterface interface {
 	List(ctx context.Context, opts v1.ListOptions) (*v1alpha1.VaultList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
 	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.Vault, err error)
+	Apply(ctx context.Context, vault *vaultv1alpha1.VaultApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha1.Vault, err error)
 	VaultExpansion
 }
 
@@ -169,6 +173,32 @@ func (c *vaults) Patch(ctx context.Context, name string, pt types.PatchType, dat
 		Name(name).
 		SubResource(subresources...).
 		VersionedParams(&opts, scheme.ParameterCodec).
+		Body(data).
+		Do(ctx).
+		Into(result)
+	return
+}
+
+// Apply takes the given apply declarative configuration, applies it and returns the applied vault.
+func (c *vaults) Apply(ctx context.Context, vault *vaultv1alpha1.VaultApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha1.Vault, err error) {
+	if vault == nil {
+		return nil, fmt.Errorf("vault provided to Apply must not be nil")
+	}
+	patchOpts := opts.ToPatchOptions()
+	data, err := json.Marshal(vault)
+	if err != nil {
+		return nil, err
+	}
+	name := vault.Name
+	if name == nil {
+		return nil, fmt.Errorf("vault.Name must be provided to Apply")
+	}
+	result = &v1alpha1.Vault{}
+	err = c.client.Patch(types.ApplyPatchType).
+		Namespace(c.ns).
+		Resource("vaults").
+		Name(*name).
+		VersionedParams(&patchOpts, scheme.ParameterCodec).
 		Body(data).
 		Do(ctx).
 		Into(result)

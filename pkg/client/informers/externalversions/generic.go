@@ -1,4 +1,4 @@
-// Copyright © 2019 Banzai Cloud
+// Copyright © 2023 Bank-Vaults
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	v1alpha1 "github.com/bank-vaults/vault-operator/v2/pkg/apis/vault/v1alpha1"
+	v1alpha2 "github.com/bank-vaults/vault-operator/v2/pkg/apis/vault/v1alpha2"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"
 )
@@ -53,6 +54,10 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 	// Group=vault.banzaicloud.com, Version=v1alpha1
 	case v1alpha1.SchemeGroupVersion.WithResource("vaults"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Vault().V1alpha1().Vaults().Informer()}, nil
+
+		// Group=vault.banzaicloud.com, Version=v1alpha2
+	case v1alpha2.SchemeGroupVersion.WithResource("vaults"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Vault().V1alpha2().Vaults().Informer()}, nil
 
 	}
 

@@ -18,13 +18,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/Masterminds/semver/v3"
 	"os"
 	"reflect"
 	"sort"
 	"strings"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	"github.com/imdario/mergo"
 	"github.com/spf13/cast"
 	v1 "k8s.io/api/core/v1"
@@ -46,11 +46,12 @@ func init() {
 }
 
 // Vault is the Schema for the vaults API
-//
+
 // +genclient
 // +genclient:noStatus
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +k8s:openapi-gen=true
+// +k8s:defaulter-gen=true
 type Vault struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -60,7 +61,7 @@ type Vault struct {
 }
 
 // VaultList contains a list of Vault
-//
+
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type VaultList struct {
 	metav1.TypeMeta `json:",inline"`

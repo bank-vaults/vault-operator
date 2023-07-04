@@ -1,4 +1,4 @@
-// Copyright © 2019 Banzai Cloud
+// Copyright © 2023 Bank-Vaults
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,6 +20,8 @@ import (
 	clientset "github.com/bank-vaults/vault-operator/v2/pkg/client/clientset/versioned"
 	vaultv1alpha1 "github.com/bank-vaults/vault-operator/v2/pkg/client/clientset/versioned/typed/vault/v1alpha1"
 	fakevaultv1alpha1 "github.com/bank-vaults/vault-operator/v2/pkg/client/clientset/versioned/typed/vault/v1alpha1/fake"
+	vaultv1alpha2 "github.com/bank-vaults/vault-operator/v2/pkg/client/clientset/versioned/typed/vault/v1alpha2"
+	fakevaultv1alpha2 "github.com/bank-vaults/vault-operator/v2/pkg/client/clientset/versioned/typed/vault/v1alpha2/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
@@ -72,9 +74,17 @@ func (c *Clientset) Tracker() testing.ObjectTracker {
 	return c.tracker
 }
 
-var _ clientset.Interface = &Clientset{}
+var (
+	_ clientset.Interface = &Clientset{}
+	_ testing.FakeClient  = &Clientset{}
+)
 
 // VaultV1alpha1 retrieves the VaultV1alpha1Client
 func (c *Clientset) VaultV1alpha1() vaultv1alpha1.VaultV1alpha1Interface {
 	return &fakevaultv1alpha1.FakeVaultV1alpha1{Fake: &c.Fake}
+}
+
+// VaultV1alpha2 retrieves the VaultV1alpha2Client
+func (c *Clientset) VaultV1alpha2() vaultv1alpha2.VaultV1alpha2Interface {
+	return &fakevaultv1alpha2.FakeVaultV1alpha2{Fake: &c.Fake}
 }
