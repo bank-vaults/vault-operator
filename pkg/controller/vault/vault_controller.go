@@ -106,6 +106,9 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 
 var _ reconcile.Reconciler = &ReconcileVault{}
 
+//+kubebuilder:rbac:groups=,resources=secrets,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=,resources=pods,verbs=get;update;patch
+
 // ReconcileVault reconciles a Vault object
 type ReconcileVault struct {
 	// This client, initialized using mgr.Client() above, is a split client

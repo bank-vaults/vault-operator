@@ -20,6 +20,7 @@ set -o pipefail
 
 function finish {
   rm -rf ${CODEGEN_DIR}
+  rm -rf ${MODULE}
 }
 
 trap finish EXIT
@@ -52,4 +53,3 @@ ${CODEGEN_DIR}/generate-groups.sh "client,lister,informer" \
 
 ## Cleanup
 cp -a ${MODULE}/. ${SOURCE_DIR}
-rm -rf ${MODULE}
