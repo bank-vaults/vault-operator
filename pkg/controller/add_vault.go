@@ -15,7 +15,7 @@
 package controller
 
 import (
-	"github.com/bank-vaults/vault-operator/v2/pkg/controller/vault"
+	"github.com/bank-vaults/vault-operator/pkg/controller/vault"
 )
 
 func init() {

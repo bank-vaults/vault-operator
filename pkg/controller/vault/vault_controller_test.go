@@ -17,7 +17,7 @@ package vault
 import (
 	"testing"
 
-	vaultv1alpha1 "github.com/bank-vaults/vault-operator/v2/pkg/apis/vault/v1alpha1"
+	vaultv1alpha1 "github.com/bank-vaults/vault-operator/pkg/apis/vault/v1alpha1"
 )
 
 func TestFluentDConfFile(t *testing.T) {

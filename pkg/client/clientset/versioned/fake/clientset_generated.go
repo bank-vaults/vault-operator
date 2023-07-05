@@ -17,9 +17,9 @@
 package fake
 
 import (
-	clientset "github.com/bank-vaults/vault-operator/v2/pkg/client/clientset/versioned"
-	vaultv1alpha1 "github.com/bank-vaults/vault-operator/v2/pkg/client/clientset/versioned/typed/vault/v1alpha1"
-	fakevaultv1alpha1 "github.com/bank-vaults/vault-operator/v2/pkg/client/clientset/versioned/typed/vault/v1alpha1/fake"
+	clientset "github.com/bank-vaults/vault-operator/pkg/client/clientset/versioned"
+	vaultv1alpha1 "github.com/bank-vaults/vault-operator/pkg/client/clientset/versioned/typed/vault/v1alpha1"
+	fakevaultv1alpha1 "github.com/bank-vaults/vault-operator/pkg/client/clientset/versioned/typed/vault/v1alpha1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"

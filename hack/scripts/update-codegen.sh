@@ -36,14 +36,14 @@ cd ${CODEGEN_DIR} && git checkout $VERSION && cd -
 #                  k8s.io/kubernetes. The output-base is needed for the generators to output into the vendor dir
 #                  instead of the $GOPATH directly. For normal projects this can be dropped.
 ${CODEGEN_DIR}/generate-groups.sh all \
-  github.com/bank-vaults/vault-operator/v2/pkg/client \
-  github.com/bank-vaults/vault-operator/v2/pkg/apis \
+  github.com/bank-vaults/vault-operator/pkg/client \
+  github.com/bank-vaults/vault-operator/pkg/apis \
   "vault:v1alpha1" \
   --go-header-file ./hack/scripts/custom-boilerplate.go.txt
 
 ${CODEGEN_DIR}/generate-internal-groups.sh "defaulter" \
-  github.com/bank-vaults/vault-operator/v2/pkg/client \
-  github.com/bank-vaults/vault-operator/v2/pkg/apis \
+  github.com/bank-vaults/vault-operator/pkg/client \
+  github.com/bank-vaults/vault-operator/pkg/apis \
   "" \
   "vault:v1alpha1" \
   --go-header-file ./hack/scripts/custom-boilerplate.go.txt

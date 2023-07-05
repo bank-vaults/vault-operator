@@ -19,7 +19,7 @@ package externalversions
 import (
 	"fmt"
 
-	v1alpha1 "github.com/bank-vaults/vault-operator/v2/pkg/apis/vault/v1alpha1"
+	v1alpha1 "github.com/bank-vaults/vault-operator/pkg/apis/vault/v1alpha1"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"
 )

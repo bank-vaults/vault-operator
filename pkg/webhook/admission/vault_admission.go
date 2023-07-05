@@ -3,8 +3,8 @@ package admission
 import (
 	"encoding/json"
 	"fmt"
-	vaultv1alpha1 "github.com/bank-vaults/vault-operator/v2/pkg/apis/vault/v1alpha1"
-	"github.com/bank-vaults/vault-operator/v2/pkg/webhook/mutation"
+	vaultv1alpha1 "github.com/bank-vaults/vault-operator/pkg/apis/vault/v1alpha1"
+	"github.com/bank-vaults/vault-operator/pkg/webhook/mutation"
 	"github.com/sirupsen/logrus"
 	admissionv1 "k8s.io/api/admission/v1"
 	"net/http"

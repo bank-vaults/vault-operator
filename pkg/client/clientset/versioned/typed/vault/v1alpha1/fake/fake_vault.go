@@ -21,8 +21,8 @@ import (
 	json "encoding/json"
 	"fmt"
 
-	v1alpha1 "github.com/bank-vaults/vault-operator/v2/pkg/apis/vault/v1alpha1"
-	vaultv1alpha1 "github.com/bank-vaults/vault-operator/v2/pkg/client/applyconfiguration/vault/v1alpha1"
+	v1alpha1 "github.com/bank-vaults/vault-operator/pkg/apis/vault/v1alpha1"
+	vaultv1alpha1 "github.com/bank-vaults/vault-operator/pkg/client/applyconfiguration/vault/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	types "k8s.io/apimachinery/pkg/types"

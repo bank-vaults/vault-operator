@@ -13,7 +13,7 @@ image:
   pullPolicy: IfNotPresent
 
   # -- Image tag override for the default value (chart appVersion).
-  tag: ""
+  tag: "dev"
 
   # -- Reference to one or more secrets to be used when [pulling images](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/#create-a-pod-that-uses-your-secret) (from private registries).
   # (`global.imagePullSecrets` is also supported)

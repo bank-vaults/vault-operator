@@ -15,7 +15,7 @@
 package apis
 
 import (
-	"github.com/bank-vaults/vault-operator/v2/pkg/apis/vault/v1alpha1"
+	"github.com/bank-vaults/vault-operator/pkg/apis/vault/v1alpha1"
 )
 
 func init() {
