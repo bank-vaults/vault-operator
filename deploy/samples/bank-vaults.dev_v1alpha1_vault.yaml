@@ -1,0 +1,12 @@
+apiVersion: bank-vaults.dev/v1alpha1
+kind: Vault
+metadata:
+  labels:
+    app.kubernetes.io/name: vault
+    app.kubernetes.io/instance: vault-sample
+    app.kubernetes.io/part-of: vault-operator-frame
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: vault-operator-frame
+  name: vault-sample
+spec:
+  # TODO(user): Add fields here

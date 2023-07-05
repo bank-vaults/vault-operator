@@ -1,0 +1,27 @@
+# permissions for end users to view vaults.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: vault-viewer-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: vault-operator-frame
+    app.kubernetes.io/part-of: vault-operator-frame
+    app.kubernetes.io/managed-by: kustomize
+  name: vault-viewer-role
+rules:
+- apiGroups:
+  - bank-vaults.dev
+  resources:
+  - vaults
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - bank-vaults.dev
+  resources:
+  - vaults/status
+  verbs:
+  - get

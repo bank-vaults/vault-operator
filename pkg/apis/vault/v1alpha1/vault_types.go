@@ -1,38 +1,41 @@
-// Copyright © 2019 Banzai Cloud
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/*
+Copyright 2023.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 
 package v1alpha1
 
 import (
-	"encoding/json"
-	"errors"
 	"fmt"
+	"github.com/Masterminds/semver/v3"
+	"github.com/imdario/mergo"
+	"github.com/spf13/cast"
+	netv1 "k8s.io/api/networking/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 	"os"
 	"reflect"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sort"
 	"strings"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
-	"github.com/imdario/mergo"
-	"github.com/spf13/cast"
 	v1 "k8s.io/api/core/v1"
-	netv1 "k8s.io/api/networking/v1"
+
+	"encoding/json"
+	"errors"
 	extv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
-	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 var log = ctrl.Log.WithName("controller_vault")
@@ -45,33 +48,9 @@ func init() {
 	}
 }
 
-// Vault is the Schema for the vaults API
-
-// +genclient
-// +genclient:noStatus
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-// +k8s:openapi-gen=true
-type Vault struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
-
-	Spec   VaultSpec   `json:"spec,omitempty"`
-	Status VaultStatus `json:"status,omitempty"`
-}
-
-// VaultList contains a list of Vault
-
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-type VaultList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []Vault `json:"items"`
-}
-
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 // VaultSpec defines the desired state of Vault
-// Important: Run "make generate-code" to regenerate code after modifying this file
 type VaultSpec struct {
 
 	// Size defines the number of Vault instances in the cluster (>= 1 means HA)
@@ -742,6 +721,8 @@ func (vault *Vault) AsOwnerReference() metav1.OwnerReference {
 }
 
 // VaultStatus defines the observed state of Vault
+
+// VaultStatus defines the observed state of Vault
 type VaultStatus struct {
 	// Important: Run "make generate-code" to regenerate code after modifying this file
 	Nodes      []string                `json:"nodes"`
@@ -1050,4 +1031,34 @@ type Resources struct {
 type Ingress struct {
 	Annotations map[string]string `json:"annotations,omitempty"`
 	Spec        netv1.IngressSpec `json:"spec,omitempty"`
+}
+
+// +genclient
+// +genclient:noStatus
+// +k8s:openapi-gen=true
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+//+kubebuilder:object:root=true
+//+kubebuilder:subresource:status
+
+// Vault is the Schema for the vaults API
+type Vault struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	Spec   VaultSpec   `json:"spec,omitempty"`
+	Status VaultStatus `json:"status,omitempty"`
+}
+
+//+kubebuilder:object:root=true
+
+// VaultList contains a list of Vault
+type VaultList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+
+	Items []Vault `json:"items"`
+}
+
+func init() {
+	SchemeBuilder.Register(&Vault{}, &VaultList{})
 }
