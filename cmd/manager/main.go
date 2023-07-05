@@ -80,17 +80,6 @@ func main() {
 		leaderElectionNamespace = "default"
 	}
 
-	// Get webhook data
-	//var webhookPort int
-	//var webhookCertDir, webhookCertName, webhookCertKey string
-	//if os.Getenv("WEBHOOK_TLS") == "true" {
-	//	webhookPort = 9443
-	//	webhookCertDir = "/etc/admission-webhook/tls"
-	//	webhookCertName, webhookCertKey = "tls.crt", "tls.key"
-	//} else {
-	//	webhookPort = 9080
-	//}
-
 	// Create a new Cmd to provide shared dependencies and start components
 	mgr, err := manager.New(k8sConfig, manager.Options{
 		Cache: cache.Options{
@@ -103,14 +92,7 @@ func main() {
 		HealthProbeBindAddress:  healthProbeBindAddress,
 		LivenessEndpointName:    "/",      // For Chart backwards compatibility
 		ReadinessEndpointName:   "/ready", // For Chart backwards compatibility
-		//MetricsBindAddress:      metricsBindAddress,
-		//WebhookServer: webhook.NewServer(webhook.Options{
-		//	Port:       webhookPort,
-		//	CertDir:    webhookCertDir,
-		//	CertName:   webhookCertName,
-		//	KeyName:    webhookCertKey,
-		//	WebhookMux: admission.NewHandler(),
-		//}),
+		MetricsBindAddress:      metricsBindAddress,
 	})
 	if err != nil {
 		log.Error(err, "Unable to create manager as defined")

@@ -1,4 +1,0 @@
-## Append samples of your project ##
-resources:
-- bank-vaults.dev_v1alpha1_vault.yaml
-#+kubebuilder:scaffold:manifestskustomizesamples
