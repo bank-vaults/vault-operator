@@ -1,8 +1,9 @@
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
+kind: Role
 metadata:
-  name: manager-role
+  name: vault
+  namespace: default
 rules:
 - resources:
   - pods
@@ -13,10 +14,4 @@ rules:
 - resources:
   - secrets
   verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
+  - '*'

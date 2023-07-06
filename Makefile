@@ -101,7 +101,7 @@ check: test lint ## Run tests and lint checks
 
 .PHONY: generate-manifests
 generate-manifests: controller-gen ## Generate RBAC and CRD objects
-	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./..." \
+	$(CONTROLLER_GEN) rbac:roleName=vault crd webhook paths="./..." \
 		output:rbac:dir=deploy/rbac \
 		output:crd:dir=deploy/crd/bases \
 		output:webhook:dir=deploy/webhook

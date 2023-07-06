@@ -124,12 +124,17 @@ func TestKvv2(t *testing.T) {
 	resources, err := prepareResources(
 		kubectlOptions.Namespace,
 		vaultVersion,
-		"../deploy/default/rbac.yaml",
 		"../deploy/examples/cr-kvv2.yaml",
 	)
+	kustomizeResources := []string{
+		"../deploy/rbac",
+	}
 	require.NoError(t, err)
 	for _, resource := range resources {
 		k8s.KubectlApplyFromString(t, kubectlOptions, string(resource))
+	}
+	for _, resource := range kustomizeResources {
+		k8s.KubectlApplyFromKustomize(t, kubectlOptions, string(resource))
 	}
 
 	// Wait until vault-0 pod comes up healthy
@@ -146,12 +151,17 @@ func TestStatsd(t *testing.T) {
 	resources, err := prepareResources(
 		kubectlOptions.Namespace,
 		vaultVersion,
-		"../deploy/default/rbac.yaml",
 		"../deploy/examples/cr-statsd.yaml",
 	)
+	kustomizeResources := []string{
+		"../deploy/rbac",
+	}
 	require.NoError(t, err)
 	for _, resource := range resources {
 		k8s.KubectlApplyFromString(t, kubectlOptions, string(resource))
+	}
+	for _, resource := range kustomizeResources {
+		k8s.KubectlApplyFromKustomize(t, kubectlOptions, string(resource))
 	}
 
 	// Wait until vault-0 pod comes up healthy
@@ -169,11 +179,16 @@ func TestExternalSecretsWatcherDeployment(t *testing.T) {
 		kubectlOptions.Namespace,
 		vaultVersion,
 		"deploy/test-external-secrets-watch-deployment.yaml",
-		"../deploy/default/rbac.yaml",
 	)
+	kustomizeResources := []string{
+		"../deploy/rbac",
+	}
 	require.NoError(t, err)
 	for _, resource := range resources {
 		k8s.KubectlApplyFromString(t, kubectlOptions, string(resource))
+	}
+	for _, resource := range kustomizeResources {
+		k8s.KubectlApplyFromKustomize(t, kubectlOptions, string(resource))
 	}
 
 	// Wait until vault-0 pod comes up healthy
@@ -197,11 +212,16 @@ func TestExternalSecretsWatcherSecrets(t *testing.T) {
 		kubectlOptions.Namespace,
 		vaultVersion,
 		"deploy/test-external-secrets-watch-deployment.yaml",
-		"../deploy/default/rbac.yaml",
 	)
+	kustomizeResources := []string{
+		"../deploy/rbac",
+	}
 	require.NoError(t, err)
 	for _, resource := range resources {
 		k8s.KubectlApplyFromString(t, kubectlOptions, string(resource))
+	}
+	for _, resource := range kustomizeResources {
+		k8s.KubectlApplyFromKustomize(t, kubectlOptions, string(resource))
 	}
 
 	// Wait until vault-0 pod comes up healthy
@@ -225,12 +245,17 @@ func TestRaft(t *testing.T) {
 	resources, err := prepareResources(
 		kubectlOptions.Namespace,
 		vaultVersion,
-		"../deploy/default/rbac.yaml",
 		"../deploy/examples/cr-raft.yaml",
 	)
+	kustomizeResources := []string{
+		"../deploy/rbac",
+	}
 	require.NoError(t, err)
 	for _, resource := range resources {
 		k8s.KubectlApplyFromString(t, kubectlOptions, string(resource))
+	}
+	for _, resource := range kustomizeResources {
+		k8s.KubectlApplyFromKustomize(t, kubectlOptions, string(resource))
 	}
 
 	// Wait until all vault pods come up healthy
@@ -249,12 +274,17 @@ func TestSoftHSM(t *testing.T) {
 	resources, err := prepareResources(
 		kubectlOptions.Namespace,
 		vaultVersion,
-		"../deploy/default/rbac.yaml",
 		"../deploy/examples/cr-hsm-softhsm.yaml",
 	)
+	kustomizeResources := []string{
+		"../deploy/rbac",
+	}
 	require.NoError(t, err)
 	for _, resource := range resources {
 		k8s.KubectlApplyFromString(t, kubectlOptions, string(resource))
+	}
+	for _, resource := range kustomizeResources {
+		k8s.KubectlApplyFromKustomize(t, kubectlOptions, string(resource))
 	}
 
 	// Wait until vault-0 pod comes up healthy
@@ -271,12 +301,17 @@ func TestDisabledRootTokenStorage(t *testing.T) {
 	resources, err := prepareResources(
 		kubectlOptions.Namespace,
 		vaultVersion,
-		"../deploy/default/rbac.yaml",
 		"../deploy/examples/cr-disabled-root-token-storage.yaml",
 	)
+	kustomizeResources := []string{
+		"../deploy/rbac",
+	}
 	require.NoError(t, err)
 	for _, resource := range resources {
 		k8s.KubectlApplyFromString(t, kubectlOptions, string(resource))
+	}
+	for _, resource := range kustomizeResources {
+		k8s.KubectlApplyFromKustomize(t, kubectlOptions, string(resource))
 	}
 
 	// Wait until vault-0 pod comes up healthy
@@ -311,12 +346,17 @@ func TestPriorityClass(t *testing.T) {
 	resources, err := prepareResources(
 		kubectlOptions.Namespace,
 		vaultVersion,
-		"../deploy/default/rbac.yaml",
 		"../deploy/examples/cr-priority.yaml",
 	)
+	kustomizeResources := []string{
+		"../deploy/rbac",
+	}
 	require.NoError(t, err)
 	for _, resource := range resources {
 		k8s.KubectlApplyFromString(t, kubectlOptions, string(resource))
+	}
+	for _, resource := range kustomizeResources {
+		k8s.KubectlApplyFromKustomize(t, kubectlOptions, string(resource))
 	}
 
 	// Wait until vault-0 pod comes up healthy and secrets are populated
@@ -345,12 +385,17 @@ func TestOIDC(t *testing.T) {
 	resources, err := prepareResources(
 		kubectlOptions.Namespace,
 		vaultVersion,
-		"../deploy/default/rbac.yaml",
 		"../deploy/examples/cr-oidc.yaml",
 	)
+	kustomizeResources := []string{
+		"../deploy/rbac",
+	}
 	require.NoError(t, err)
 	for _, resource := range resources {
 		k8s.KubectlApplyFromString(t, kubectlOptions, string(resource))
+	}
+	for _, resource := range kustomizeResources {
+		k8s.KubectlApplyFromKustomize(t, kubectlOptions, string(resource))
 	}
 
 	// Wait until vault-0 pod comes up healthy

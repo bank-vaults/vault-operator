@@ -15,7 +15,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: controller-manager
-  namespace: system
+  namespace: default
   labels:
     control-plane: controller-manager
     app.kubernetes.io/name: deployment
@@ -79,14 +79,14 @@ spec:
               - "ALL"
         livenessProbe:
           httpGet:
-            path: /healthz
-            port: 8081
+            path: /
+            port: 8080
           initialDelaySeconds: 15
           periodSeconds: 20
         readinessProbe:
           httpGet:
-            path: /readyz
-            port: 8081
+            path: /ready
+            port: 8080
           initialDelaySeconds: 5
           periodSeconds: 10
         # TODO(user): Configure the resources accordingly based on the project requirements.
