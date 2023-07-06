@@ -86,12 +86,12 @@ lint: lint-go lint-helm lint-docker lint-yaml
 lint: ## Run all lint checks
 
 .PHONY: test
-test: generate fmt vet envtest ## Run tests
+test: envtest ## Run tests
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" \
 		go test -race -v ./... -coverprofile cover.out
 
 .PHONY: test-acceptance
-test-acceptance: generate fmt vet envtest ## Run acceptance tests
+test-acceptance: ## Run acceptance tests
 	go test -race -v -timeout 900s -tags kubeall ./test
 
 .PHONY: check
@@ -102,8 +102,9 @@ check: test lint ## Run tests and lint checks
 .PHONY: generate-manifests
 generate-manifests: controller-gen ## Generate RBAC and CRD objects
 	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./..." \
-		output:rbac:artifacts:config=deploy/rbac \
-		output:crd:artifacts:config=deploy/crd/bases
+		output:rbac:dir=deploy/rbac \
+		output:crd:dir=deploy/crd/bases \
+		output:webhook:dir=deploy/webhook
 	cp deploy/crd/bases/bank-vaults.dev_vaults.yaml deploy/charts/vault-operator/crds/crd.yaml
 
 .PHONY: generate-code
@@ -122,19 +123,19 @@ generate: ## Generate manifests, code, and docs resources
 ##@ Build
 
 .PHONY: build
-build: generate-manifests generate-code fmt vet ## Build manager binary
+build: ## Build manager binary
 	@mkdir -p build
 	go build -race -o build/manager ./cmd/manager
 
 .PHONY: run
-run: generate-manifests generate-code fmt vet deploy ## Run the controller from your host
+run: generate deploy ## Run the controller from your host
 	OPERATOR_NAME=vault-dev go run cmd/manager/main.go -verbose
 
 # If you wish built the manager image targeting other platforms you can use the --platform flag.
 # (i.e. docker build --platform linux/arm64 ). However, you must enable docker buildKit for it.
 # More info: https://docs.docker.com/develop/develop-images/build_enhancements/
 .PHONY: docker-build
-docker-build: test ## Build docker image
+docker-build: ## Build docker image
 	docker build -t ${IMG} .
 
 .PHONY: docker-push
@@ -149,7 +150,7 @@ docker-push: ## Push docker image
 # To properly provided solutions that supports more than one platform you should use this option.
 PLATFORMS ?= linux/arm64,linux/amd64,linux/s390x,linux/ppc64le
 .PHONY: docker-buildx
-docker-buildx: test ## Build docker image for cross-platform support
+docker-buildx: ## Build docker image for cross-platform support
 	# copy existing Dockerfile and insert --platform=${BUILDPLATFORM} into Dockerfile.cross, and preserve the original Dockerfile
 	sed -e '1 s/\(^FROM\)/FROM --platform=\$$\{BUILDPLATFORM\}/; t' -e ' 1,// s//FROM --platform=\$$\{BUILDPLATFORM\}/' Dockerfile > Dockerfile.cross
 	- docker buildx create --name project-v3-builder
