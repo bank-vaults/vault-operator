@@ -719,8 +719,6 @@ func (vault *Vault) AsOwnerReference() metav1.OwnerReference {
 }
 
 // VaultStatus defines the observed state of Vault
-
-// VaultStatus defines the observed state of Vault
 type VaultStatus struct {
 	// Important: Run "make generate-code" to regenerate code after modifying this file
 	Nodes      []string                `json:"nodes"`
@@ -1033,8 +1031,6 @@ type Ingress struct {
 
 // +genclient
 // +genclient:noStatus
-// +k8s:openapi-gen=true
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 
