@@ -22,7 +22,6 @@ import (
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
-	"os"
 	"reflect"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sort"
@@ -36,17 +35,25 @@ import (
 	extv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 )
 
-var log = ctrl.Log.WithName("controller_vault")
+var (
+	log = ctrl.Log.WithName("controller_vault")
 
-var bankVaultsImage string
+	// DefaultBankVaultsImage defines the image used when VaultSpec.BankVaultsImage is empty.
+	DefaultBankVaultsImage = "ghcr.io/banzaicloud/bank-vaults:latest"
 
-func init() {
-	if bankVaultsImage = os.Getenv("BANK_VAULTS_IMAGE"); bankVaultsImage == "" {
-		bankVaultsImage = "ghcr.io/banzaicloud/bank-vaults:latest"
+	// HAStorageTypes is the set of storage backends supporting High Availability
+	HAStorageTypes = map[string]bool{
+		"consul":     true,
+		"dynamodb":   true,
+		"etcd":       true,
+		"gcs":        true,
+		"mysql":      true,
+		"postgresql": true,
+		"raft":       true,
+		"spanner":    true,
+		"zookeeper":  true,
 	}
-}
-
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
+)
 
 // VaultSpec defines the desired state of Vault
 type VaultSpec struct {
@@ -304,19 +311,6 @@ type VaultSpec struct {
 	VaultInitContainers []v1.Container `json:"vaultInitContainers,omitempty"`
 }
 
-// HAStorageTypes is the set of storage backends supporting High Availability
-var HAStorageTypes = map[string]bool{
-	"consul":     true,
-	"dynamodb":   true,
-	"etcd":       true,
-	"gcs":        true,
-	"mysql":      true,
-	"postgresql": true,
-	"raft":       true,
-	"spanner":    true,
-	"zookeeper":  true,
-}
-
 // HasHAStorage detects if Vault is configured to use a storage backend which supports High Availability or if it has
 // ha_storage stanza, then doesn't check for ha_enabled flag
 func (spec *VaultSpec) HasHAStorage() bool {
@@ -459,7 +453,7 @@ func (spec *VaultSpec) GetVaultImage() string {
 // GetBankVaultsImage returns the bank-vaults image to use
 func (spec *VaultSpec) GetBankVaultsImage() string {
 	if spec.BankVaultsImage == "" {
-		return bankVaultsImage
+		return DefaultBankVaultsImage
 	}
 	return spec.BankVaultsImage
 }
@@ -535,7 +529,7 @@ func (spec *VaultSpec) GetAPIPortName() string {
 	return portName
 }
 
-// GetVaultLAbels returns the Vault Pod , Secret and ConfigMap Labels
+// GetVaultLabels returns the Vault Pod, Secret and ConfigMap Labels
 func (spec *VaultSpec) GetVaultLabels() map[string]string {
 	if spec.VaultLabels == nil {
 		spec.VaultLabels = map[string]string{}
@@ -597,37 +591,6 @@ func (spec *VaultSpec) IsStatsDDisabled() bool {
 	return spec.StatsDDisabled
 }
 
-// ConfigJSON returns the Config field as a JSON string
-func (v *Vault) ConfigJSON() ([]byte, error) {
-	config := map[string]interface{}{}
-
-	err := json.Unmarshal(v.Spec.Config.Raw, &config)
-	if err != nil {
-		return nil, err
-	}
-
-	if v.Spec.ServiceRegistrationEnabled && v.Spec.HasHAStorage() {
-		serviceRegistration := map[string]interface{}{
-			"service_registration": map[string]interface{}{
-				"kubernetes": map[string]string{
-					"namespace": v.Namespace,
-				},
-			},
-		}
-
-		if err := mergo.Merge(&config, serviceRegistration); err != nil {
-			return nil, err
-		}
-	}
-
-	configJSON, err := json.Marshal(config)
-	if err != nil {
-		return nil, err
-	}
-
-	return configJSON, nil
-}
-
 // ExternalConfigJSON returns the ExternalConfig field as a JSON string
 func (spec *VaultSpec) ExternalConfigJSON() []byte {
 	return spec.ExternalConfig.Raw
@@ -655,75 +618,20 @@ func (spec *VaultSpec) IsRaftBootstrapFollower() bool {
 	return spec.RaftLeaderAddress != "" && spec.RaftLeaderAddress != "self"
 }
 
-// GetIngress the Ingress configuration for Vault if any
-func (vault *Vault) GetIngress() *Ingress {
-	if vault.Spec.Ingress != nil {
-		// Add the Vault Service as the backend if no rules are specified and there is no default backend
-		if len(vault.Spec.Ingress.Spec.Rules) == 0 && vault.Spec.Ingress.Spec.DefaultBackend == nil {
-			vault.Spec.Ingress.Spec.DefaultBackend = &netv1.IngressBackend{
-				Service: &netv1.IngressServiceBackend{
-					Name: vault.Name,
-					Port: netv1.ServiceBackendPort{
-						Number: 8200,
-					},
-				},
-			}
-		}
-
-		if vault.Spec.Ingress.Annotations == nil {
-			vault.Spec.Ingress.Annotations = map[string]string{}
-		}
-
-		// If TLS is enabled add the Ingress TLS backend annotations
-		if !vault.Spec.IsTLSDisabled() {
-			// Supporting the NGINX ingress controller with TLS backends
-			// https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/annotations/#backend-protocol
-			vault.Spec.Ingress.Annotations["nginx.ingress.kubernetes.io/backend-protocol"] = "HTTPS"
-
-			// Supporting the Traefik ingress controller with TLS backends
-			// https://docs.traefik.io/configuration/backends/kubernetes/#tls-communication-between-traefik-and-backend-pods
-			vault.Spec.Ingress.Annotations["ingress.kubernetes.io/protocol"] = "https"
-
-			// Supporting the HAProxy ingress controller with TLS backends
-			// https://github.com/jcmoraisjr/haproxy-ingress#secure-backend
-			vault.Spec.Ingress.Annotations["ingress.kubernetes.io/secure-backends"] = "true"
-		}
-
-		return vault.Spec.Ingress
-	}
-
-	return nil
-}
-
-// LabelsForVault returns the labels for selecting the resources
-// belonging to the given vault CR name.
-func (vault *Vault) LabelsForVault() map[string]string {
-	return map[string]string{"app.kubernetes.io/name": "vault", "vault_cr": vault.Name}
-}
-
-// LabelsForVaultConfigurer returns the labels for selecting the resources
-// belonging to the given vault CR name.
-func (vault *Vault) LabelsForVaultConfigurer() map[string]string {
-	return map[string]string{"app.kubernetes.io/name": "vault-configurator", "vault_cr": vault.Name}
-}
-
-// AsOwnerReference returns this Vault instance as an OwnerReference
-func (vault *Vault) AsOwnerReference() metav1.OwnerReference {
-	return metav1.OwnerReference{
-		APIVersion: vault.APIVersion,
-		Kind:       vault.Kind,
-		Name:       vault.Name,
-		UID:        vault.UID,
-		Controller: pointer.Bool(true),
-	}
-}
-
 // VaultStatus defines the observed state of Vault
 type VaultStatus struct {
 	// Important: Run "make generate-code" to regenerate code after modifying this file
 	Nodes      []string                `json:"nodes"`
 	Leader     string                  `json:"leader"`
 	Conditions []v1.ComponentCondition `json:"conditions,omitempty"`
+}
+
+// UnsealOptions represents the common options to all unsealing backends
+type UnsealOptions struct {
+	PreFlightChecks *bool `json:"preFlightChecks,omitempty"`
+	StoreRootToken  *bool `json:"storeRootToken,omitempty"`
+	SecretThreshold *uint `json:"secretThreshold,omitempty"`
+	SecretShares    *uint `json:"secretShares,omitempty"`
 }
 
 // UnsealConfig represents the UnsealConfig field of a VaultSpec Kubernetes object
@@ -736,14 +644,6 @@ type UnsealConfig struct {
 	AWS        *AWSUnsealConfig       `json:"aws,omitempty"`
 	Vault      *VaultUnsealConfig     `json:"vault,omitempty"`
 	HSM        *HSMUnsealConfig       `json:"hsm,omitempty"`
-}
-
-// UnsealOptions represents the common options to all unsealing backends
-type UnsealOptions struct {
-	PreFlightChecks *bool `json:"preFlightChecks,omitempty"`
-	StoreRootToken  *bool `json:"storeRootToken,omitempty"`
-	SecretThreshold *uint `json:"secretThreshold,omitempty"`
-	SecretShares    *uint `json:"secretShares,omitempty"`
 }
 
 // ToArgs returns the UnsealConfig as and argument array for bank-vaults
@@ -1041,6 +941,100 @@ type Vault struct {
 
 	Spec   VaultSpec   `json:"spec,omitempty"`
 	Status VaultStatus `json:"status,omitempty"`
+}
+
+// ConfigJSON returns the Config field as a JSON string
+func (vault *Vault) ConfigJSON() ([]byte, error) {
+	config := map[string]interface{}{}
+
+	err := json.Unmarshal(vault.Spec.Config.Raw, &config)
+	if err != nil {
+		return nil, err
+	}
+
+	if vault.Spec.ServiceRegistrationEnabled && vault.Spec.HasHAStorage() {
+		serviceRegistration := map[string]interface{}{
+			"service_registration": map[string]interface{}{
+				"kubernetes": map[string]string{
+					"namespace": vault.Namespace,
+				},
+			},
+		}
+
+		if err := mergo.Merge(&config, serviceRegistration); err != nil {
+			return nil, err
+		}
+	}
+
+	configJSON, err := json.Marshal(config)
+	if err != nil {
+		return nil, err
+	}
+
+	return configJSON, nil
+}
+
+// GetIngress the Ingress configuration for Vault if any
+func (vault *Vault) GetIngress() *Ingress {
+	if vault.Spec.Ingress != nil {
+		// Add the Vault Service as the backend if no rules are specified and there is no default backend
+		if len(vault.Spec.Ingress.Spec.Rules) == 0 && vault.Spec.Ingress.Spec.DefaultBackend == nil {
+			vault.Spec.Ingress.Spec.DefaultBackend = &netv1.IngressBackend{
+				Service: &netv1.IngressServiceBackend{
+					Name: vault.Name,
+					Port: netv1.ServiceBackendPort{
+						Number: 8200,
+					},
+				},
+			}
+		}
+
+		if vault.Spec.Ingress.Annotations == nil {
+			vault.Spec.Ingress.Annotations = map[string]string{}
+		}
+
+		// If TLS is enabled add the Ingress TLS backend annotations
+		if !vault.Spec.IsTLSDisabled() {
+			// Supporting the NGINX ingress controller with TLS backends
+			// https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/annotations/#backend-protocol
+			vault.Spec.Ingress.Annotations["nginx.ingress.kubernetes.io/backend-protocol"] = "HTTPS"
+
+			// Supporting the Traefik ingress controller with TLS backends
+			// https://docs.traefik.io/configuration/backends/kubernetes/#tls-communication-between-traefik-and-backend-pods
+			vault.Spec.Ingress.Annotations["ingress.kubernetes.io/protocol"] = "https"
+
+			// Supporting the HAProxy ingress controller with TLS backends
+			// https://github.com/jcmoraisjr/haproxy-ingress#secure-backend
+			vault.Spec.Ingress.Annotations["ingress.kubernetes.io/secure-backends"] = "true"
+		}
+
+		return vault.Spec.Ingress
+	}
+
+	return nil
+}
+
+// LabelsForVault returns the labels for selecting the resources
+// belonging to the given vault CR name.
+func (vault *Vault) LabelsForVault() map[string]string {
+	return map[string]string{"app.kubernetes.io/name": "vault", "vault_cr": vault.Name}
+}
+
+// LabelsForVaultConfigurer returns the labels for selecting the resources
+// belonging to the given vault CR name.
+func (vault *Vault) LabelsForVaultConfigurer() map[string]string {
+	return map[string]string{"app.kubernetes.io/name": "vault-configurator", "vault_cr": vault.Name}
+}
+
+// AsOwnerReference returns this Vault instance as an OwnerReference
+func (vault *Vault) AsOwnerReference() metav1.OwnerReference {
+	return metav1.OwnerReference{
+		APIVersion: vault.APIVersion,
+		Kind:       vault.Kind,
+		Name:       vault.Name,
+		UID:        vault.UID,
+		Controller: pointer.Bool(true),
+	}
 }
 
 //+kubebuilder:object:root=true

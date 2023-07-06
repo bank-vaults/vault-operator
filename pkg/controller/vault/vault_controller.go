@@ -59,9 +59,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-var log = logf.Log.WithName("controller_vault")
+const defaultConfigFile = "vault-config.yml"
 
-var configFileNames = []string{"vault-config.yml", "vault-config.yaml"}
+var (
+	log = logf.Log.WithName("controller_vault")
+
+	configFileNames = []string{"vault-config.yml", "vault-config.yaml"}
+)
 
 // Add creates a new Vault Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
@@ -111,14 +115,17 @@ var _ reconcile.Reconciler = &ReconcileVault{}
 
 // ReconcileVault reconciles a Vault object
 type ReconcileVault struct {
-	// This client, initialized using mgr.Client() above, is a split client
+	// client initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
 	client client.Client
-	// since the cache inside the client is namespaced we need to create another client which is not namespaced
+
+	// nonNamespacedClient since the cache inside the client is namespaced,
+	// we need to create another client which is not namespaced
 	// TODO the cache should be restricted to Secrets only right now in this one if possible
 	nonNamespacedClient client.Client
-	scheme              *runtime.Scheme
-	httpClient          *http.Client
+
+	scheme     *runtime.Scheme
+	httpClient *http.Client
 }
 
 func (r *ReconcileVault) createOrUpdateObject(ctx context.Context, o client.Object) error {
@@ -975,8 +982,6 @@ func deprecatedConfigMapForConfigurer(v *vaultv1alpha1.Vault) *corev1.ConfigMap 
 		},
 	}
 }
-
-const defaultConfigFile = "vault-config.yml"
 
 func secretForConfigurer(v *vaultv1alpha1.Vault) *corev1.Secret {
 	ls := v.LabelsForVaultConfigurer()

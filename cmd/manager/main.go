@@ -16,12 +16,15 @@ package main
 
 import (
 	"flag"
+	vaultv1alpha1 "github.com/bank-vaults/vault-operator/pkg/apis/vault/v1alpha1"
 	"net"
 	"os"
 	"time"
 
-	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
-	"k8s.io/client-go/rest"
+	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
+	// to ensure that exec-entrypoint and run can make use of them.
+	_ "k8s.io/client-go/plugin/pkg/client/auth"
+
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
@@ -31,21 +34,27 @@ import (
 
 	"github.com/bank-vaults/vault-operator/pkg/apis"
 	"github.com/bank-vaults/vault-operator/pkg/controller"
+	//+kubebuilder:scaffold:imports
+)
+
+const (
+	envOperatorNamespace   = "OPERATOR_NAMESPACE"
+	envWatchNamespace      = "WATCH_NAMESPACE"
+	envKubeServiceHost     = "KUBERNETES_SERVICE_HOST"
+	envKubeServicePort     = "KUBERNETES_SERVICE_PORT"
+	envBankVaultsImage     = "BANK_VAULTS_IMAGE"
+	healthProbeBindAddress = ":8080"
+	metricsBindAddress     = ":8383"
+	defaultSyncPeriod      = 30 * time.Second
 )
 
 var log = ctrl.Log.WithName("cmd")
 
-const (
-	operatorNamespace      = "OPERATOR_NAMESPACE"
-	watchNamespaceEnvVar   = "WATCH_NAMESPACE"
-	healthProbeBindAddress = ":8080"
-	metricsBindAddress     = ":8383"
-)
-
 func main() {
-	syncPeriod := flag.Duration("sync_period", 30*time.Second, "SyncPeriod determines the minimum frequency at which watched resources are reconciled")
-	verbose := flag.Bool("verbose", false, "enable verbose logging")
-
+	// Register CLI flags
+	syncPeriod := flag.Duration("sync_period", defaultSyncPeriod,
+		"Determines the minimum frequency at which watched resources are reconciled")
+	verbose := flag.Bool("verbose", false, "Enables verbose logging")
 	flag.Parse()
 
 	// The logger instantiated here can be changed to any logger
@@ -54,29 +63,38 @@ func main() {
 	// uniform and structured logs.
 	ctrl.SetLogger(zap.New(zap.UseDevMode(*verbose)))
 
-	// Fetch namespace data
-	namespace, isSet := os.LookupEnv(operatorNamespace)
-	if !isSet {
-		namespace, isSet = os.LookupEnv(watchNamespaceEnvVar)
+	// Update default bank vaults image if needed
+	defaultImage := os.Getenv(envBankVaultsImage)
+	if defaultImage != "" {
+		vaultv1alpha1.DefaultBankVaultsImage = defaultImage
 	}
 
-	var namespaces []string
-	if !isSet {
-		log.Info("No watched namespace found, watching the entire cluster")
+	// Get namespace config
+	namespace := os.Getenv(envOperatorNamespace)
+	if namespace == "" {
+		namespace = os.Getenv(envWatchNamespace)
+	}
+
+	namespaces := []string{}
+	if namespace == "" {
+		log.Info("no watched namespace found, watching the entire cluster")
 	} else {
-		log.Info("Watched namespace: " + namespace)
 		namespaces = []string{namespace}
+		log.Info("watched namespace: " + namespace)
 	}
 
-	// Get a config to talk to the apiserver
+	// Load kube client config
 	k8sConfig, err := config.GetConfig()
 	if err != nil {
-		log.Error(err, "Unable to get k8s config")
+		log.Error(err, "unable to get k8s config")
 		os.Exit(1)
 	}
 
+	// Configure leader election
+	host := os.Getenv(envKubeServiceHost)
+	port := os.Getenv(envKubeServicePort)
 	leaderElectionNamespace := ""
-	if !isInClusterConfig(k8sConfig) {
+	if k8sConfig.Host != "https://"+net.JoinHostPort(host, port) {
 		leaderElectionNamespace = "default"
 	}
 
@@ -90,50 +108,48 @@ func main() {
 		LeaderElectionNamespace: leaderElectionNamespace,
 		LeaderElectionID:        "vault-operator-lock",
 		HealthProbeBindAddress:  healthProbeBindAddress,
+		MetricsBindAddress:      metricsBindAddress,
 		LivenessEndpointName:    "/",      // For Chart backwards compatibility
 		ReadinessEndpointName:   "/ready", // For Chart backwards compatibility
-		MetricsBindAddress:      metricsBindAddress,
 	})
 	if err != nil {
-		log.Error(err, "Unable to create manager as defined")
+		log.Error(err, "unable to create manager as defined")
 		os.Exit(1)
 	}
+	//+kubebuilder:scaffold:builder
+
+	// Register checks
+	log.Info("registering manager checks")
 
 	err = mgr.AddReadyzCheck("ping", healthz.Ping)
 	if err != nil {
-		log.Error(err, "Add Readyz Check failed")
+		log.Error(err, "unable to add readyz check")
 		os.Exit(1)
 	}
+
 	err = mgr.AddHealthzCheck("ping", healthz.Ping)
 	if err != nil {
-		log.Error(err, "Unable to add heatlh check")
+		log.Error(err, "unable to add heatlhz check")
 		os.Exit(1)
 	}
 
-	log.Info("Registering Components.")
+	// Setup scheme and controller
+	log.Info("bootstrapping manager")
 
-	// Setup Scheme for all resources
 	if err := apis.AddToScheme(mgr.GetScheme()); err != nil {
-		log.Error(err, "Failed to use api to add scheme")
+		log.Error(err, "unable to add scheme to manager")
 		os.Exit(1)
 	}
 
-	// Setup all Controllers
 	if err := controller.AddToManager(mgr); err != nil {
-		log.Error(err, "Unable to add manager to controller")
+		log.Error(err, "unable to add manager to controller")
 		os.Exit(1)
 	}
 
-	log.Info("Starting the Cmd.")
-
-	// Start the Cmd
+	// Start manager
+	log.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
-		log.Error(err, "manager exited non-zero")
+		log.Error(err, "problem running manager")
 		os.Exit(1)
 	}
-}
-
-func isInClusterConfig(k8sConfig *rest.Config) bool {
-	host, port := os.Getenv("KUBERNETES_SERVICE_HOST"), os.Getenv("KUBERNETES_SERVICE_PORT")
-	return k8sConfig.Host == "https://"+net.JoinHostPort(host, port)
 }
