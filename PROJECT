@@ -14,7 +14,7 @@ resources:
     crdVersion: v1alpha1
     namespaced: true
   controller: true
-  group: banzaicloud.com
+  group: vault.banzaicloud.com
   kind: Vault
   path: github.com/bank-vaults/vault-operator/pkg/apis/vault/v1alpha1
   version: v1alpha1

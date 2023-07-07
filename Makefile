@@ -101,11 +101,11 @@ check: test lint ## Run tests and lint checks
 
 .PHONY: generate-manifests
 generate-manifests: controller-gen ## Generate RBAC and CRD objects
-	$(CONTROLLER_GEN) rbac:roleName=vault crd webhook paths="./..." \
+	$(CONTROLLER_GEN) rbac:roleName=vault crd:maxDescLen=0 webhook paths="./..." \
 		output:rbac:dir=deploy/rbac \
 		output:crd:dir=deploy/crd/bases \
 		output:webhook:dir=deploy/webhook
-	cp deploy/crd/bases/banzaicloud.com_vaults.yaml deploy/charts/vault-operator/crds/crd.yaml
+	cp deploy/crd/bases/vault.banzaicloud.com_vaults.yaml deploy/charts/vault-operator/crds/crd.yaml
 
 .PHONY: generate-code
 generate-code: controller-gen ## Generate deepcopy,client,lister,informer objects
@@ -176,16 +176,15 @@ endif
 
 .PHONY: up
 up: kind ## Start development environment
-	$(KIND) create cluster
-
-.PHONY: stop
-stop: kind ## Stop development environment
-	# TODO: consider using k3d instead
-	$(KIND) delete cluster
+	$(KIND) create cluster --name vault-operator
 
 .PHONY: down
 down: kind ## Destroy development environment
-	$(KIND) delete cluster
+	$(KIND) delete cluster --name vault-operator
+
+.PHONY: import-image
+import-image: ## Import built docker image to local kind image repository
+	$(KIND) load docker-image ${IMG} --name vault-operator
 
 .PHONY: clean
 clean: undeploy ## Clean operator resources from a Kubernetes cluster
@@ -250,7 +249,7 @@ $(HELM): $(LOCALBIN)
 	curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | USE_SUDO=false HELM_INSTALL_DIR=$(LOCALBIN) bash
 
 KIND ?= $(LOCALBIN)/kind
-kind ?= $(KIND)
+kind: $(KIND)
 $(KIND): $(LOCALBIN)
 	curl -Lo $(LOCALBIN)/kind https://kind.sigs.k8s.io/dl/v${KIND_VERSION}/kind-$(shell uname -s | tr '[:upper:]' '[:lower:]')-$(shell uname -m | sed -e "s/aarch64/arm64/; s/x86_64/amd64/")
 	@chmod +x $(LOCALBIN)/kind

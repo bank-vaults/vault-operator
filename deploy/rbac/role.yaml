@@ -5,13 +5,17 @@ metadata:
   name: vault
   namespace: default
 rules:
-- resources:
+- apiGroups:
+  - ""
+  resources:
   - pods
   verbs:
   - get
   - patch
   - update
-- resources:
+- apiGroups:
+  - ""
+  resources:
   - secrets
   verbs:
   - '*'

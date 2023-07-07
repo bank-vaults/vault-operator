@@ -20,7 +20,7 @@ set -o pipefail
 
 function finish {
   rm -rf ${CODEGEN_DIR}
-  rm -rf ${MODULE}
+  rm -rf github.com
 }
 
 trap finish EXIT

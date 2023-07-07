@@ -110,8 +110,8 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 
 var _ reconcile.Reconciler = &ReconcileVault{}
 
-// +kubebuilder:rbac:groups=,namespace=default,resources=secrets,verbs=*
-// +kubebuilder:rbac:groups=,namespace=default,resources=pods,verbs=get;update;patch
+// +kubebuilder:rbac:groups="",namespace=default,resources=secrets,verbs=*
+// +kubebuilder:rbac:groups="",namespace=default,resources=pods,verbs=get;update;patch
 
 // ReconcileVault reconciles a Vault object
 type ReconcileVault struct {

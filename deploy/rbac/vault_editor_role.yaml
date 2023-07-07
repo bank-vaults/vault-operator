@@ -12,7 +12,7 @@ metadata:
   name: vault-editor-role
 rules:
 - apiGroups:
-  - vaults.banzaicloud.com
+  - vault.banzaicloud.com
   resources:
   - vaults
   verbs:
@@ -24,7 +24,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - vaults.banzaicloud.com
+  - vault.banzaicloud.com
   resources:
   - vaults/status
   verbs:

@@ -13,9 +13,9 @@
 // limitations under the License.
 
 // +kubebuilder:object:generate=true
-// +groupName=banzaicloud.com
+// +groupName=vault.banzaicloud.com
 
-// Package v1alpha1 contains API Schema definitions for the banzaicloud.com v1alpha1 API group
+// Package v1alpha1 contains API Schema definitions for the vault.banzaicloud.com v1alpha1 API group
 package v1alpha1
 
 import (
@@ -25,7 +25,7 @@ import (
 
 var (
 	// SchemeGroupVersion is group version used to register these objects
-	SchemeGroupVersion = schema.GroupVersion{Group: "banzaicloud.com", Version: "v1alpha1"}
+	SchemeGroupVersion = schema.GroupVersion{Group: "vault.banzaicloud.com", Version: "v1alpha1"}
 
 	// SchemeBuilder is used to add go types to the GroupVersionKind scheme
 	SchemeBuilder = &scheme.Builder{GroupVersion: SchemeGroupVersion}
