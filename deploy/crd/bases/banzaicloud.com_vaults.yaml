@@ -4,9 +4,9 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.12.0
-  name: vaults.bank-vaults.dev
+  name: vaults.banzaicloud.com
 spec:
-  group: bank-vaults.dev
+  group: banzaicloud.com
   names:
     kind: Vault
     listKind: VaultList

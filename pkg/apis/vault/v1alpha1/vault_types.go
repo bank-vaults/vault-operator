@@ -931,8 +931,8 @@ type Ingress struct {
 
 // +genclient
 // +genclient:noStatus
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
 
 // Vault is the Schema for the vaults API
 type Vault struct {
@@ -1037,7 +1037,7 @@ func (vault *Vault) AsOwnerReference() metav1.OwnerReference {
 	}
 }
 
-//+kubebuilder:object:root=true
+// +kubebuilder:object:root=true
 
 // VaultList contains a list of Vault
 type VaultList struct {

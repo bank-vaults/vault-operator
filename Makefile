@@ -105,7 +105,7 @@ generate-manifests: controller-gen ## Generate RBAC and CRD objects
 		output:rbac:dir=deploy/rbac \
 		output:crd:dir=deploy/crd/bases \
 		output:webhook:dir=deploy/webhook
-	cp deploy/crd/bases/bank-vaults.dev_vaults.yaml deploy/charts/vault-operator/crds/crd.yaml
+	cp deploy/crd/bases/banzaicloud.com_vaults.yaml deploy/charts/vault-operator/crds/crd.yaml
 
 .PHONY: generate-code
 generate-code: controller-gen ## Generate deepcopy,client,lister,informer objects
@@ -129,7 +129,7 @@ build: ## Build manager binary
 
 .PHONY: run
 run: generate deploy ## Run the controller from your host
-	OPERATOR_NAME=vault-dev go run cmd/manager/main.go -verbose
+	OPERATOR_NAME=vault-dev go run cmd/main.go -verbose
 
 # If you wish built the manager image targeting other platforms you can use the --platform flag.
 # (i.e. docker build --platform linux/arm64 ). However, you must enable docker buildKit for it.

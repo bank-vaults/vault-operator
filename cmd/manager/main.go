@@ -114,7 +114,7 @@ func main() {
 		log.Error(err, "unable to create manager as defined")
 		os.Exit(1)
 	}
-	//+kubebuilder:scaffold:builder
+	// +kubebuilder:scaffold:builder
 
 	// Register checks
 	log.Info("registering manager checks")
