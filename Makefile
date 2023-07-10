@@ -94,6 +94,12 @@ test: envtest ## Run tests
 test-acceptance: ## Run acceptance tests
 	go test -race -v -timeout 900s -tags kubeall ./test
 
+
+.PHONY: test-acceptance-local
+test-acceptance-local:  docker-build import-image ## Run acceptance tests in local kind cluster
+	go test -race -v -timeout 900s -ldflags "-s -w -X 'github.com/bank-vaults/vault-operator/test.bankVaultsVersion=latest'" \
+                                                   -tags kubeall ./test
+
 .PHONY: check
 check: test lint ## Run tests and lint checks
 

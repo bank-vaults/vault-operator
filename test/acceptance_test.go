@@ -47,7 +47,7 @@ import (
 
 var (
 	vaultVersion      = "latest"
-	bankVaultsVersion = "latest"
+	bankVaultsVersion = "1.19.0"
 )
 
 // Installing the operator helm chart before testing
