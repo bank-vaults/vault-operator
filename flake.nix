@@ -35,22 +35,12 @@
             packages = with pkgs; [
               gnumake
 
-              golangci-lint
-
-              kubernetes-controller-tools
-              kubernetes-code-generator
-
-              kind
               kubectl
               kubectl-images
-              kustomize
-              kubernetes-helm
-              helm-docs
 
               yamllint
               hadolint
             ] ++ [
-              self'.packages.licensei
               self'.packages.kurun
               self'.packages.envtpl
               self'.packages.cidr
@@ -59,12 +49,7 @@
             scripts = {
               versions.exec = ''
                 go version
-                golangci-lint version
-                echo controller-gen $(controller-gen --version)
-                kind version
                 kubectl version --client
-                echo kustomize $(kustomize version --short)
-                echo helm $(helm version --short)
               '';
             };
 
@@ -80,29 +65,6 @@
         };
 
         packages = {
-          # TODO: create flake in source repo
-          licensei = pkgs.buildGoModule rec {
-            pname = "licensei";
-            version = "0.8.0";
-
-            src = pkgs.fetchFromGitHub {
-              owner = "goph";
-              repo = "licensei";
-              rev = "v${version}";
-              sha256 = "sha256-Pvjmvfk0zkY2uSyLwAtzWNn5hqKImztkf8S6OhX8XoM=";
-            };
-
-            vendorSha256 = "sha256-ZIpZ2tPLHwfWiBywN00lPI1R7u7lseENIiybL3+9xG8=";
-
-            subPackages = [ "cmd/licensei" ];
-
-            ldflags = [
-              "-w"
-              "-s"
-              "-X main.version=v${version}"
-            ];
-          };
-
           # TODO: create flake in source repo
           kurun = pkgs.buildGoModule rec {
             pname = "kurun";
