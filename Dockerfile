@@ -23,7 +23,7 @@ RUN go mod download
 
 COPY . .
 
-RUN go build -o /usr/local/bin/vault-operator ./cmd/manager/
+RUN go build -o /usr/local/bin/vault-operator ./cmd/
 RUN xx-verify /usr/local/bin/vault-operator
 
 

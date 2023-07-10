@@ -1,6 +1,6 @@
 
 # Image URL to use all building/pushing image targets
-IMG ?= ghcr.io/bank-vaults/vault-operator:latest
+IMG ?= ghcr.io/bank-vaults/vault-operator:dev
 
 # Requred tools
 # kubectl,docker,go,hadolint,yamllint
@@ -10,11 +10,15 @@ GOLANGCI_VERSION = 1.53.3
 LICENSEI_VERSION = 0.8.0
 KIND_VERSION = 0.20.0
 KURUN_VERSION = 0.7.0
-CODE_GENERATOR_VERSION = v0.27.1
+CODE_GENERATOR_VERSION = 0.27.1
 HELM_DOCS_VERSION = 1.11.0
-KUSTOMIZE_VERSION = v5.0.1
-CONTROLLER_TOOLS_VERSION = v0.12.0
+KUSTOMIZE_VERSION = 5.0.1
+CONTROLLER_TOOLS_VERSION = 0.12.0
 ENVTEST_K8S_VERSION = 1.27.1
+
+# Acceptance test default data
+TEST_VAULT_VERSION = 1.13.3
+TEST_BANK_VAULTS_VERSION = 1.19.0
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -51,7 +55,7 @@ help: ## Display this help.
 ##@ Development
 
 .PHONY: fmt
-fmt: golangci-lint ## Run go fmt against code
+fmt: ## Run go fmt against code
 	$(GOLANGCI_LINT) run --fix
 
 .PHONY: vet
@@ -59,16 +63,16 @@ vet: ## Run go vet against code
 	go vet ./...
 
 .PHONY: license-check
-license-check: licensei ## Run license check
+license-check: ## Run license check
 	$(LICENSEI) check
 	$(LICENSEI) header
 
 .PHONY: lint-go
-lint-go: golangci-lint ## Run golang lint check
+lint-go: ## Run golang lint check
 	$(GOLANGCI_LINT) run $(if ${CI},--out-format github-actions,)
 
 .PHONY: lint-helm
-lint-helm: helm ## Run helm lint check
+lint-helm: ## Run helm lint check
 	$(HELM) lint deploy/charts/vault-operator
 
 # TODO: add hadolint dep?
@@ -86,7 +90,7 @@ lint: lint-go lint-helm lint-docker lint-yaml
 lint: ## Run all lint checks
 
 .PHONY: test
-test: envtest ## Run tests
+test: ## Run tests
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" \
 		go test -race -v ./... -coverprofile cover.out
 
@@ -94,11 +98,10 @@ test: envtest ## Run tests
 test-acceptance: ## Run acceptance tests
 	go test -race -v -timeout 900s -tags kubeall ./test
 
-
 .PHONY: test-acceptance-local
-test-acceptance-local:  docker-build import-image ## Run acceptance tests in local kind cluster
-	go test -race -v -timeout 900s -ldflags "-s -w -X 'github.com/bank-vaults/vault-operator/test.bankVaultsVersion=latest'" \
-                                                   -tags kubeall ./test
+test-acceptance-local: docker-build import-image import-images-acceptance ## Run acceptance tests in kind cluster
+	VAULT_VERSION=$(TEST_VAULT_VERSION) BANK_VAULTS_VERSION=$(TEST_BANK_VAULTS_VERSION) \
+		go test -race -v -timeout 900s -tags kubeall ./test
 
 .PHONY: check
 check: test lint ## Run tests and lint checks
@@ -106,7 +109,7 @@ check: test lint ## Run tests and lint checks
 ##@ Autogeneration
 
 .PHONY: generate-manifests
-generate-manifests: controller-gen ## Generate RBAC and CRD objects
+generate-manifests: ## Generate RBAC and CRD objects
 	$(CONTROLLER_GEN) rbac:roleName=vault crd:maxDescLen=0 webhook paths="./..." \
 		output:rbac:dir=deploy/rbac \
 		output:crd:dir=deploy/crd/bases \
@@ -114,12 +117,12 @@ generate-manifests: controller-gen ## Generate RBAC and CRD objects
 	cp deploy/crd/bases/vault.banzaicloud.com_vaults.yaml deploy/charts/vault-operator/crds/crd.yaml
 
 .PHONY: generate-code
-generate-code: controller-gen ## Generate deepcopy,client,lister,informer objects
+generate-code: ## Generate deepcopy,client,lister,informer objects
 	$(CONTROLLER_GEN) object:headerFile="hack/custom-boilerplate.go.txt" paths="./..."
-	./hack/update-codegen.sh ${CODE_GENERATOR_VERSION}
+	./hack/update-codegen.sh v${CODE_GENERATOR_VERSION}
 
 .PHONY: generate-helm-docs
-generate-helm-docs: helm-docs ## Generate Helm chart documentation
+generate-helm-docs: ## Generate Helm chart documentation
 	$(HELM_DOCS) -s file -c deploy/charts/ -t README.md.gotmpl
 
 .PHONY: generate
@@ -131,7 +134,7 @@ generate: ## Generate manifests, code, and docs resources
 .PHONY: build
 build: ## Build manager binary
 	@mkdir -p build
-	go build -race -o build/manager ./cmd/manager
+	go build -race -o build/manager ./cmd
 
 .PHONY: run
 run: generate deploy ## Run the controller from your host
@@ -166,7 +169,7 @@ docker-buildx: ## Build docker image for cross-platform support
 	rm Dockerfile.cross
 
 .PHONY: helm-chart
-helm-chart: helm ## Build helm chart
+helm-chart: ## Build helm chart
 	@mkdir -p build
 	$(HELM) package -d build/ deploy/charts/vault-operator
 
@@ -181,35 +184,44 @@ ifndef ignore-not-found
 endif
 
 .PHONY: up
-up: kind ## Start development environment
+up: ## Start kind development environment
 	$(KIND) create cluster --name vault-operator
 
 .PHONY: down
-down: kind ## Destroy development environment
+down: ## Destroy kind development environment
 	$(KIND) delete cluster --name vault-operator
 
 .PHONY: import-image
-import-image: ## Import built docker image to local kind image repository
+import-image: ## Import operator docker image to kind image repository
 	$(KIND) load docker-image ${IMG} --name vault-operator
+
+.PHONY: import-images-acceptance
+import-images-acceptance: import-image ## Import docker images required for acceptance tests to kind image repository
+	docker pull ghcr.io/banzaicloud/bank-vaults:$(TEST_BANK_VAULTS_VERSION)
+	docker pull vault:$(TEST_VAULT_VERSION)
+	docker tag vault:$(TEST_VAULT_VERSION) vault:latest
+
+	$(KIND) load docker-image ghcr.io/banzaicloud/bank-vaults:$(TEST_BANK_VAULTS_VERSION) --name vault-operator
+	$(KIND) load docker-image vault:latest --name vault-operator
 
 .PHONY: clean
 clean: undeploy ## Clean operator resources from a Kubernetes cluster
 
 .PHONY: install
-install: generate-manifests kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.
+install: generate-manifests ## Install CRDs into the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build deploy/crd | kubectl apply -f -
 
 .PHONY: uninstall
-uninstall: generate-manifests kustomize ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
+uninstall: generate-manifests ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
 	$(KUSTOMIZE) build deploy/crd | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
 
 .PHONY: deploy
-deploy: generate-manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
+deploy: generate-manifests ## Deploy controller to the K8s cluster specified in ~/.kube/config.
 	cd deploy/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	$(KUSTOMIZE) build deploy/default | kubectl apply -f -
 
 .PHONY: undeploy
-undeploy: kustomize ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
+undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
 	$(KUSTOMIZE) build deploy/default | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
 
 ##@ Dependencies
@@ -220,48 +232,40 @@ $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
 
 KUSTOMIZE ?= $(LOCALBIN)/kustomize
-kustomize: $(KUSTOMIZE)
 $(KUSTOMIZE): $(LOCALBIN)
-	@if test -x $(LOCALBIN)/kustomize && ! $(LOCALBIN)/kustomize version | grep -q $(KUSTOMIZE_VERSION); then \
+	@if test -x $(LOCALBIN)/kustomize && ! $(LOCALBIN)/kustomize version | grep -q v$(KUSTOMIZE_VERSION); then \
 		echo "$(LOCALBIN)/kustomize version is not expected $(KUSTOMIZE_VERSION). Removing it before installing."; \
 		rm -rf $(LOCALBIN)/kustomize; \
 	fi
-	test -s $(LOCALBIN)/kustomize || GOBIN=$(LOCALBIN) GO111MODULE=on go install sigs.k8s.io/kustomize/kustomize/v5@$(KUSTOMIZE_VERSION)
+	test -s $(LOCALBIN)/kustomize || GOBIN=$(LOCALBIN) GO111MODULE=on go install sigs.k8s.io/kustomize/kustomize/v5@v$(KUSTOMIZE_VERSION)
 
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
-controller-gen: $(CONTROLLER_GEN)
 $(CONTROLLER_GEN): $(LOCALBIN)
-	test -s $(LOCALBIN)/controller-gen && $(LOCALBIN)/controller-gen --version | grep -q $(CONTROLLER_TOOLS_VERSION) || \
-	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION)
+	test -s $(LOCALBIN)/controller-gen && $(LOCALBIN)/controller-gen --version | grep -q v$(CONTROLLER_TOOLS_VERSION) || \
+	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-tools/cmd/controller-gen@v$(CONTROLLER_TOOLS_VERSION)
 
 ENVTEST ?= $(LOCALBIN)/setup-envtest
-envtest: $(ENVTEST)
 $(ENVTEST): $(LOCALBIN)
 	test -s $(LOCALBIN)/setup-envtest || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
 
 GOLANGCI_LINT ?= $(LOCALBIN)/golangci-lint
-golangci-lint: $(GOLANGCI_LINT)
 $(GOLANGCI_LINT): $(LOCALBIN)
 	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | bash -s -- v${GOLANGCI_VERSION}
 
 LICENSEI ?= $(LOCALBIN)/licensei
-licensei: $(LICENSEI)
 $(LICENSEI): $(LOCALBIN)
 	curl -sfL https://raw.githubusercontent.com/goph/licensei/master/install.sh | bash -s -- v${LICENSEI_VERSION}
 
 HELM ?= $(LOCALBIN)/helm
-helm: $(HELM)
 $(HELM): $(LOCALBIN)
 	curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | USE_SUDO=false HELM_INSTALL_DIR=$(LOCALBIN) bash
 
 KIND ?= $(LOCALBIN)/kind
-kind: $(KIND)
 $(KIND): $(LOCALBIN)
 	curl -Lo $(LOCALBIN)/kind https://kind.sigs.k8s.io/dl/v${KIND_VERSION}/kind-$(shell uname -s | tr '[:upper:]' '[:lower:]')-$(shell uname -m | sed -e "s/aarch64/arm64/; s/x86_64/amd64/")
 	@chmod +x $(LOCALBIN)/kind
 
 HELM_DOCS ?= $(LOCALBIN)/helm-docs
-helm-docs: $(HELM_DOCS)
 $(HELM_DOCS): $(LOCALBIN)
 	curl -L https://github.com/norwoodj/helm-docs/releases/download/v${HELM_DOCS_VERSION}/helm-docs_${HELM_DOCS_VERSION}_$(shell uname)_x86_64.tar.gz | tar -zOxf - helm-docs > ./bin/helm-docs
 	@chmod +x $(LOCALBIN)/helm-docs
