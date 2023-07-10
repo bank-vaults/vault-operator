@@ -35,23 +35,13 @@
             packages = with pkgs; [
               gnumake
 
-              golangci-lint
-
-              kubernetes-controller-tools
-              kubernetes-code-generator
-
-              kind
               kubectl
               kubectl-images
-              kustomize
-              kubernetes-helm
-              helm-docs
 
               yamllint
               hadolint
             ] ++ [
               self'.packages.licensei
-              self'.packages.kurun
               self'.packages.envtpl
               self'.packages.cidr
             ];
@@ -95,29 +85,6 @@
             vendorSha256 = "sha256-ZIpZ2tPLHwfWiBywN00lPI1R7u7lseENIiybL3+9xG8=";
 
             subPackages = [ "cmd/licensei" ];
-
-            ldflags = [
-              "-w"
-              "-s"
-              "-X main.version=v${version}"
-            ];
-          };
-
-          # TODO: create flake in source repo
-          kurun = pkgs.buildGoModule rec {
-            pname = "kurun";
-            version = "0.7.0";
-
-            src = pkgs.fetchFromGitHub {
-              owner = "banzaicloud";
-              repo = "kurun";
-              rev = "${version}";
-              sha256 = "sha256-b7ucOpTv+JON1yYxb1OhxBTZhyppKssOP7GNkmaCI5s=";
-            };
-
-            vendorSha256 = "sha256-kbdYDzPSNU3s4E4OwEGG9nbg66EwX18t+SVB4GejsNA=";
-
-            subPackages = [ "." ];
 
             ldflags = [
               "-w"

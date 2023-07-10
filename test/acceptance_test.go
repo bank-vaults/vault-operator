@@ -48,7 +48,7 @@ import (
 var (
 	vaultVersion      = "latest"
 	bankVaultsVersion = "latest"
-	operatorVersion   = "dev"
+	operatorVersion   = "latest"
 )
 
 // Installing the operator helm chart before testing
@@ -403,6 +403,9 @@ func prepareEnv(t *testing.T, testName string, k8sRes []string) *k8s.KubectlOpti
 		}
 
 		k8s.KubectlApplyFromString(t, kubectlOptions, string(resource))
+		t.Cleanup(func() {
+			k8s.KubectlDeleteFromString(t, kubectlOptions, string(resource))
+		})
 	}
 
 	return kubectlOptions

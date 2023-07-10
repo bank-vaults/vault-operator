@@ -1,3 +1,4 @@
+# A Self-Documenting Makefile: http://marmelab.com/blog/2016/02/29/auto-documented-makefile.html
 
 # Image URL to use all building/pushing image targets
 IMG ?= ghcr.io/bank-vaults/vault-operator:dev
@@ -16,6 +17,8 @@ ENVTEST_K8S_VERSION = 1.27.1
 # Acceptance test default data
 TEST_VAULT_VERSION = 1.13.3
 TEST_BANK_VAULTS_VERSION = 1.19.0
+TEST_OPERATOR_VERSION = $(lastword $(subst :, ,$(IMG)))
+TEST_KIND_CLUSTER ?= vault-operator
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -31,10 +34,8 @@ SHELL = /usr/bin/env bash -o pipefail
 
 ##@ General
 
-.PHONY: all
-all: build
-
 .PHONY: help
+default: help
 help: ## Display this help.
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
@@ -43,10 +44,6 @@ help: ## Display this help.
 .PHONY: fmt
 fmt: golangci-lint ## Run go fmt against code
 	$(GOLANGCI_LINT) run --fix
-
-.PHONY: vet
-vet: ## Run go vet against code
-	go vet ./...
 
 .PHONY: license-check
 license-check: licensei ## Run license check
@@ -81,38 +78,34 @@ test: envtest ## Run tests
 		go test -race -v ./... -coverprofile cover.out
 
 .PHONY: test-acceptance
-test-acceptance: ## Run acceptance tests
-	go test -race -v -timeout 900s -tags kubeall ./test
-
-.PHONY: test-acceptance-local
-test-acceptance-local: docker-build import-image import-images-acceptance ## Run acceptance tests in kind cluster
-	VAULT_VERSION=$(TEST_VAULT_VERSION) BANK_VAULTS_VERSION=$(TEST_BANK_VAULTS_VERSION) \
+test-acceptance: ## Run acceptance tests. If running on local kind cluster, run make "import-test" before this command
+	VAULT_VERSION=$(TEST_VAULT_VERSION) BANK_VAULTS_VERSION=$(TEST_BANK_VAULTS_VERSION) OPERATOR_VERSION=$(TEST_OPERATOR_VERSION) \
 		go test -race -v -timeout 900s -tags kubeall ./test
 
 .PHONY: check
-check: test lint ## Run tests and lint checks
+check: lint test ## Run lint checks and tests
 
 ##@ Autogeneration
 
-.PHONY: generate-manifests
-generate-manifests: controller-gen ## Generate RBAC and CRD objects
+.PHONY: gen-manifests
+gen-manifests: controller-gen ## Generate RBAC and CRD objects
 	$(CONTROLLER_GEN) rbac:roleName=vault crd:maxDescLen=0 webhook paths="./..." \
 		output:rbac:dir=deploy/rbac \
 		output:crd:dir=deploy/crd/bases \
 		output:webhook:dir=deploy/webhook
 	cp deploy/crd/bases/vault.banzaicloud.com_vaults.yaml deploy/charts/vault-operator/crds/crd.yaml
 
-.PHONY: generate-code
-generate-code: controller-gen ## Generate deepcopy,client,lister,informer objects
+.PHONY: gen-code
+gen-code: controller-gen ## Generate deepcopy,client,lister,informer objects
 	$(CONTROLLER_GEN) object:headerFile="hack/custom-boilerplate.go.txt" paths="./..."
 	./hack/update-codegen.sh v${CODE_GENERATOR_VERSION}
 
-.PHONY: generate-helm-docs
-generate-helm-docs: helm-docs ## Generate Helm chart documentation
+.PHONY: gen-helm-docs
+gen-helm-docs: helm-docs ## Generate Helm chart documentation
 	$(HELM_DOCS) -s file -c deploy/charts/ -t README.md.gotmpl
 
 .PHONY: generate
-generate: generate-manifests generate-code generate-helm-docs
+generate: gen-manifests gen-code gen-helm-docs
 generate: ## Generate manifests, code, and docs resources
 
 ##@ Build
@@ -132,10 +125,6 @@ run: generate deploy ## Run the controller from your host
 .PHONY: docker-build
 docker-build: ## Build docker image
 	docker build -t ${IMG} .
-
-.PHONY: docker-push
-docker-push: ## Push docker image
-	docker push ${IMG}
 
 # PLATFORMS defines the target platforms for  the manager image be build to provide support to multiple
 # architectures. (i.e. make docker-buildx IMG=myregistry/mypoperator:0.0.1). To use this option you need to:
@@ -171,38 +160,38 @@ endif
 
 .PHONY: up
 up: kind ## Start kind development environment
-	$(KIND) create cluster --name vault-operator
+	$(KIND) create cluster --name $(TEST_KIND_CLUSTER)
 
 .PHONY: down
 down: kind ## Destroy kind development environment
-	$(KIND) delete cluster --name vault-operator
+	$(KIND) delete cluster --name $(TEST_KIND_CLUSTER)
 
 .PHONY: import-image
-import-image: kind ## Import operator docker image to kind image repository
-	$(KIND) load docker-image ${IMG} --name vault-operator
+import-image: kind docker-build ## Import operator docker image to kind image repository
+	$(KIND) load docker-image ${IMG} --name $(TEST_KIND_CLUSTER)
 
-.PHONY: import-images-acceptance
-import-images-acceptance: import-image ## Import docker images required for acceptance tests to kind image repository
+.PHONY: import-test
+import-test: import-image ## Import docker images required for tests to kind image repository
 	docker pull ghcr.io/banzaicloud/bank-vaults:$(TEST_BANK_VAULTS_VERSION)
 	docker pull vault:$(TEST_VAULT_VERSION)
 	docker tag vault:$(TEST_VAULT_VERSION) vault:latest
 
-	$(KIND) load docker-image ghcr.io/banzaicloud/bank-vaults:$(TEST_BANK_VAULTS_VERSION) --name vault-operator
-	$(KIND) load docker-image vault:latest --name vault-operator
+	$(KIND) load docker-image ghcr.io/banzaicloud/bank-vaults:$(TEST_BANK_VAULTS_VERSION) --name $(TEST_KIND_CLUSTER)
+	$(KIND) load docker-image vault:latest --name $(TEST_KIND_CLUSTER)
 
 .PHONY: clean
 clean: undeploy ## Clean operator resources from a Kubernetes cluster
 
 .PHONY: install
-install: generate-manifests kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.
+install: gen-manifests kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build deploy/crd | kubectl apply -f -
 
 .PHONY: uninstall
-uninstall: generate-manifests kustomize ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
+uninstall: gen-manifests kustomize ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
 	$(KUSTOMIZE) build deploy/crd | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
 
 .PHONY: deploy
-deploy: generate-manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
+deploy: gen-manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
 	cd deploy/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	$(KUSTOMIZE) build deploy/default | kubectl apply -f -
 
@@ -255,28 +244,28 @@ $(HELM): $(LOCALBIN)
 KIND ?= $(LOCALBIN)/kind
 kind: $(KIND)
 $(KIND): $(LOCALBIN)
-	@if test -s $(LOCALBIN)/kind; then \
+	@if [ ! -s "$(LOCALBIN)/kind" ]; then \
 		curl -Lo $(LOCALBIN)/kind https://kind.sigs.k8s.io/dl/v${KIND_VERSION}/kind-$(shell uname -s | tr '[:upper:]' '[:lower:]')-$(shell uname -m | sed -e "s/aarch64/arm64/; s/x86_64/amd64/"); \
-		@chmod +x $(LOCALBIN)/kind; \
+		chmod +x $(LOCALBIN)/kind; \
 	fi
 
 HELM_DOCS ?= $(LOCALBIN)/helm-docs
 helm-docs: $(HELM_DOCS)
 $(HELM_DOCS): $(LOCALBIN)
-	@if test -s $(LOCALBIN)/helm-docs; then \
+	@if [ ! -s "$(LOCALBIN)/helm-docs" ]; then \
 		curl -L https://github.com/norwoodj/helm-docs/releases/download/v${HELM_DOCS_VERSION}/helm-docs_${HELM_DOCS_VERSION}_$(shell uname)_x86_64.tar.gz | tar -zOxf - helm-docs > ./bin/helm-docs; \
-		@chmod +x $(LOCALBIN)/helm-docs; \
+		chmod +x $(LOCALBIN)/helm-docs; \
 	fi
 
 KURUN ?= $(LOCALBIN)/kurun
 kurun: $(KURUN)
 $(KURUN): $(LOCALBIN)
-	@if test -s $(LOCALBIN)/kurun; then \
+	@if [ ! -s "$(LOCALBIN)/kurun" ]; then \
 		curl -Lo  $(LOCALBIN)/kurun https://github.com/banzaicloud/kurun/releases/download/${KURUN_VERSION}/kurun-$(shell uname -s | tr '[:upper:]' '[:lower:]')-$(shell uname -m | sed -e "s/aarch64/arm64/; s/x86_64/amd64/"); \
-		@chmod +x  $(LOCALBIN)/kurun; \
+		chmod +x  $(LOCALBIN)/kurun; \
 	fi
 
 .PHONY: deps
 deps: $(HELM) $(CONTROLLER_GEN) $(KUSTOMIZE) $(KIND)
 deps: $(HELM_DOCS) $(ENVTEST) $(GOLANGCI_LINT) $(LICENSEI) $(KURUN)
-deps: ## Install dependencies
+deps: ## Download and install dependencies

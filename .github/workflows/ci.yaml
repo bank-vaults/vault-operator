@@ -190,8 +190,8 @@ jobs:
       - name: Acceptance test
         run: nix develop --impure .#ci -c make test-acceptance
         env:
-          VAULT_VERSION: ${{ matrix.vault_version }}
-          OPERATOR_VERSION: ${{ needs.artifacts.outputs.container-image-tag }}
+          TEST_VAULT_VERSION: ${{ matrix.vault_version }}
+          TEST_OPERATOR_VERSION: ${{ needs.artifacts.outputs.container-image-tag }}
           HELM_CHART: "${{ github.workspace }}/${{ needs.artifacts.outputs.helm-chart-package }}"
 
   multi-cluster-acceptance-test:
