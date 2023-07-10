@@ -2,9 +2,6 @@
 # Image URL to use all building/pushing image targets
 IMG ?= ghcr.io/bank-vaults/vault-operator:dev
 
-# Requred tools
-# kubectl,docker,go,hadolint,yamllint
-
 # Tool chain
 GOLANGCI_VERSION = 1.53.3
 LICENSEI_VERSION = 0.8.0
@@ -33,17 +30,6 @@ SHELL = /usr/bin/env bash -o pipefail
 .SHELLFLAGS = -ec
 
 ##@ General
-
-# The help target prints out all targets with their descriptions organized
-# beneath their categories. The categories are represented by '##@' and the
-# target descriptions by '##'. The awk commands is responsible for reading the
-# entire set of makefiles included in this invocation, looking for lines of the
-# file as xyz: ## something, and then pretty-format the target and help. Then,
-# if there's a line with ##@ something, that gets pretty-printed as a category.
-# More info on the usage of ANSI control characters for terminal formatting:
-# https://en.wikipedia.org/wiki/ANSI_escape_code#SGR_parameters
-# More info on the awk command:
-# http://linuxcommand.org/lc3_adv_awk.php
 
 .PHONY: all
 all: build
@@ -282,7 +268,15 @@ $(HELM_DOCS): $(LOCALBIN)
 		@chmod +x $(LOCALBIN)/helm-docs; \
 	fi
 
+KURUN ?= $(LOCALBIN)/kurun
+kurun: $(KURUN)
+$(KURUN): $(LOCALBIN)
+	@if test -s $(LOCALBIN)/kurun; then \
+		curl -Lo  $(LOCALBIN)/kurun https://github.com/banzaicloud/kurun/releases/download/${KURUN_VERSION}/kurun-$(shell uname -s | tr '[:upper:]' '[:lower:]')-$(shell uname -m | sed -e "s/aarch64/arm64/; s/x86_64/amd64/"); \
+		@chmod +x  $(LOCALBIN)/kurun; \
+	fi
+
 .PHONY: deps
-deps: $(HELM_DOCS) $(ENVTEST) $(CONTROLLER_GEN) $(KUSTOMIZE)
-deps: $(KIND) $(GOLANGCI_LINT) $(LICENSEI) $(HELM)
+deps: $(HELM) $(CONTROLLER_GEN) $(KUSTOMIZE) $(KIND)
+deps: $(HELM_DOCS) $(ENVTEST) $(GOLANGCI_LINT) $(LICENSEI) $(KURUN)
 deps: ## Install dependencies
