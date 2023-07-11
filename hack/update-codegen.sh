@@ -20,22 +20,36 @@ set -o pipefail
 
 function finish {
   rm -rf ${CODEGEN_DIR}
+  rm -rf github.com
 }
 
 trap finish EXIT
 
+## Package configs
+MODULE=github.com/bank-vaults/vault-operator
+APIS_PKG=pkg/apis
+OUTPUT_PKG=pkg/client
+GROUP_VERSION=vault:v1alpha1
+
+## Prepare codegen
+SOURCE_DIR=$(dirname "${BASH_SOURCE[0]}")/..
+CODEGEN_VERSION=$1
 CODEGEN_DIR=$(mktemp -d)
 
-VERSION=$1
-
-git clone git@github.com:kubernetes/code-generator.git ${CODEGEN_DIR}
-cd ${CODEGEN_DIR} && git checkout $VERSION && cd -
+git clone https://github.com/kubernetes/code-generator.git ${CODEGEN_DIR}
+cd ${CODEGEN_DIR} && git checkout $CODEGEN_VERSION && cd -
 
 # generate the code with:
 # --output-base    because this script should also be able to run inside the vendor dir of
 #                  k8s.io/kubernetes. The output-base is needed for the generators to output into the vendor dir
 #                  instead of the $GOPATH directly. For normal projects this can be dropped.
-${CODEGEN_DIR}/generate-groups.sh all \
-  github.com/banzaicloud/bank-vaults/vault-operator/pkg/client github.com/banzaicloud/bank-vaults/vault-operator/pkg/apis \
-  vault:v1alpha1 \
-  --go-header-file ./hack/scripts/custom-boilerplate.go.txt
+
+## Generate code
+${CODEGEN_DIR}/generate-groups.sh "client,lister,informer" \
+  ${MODULE}/${OUTPUT_PKG} ${MODULE}/${APIS_PKG} \
+  ${GROUP_VERSION} \
+  --go-header-file "${SOURCE_DIR}"/hack/custom-boilerplate.go.txt \
+  --output-base "${SOURCE_DIR}"
+
+## Cleanup
+cp -a ${MODULE}/. ${SOURCE_DIR}

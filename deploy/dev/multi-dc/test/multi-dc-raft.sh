@@ -3,6 +3,7 @@
 set -xeo pipefail
 
 # REQUIREMENTS:
+# - kustomize
 # - kubectl
 # - helm3
 # - https://github.com/subfuzion/envtpl
@@ -83,7 +84,7 @@ function install_instance {
 
     helm upgrade --install vault-operator ./deploy/charts/vault-operator --wait --set image.tag=${OPERATOR_VERSION} --set image.pullPolicy=Never --set image.bankVaultsTag=${BANK_VAULTS_VERSION}
 
-    kubectl apply -f deploy/default/rbac.yaml
+    kubectl apply -k deploy/rbac/
     envtpl deploy/dev/multi-dc/test/cr-"${INSTANCE}".yaml | kubectl apply -f -
 
     echo "Waiting for for ${INSTANCE} vault instance..."

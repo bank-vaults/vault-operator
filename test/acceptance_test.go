@@ -33,41 +33,51 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
-	"gopkg.in/yaml.v3"
-
-	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/rbac/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
-
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/gruntwork-io/terratest/modules/logger"
 	"github.com/gruntwork-io/terratest/modules/retry"
+	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
+	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/rbac/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 )
 
 var (
 	vaultVersion      = "latest"
-	bankVaultsVersion = "1.19.0" // TODO: Make it work locally with latest
+	bankVaultsVersion = "latest"
+	operatorVersion   = "latest"
 )
 
 // Installing the operator helm chart before testing
 func TestMain(m *testing.M) {
 	t := &testing.T{}
 
-	// Setting Vault version
-	if os.Getenv("VAULT_VERSION") != "" {
-		vaultVersion = os.Getenv("VAULT_VERSION")
-	}
-
 	// Setup Vault operator as a dependency for each test
 	releaseName := "vault-operator"
 	defaultKubectlOptions := k8s.NewKubectlOptions("", "", "default")
 
-	operatorVersion := "latest"
+	// Set Vault version
+	if v := os.Getenv("VAULT_VERSION"); v != "" {
+		vaultVersion = v
+	}
+
+	// Set Bank vaults version
+	if v := os.Getenv("BANK_VAULTS_VERSION"); v != "" {
+		bankVaultsVersion = v
+	}
+
+	// Set Operator version
 	if v := os.Getenv("OPERATOR_VERSION"); v != "" {
 		operatorVersion = v
+	}
+
+	// Set Helm chart
+	chart := "../deploy/charts/vault-operator"
+	if v := os.Getenv("HELM_CHART"); v != "" {
+		chart = v
 	}
 
 	// Setup args for helm.
@@ -80,35 +90,33 @@ func TestMain(m *testing.M) {
 		},
 	}
 
-	chart := "../deploy/charts/vault-operator"
-	if v := os.Getenv("HELM_CHART"); v != "" {
-		chart = v
-	}
-
 	// Deploy the chart using `helm install` and wait until the pod comes up
 	helm.Install(t, helmOptions, chart, releaseName)
+	defer helm.Delete(t, helmOptions, releaseName, true)
+
 	operatorPods := waitUntilPodsCreated(t, defaultKubectlOptions, releaseName, 10, 5*time.Second)
 	k8s.WaitUntilPodAvailable(t, defaultKubectlOptions, operatorPods[0].GetName(), 5, 10*time.Second)
 
 	clientset, err := k8s.GetKubernetesClientFromOptionsE(t, defaultKubectlOptions)
-	_, err = clientset.RbacV1().ClusterRoleBindings().Create(context.Background(), &v1.ClusterRoleBinding{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "vault-auth-delegator",
+	_, err = clientset.RbacV1().ClusterRoleBindings().Create(
+		context.Background(),
+		&v1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "vault-auth-delegator",
+			},
+			Subjects: []v1.Subject{},
+			RoleRef: v1.RoleRef{
+				Kind: "ClusterRole",
+				Name: "system:auth-delegator",
+			},
 		},
-		Subjects: []v1.Subject{},
-		RoleRef: v1.RoleRef{
-			Kind: "ClusterRole",
-			Name: "system:auth-delegator",
-		},
-	}, metav1.CreateOptions{})
+		metav1.CreateOptions{},
+	)
 	require.NoError(t, err)
+	defer clientset.RbacV1().ClusterRoleBindings().Delete(context.Background(), "vault-auth-delegator", metav1.DeleteOptions{})
 
 	// Run tests
 	exitCode := m.Run()
-
-	// Tear down dependencies
-	helm.Delete(t, helmOptions, releaseName, true)
-	clientset.RbacV1().ClusterRoleBindings().Delete(context.Background(), "vault-auth-delegator", metav1.DeleteOptions{})
 
 	// Exit based on the test results
 	os.Exit(exitCode)
@@ -117,20 +125,14 @@ func TestMain(m *testing.M) {
 func TestKvv2(t *testing.T) {
 	// t.Parallel()
 
-	kubectlOptions := prepareNamespace(t, "kvv2", vaultVersion)
-	defer k8s.DeleteNamespace(t, kubectlOptions, kubectlOptions.Namespace)
-
 	// Prepare and apply resources
-	resources, err := prepareResources(
-		kubectlOptions.Namespace,
-		vaultVersion,
-		"../deploy/default/rbac.yaml",
-		"../deploy/examples/cr-kvv2.yaml",
+	kubectlOptions := prepareEnv(t,
+		"kvv2",
+		[]string{
+			"rbac.yaml",
+			"../deploy/examples/cr-kvv2.yaml",
+		},
 	)
-	require.NoError(t, err)
-	for _, resource := range resources {
-		k8s.KubectlApplyFromString(t, kubectlOptions, string(resource))
-	}
 
 	// Wait until vault-0 pod comes up healthy
 	k8s.WaitUntilPodAvailable(t, kubectlOptions, "vault-0", 60, 10*time.Second)
@@ -139,20 +141,14 @@ func TestKvv2(t *testing.T) {
 func TestStatsd(t *testing.T) {
 	// t.Parallel()
 
-	kubectlOptions := prepareNamespace(t, "statsd", vaultVersion)
-	defer k8s.DeleteNamespace(t, kubectlOptions, kubectlOptions.Namespace)
-
 	// Prepare and apply resources
-	resources, err := prepareResources(
-		kubectlOptions.Namespace,
-		vaultVersion,
-		"../deploy/default/rbac.yaml",
-		"../deploy/examples/cr-statsd.yaml",
+	kubectlOptions := prepareEnv(t,
+		"statsd",
+		[]string{
+			"rbac.yaml",
+			"../deploy/examples/cr-statsd.yaml",
+		},
 	)
-	require.NoError(t, err)
-	for _, resource := range resources {
-		k8s.KubectlApplyFromString(t, kubectlOptions, string(resource))
-	}
 
 	// Wait until vault-0 pod comes up healthy
 	k8s.WaitUntilPodAvailable(t, kubectlOptions, "vault-0", 60, 10*time.Second)
@@ -161,20 +157,14 @@ func TestStatsd(t *testing.T) {
 func TestExternalSecretsWatcherDeployment(t *testing.T) {
 	// t.Parallel()
 
-	kubectlOptions := prepareNamespace(t, "external-secrets-watcher-deployment", vaultVersion)
-	defer k8s.DeleteNamespace(t, kubectlOptions, kubectlOptions.Namespace)
-
 	// Prepare and apply resources
-	resources, err := prepareResources(
-		kubectlOptions.Namespace,
-		vaultVersion,
-		"deploy/test-external-secrets-watch-deployment.yaml",
-		"../deploy/default/rbac.yaml",
+	kubectlOptions := prepareEnv(t,
+		"external-secrets-watcher-deployment",
+		[]string{
+			"rbac.yaml",
+			"deploy/test-external-secrets-watch-deployment.yaml",
+		},
 	)
-	require.NoError(t, err)
-	for _, resource := range resources {
-		k8s.KubectlApplyFromString(t, kubectlOptions, string(resource))
-	}
 
 	// Wait until vault-0 pod comes up healthy
 	k8s.WaitUntilPodAvailable(t, kubectlOptions, "vault-0", 60, 10*time.Second)
@@ -186,23 +176,15 @@ func TestExternalSecretsWatcherDeployment(t *testing.T) {
 func TestExternalSecretsWatcherSecrets(t *testing.T) {
 	// t.Parallel()
 
-	kubectlOptions := prepareNamespace(t, "external-secrets-watcher-secrets", vaultVersion)
-	defer k8s.DeleteNamespace(t, kubectlOptions, kubectlOptions.Namespace)
-
-	// Applying secrets to be watched
-	k8s.KubectlApply(t, kubectlOptions, "deploy/test-external-secrets-watch-secrets.yaml")
-
 	// Prepare and apply resources
-	resources, err := prepareResources(
-		kubectlOptions.Namespace,
-		vaultVersion,
-		"deploy/test-external-secrets-watch-deployment.yaml",
-		"../deploy/default/rbac.yaml",
+	kubectlOptions := prepareEnv(t,
+		"external-secrets-watcher-secrets",
+		[]string{
+			"rbac.yaml",
+			"deploy/test-external-secrets-watch-secrets.yaml",
+			"deploy/test-external-secrets-watch-deployment.yaml",
+		},
 	)
-	require.NoError(t, err)
-	for _, resource := range resources {
-		k8s.KubectlApplyFromString(t, kubectlOptions, string(resource))
-	}
 
 	// Wait until vault-0 pod comes up healthy
 	k8s.WaitUntilPodAvailable(t, kubectlOptions, "vault-0", 60, 10*time.Second)
@@ -218,20 +200,14 @@ func TestExternalSecretsWatcherSecrets(t *testing.T) {
 func TestRaft(t *testing.T) {
 	// t.Parallel()
 
-	kubectlOptions := prepareNamespace(t, "raft", vaultVersion)
-	defer k8s.DeleteNamespace(t, kubectlOptions, kubectlOptions.Namespace)
-
 	// Prepare and apply resources
-	resources, err := prepareResources(
-		kubectlOptions.Namespace,
-		vaultVersion,
-		"../deploy/default/rbac.yaml",
-		"../deploy/examples/cr-raft.yaml",
+	kubectlOptions := prepareEnv(t,
+		"raft",
+		[]string{
+			"rbac.yaml",
+			"../deploy/examples/cr-raft.yaml",
+		},
 	)
-	require.NoError(t, err)
-	for _, resource := range resources {
-		k8s.KubectlApplyFromString(t, kubectlOptions, string(resource))
-	}
 
 	// Wait until all vault pods come up healthy
 	k8s.WaitUntilPodAvailable(t, kubectlOptions, "vault-0", 60, 10*time.Second)
@@ -242,20 +218,14 @@ func TestRaft(t *testing.T) {
 func TestSoftHSM(t *testing.T) {
 	// t.Parallel()
 
-	kubectlOptions := prepareNamespace(t, "softhsm", vaultVersion)
-	defer k8s.DeleteNamespace(t, kubectlOptions, kubectlOptions.Namespace)
-
 	// Prepare and apply resources
-	resources, err := prepareResources(
-		kubectlOptions.Namespace,
-		vaultVersion,
-		"../deploy/default/rbac.yaml",
-		"../deploy/examples/cr-hsm-softhsm.yaml",
+	kubectlOptions := prepareEnv(t,
+		"softhsm",
+		[]string{
+			"rbac.yaml",
+			"../deploy/examples/cr-hsm-softhsm.yaml",
+		},
 	)
-	require.NoError(t, err)
-	for _, resource := range resources {
-		k8s.KubectlApplyFromString(t, kubectlOptions, string(resource))
-	}
 
 	// Wait until vault-0 pod comes up healthy
 	k8s.WaitUntilPodAvailable(t, kubectlOptions, "vault-0", 60, 10*time.Second)
@@ -264,26 +234,20 @@ func TestSoftHSM(t *testing.T) {
 func TestDisabledRootTokenStorage(t *testing.T) {
 	// t.Parallel()
 
-	kubectlOptions := prepareNamespace(t, "disabled-root-token-storage", vaultVersion)
-	defer k8s.DeleteNamespace(t, kubectlOptions, kubectlOptions.Namespace)
-
 	// Prepare and apply resources
-	resources, err := prepareResources(
-		kubectlOptions.Namespace,
-		vaultVersion,
-		"../deploy/default/rbac.yaml",
-		"../deploy/examples/cr-disabled-root-token-storage.yaml",
+	kubectlOptions := prepareEnv(t,
+		"disabled-root-token-storage",
+		[]string{
+			"rbac.yaml",
+			"../deploy/examples/cr-disabled-root-token-storage.yaml",
+		},
 	)
-	require.NoError(t, err)
-	for _, resource := range resources {
-		k8s.KubectlApplyFromString(t, kubectlOptions, string(resource))
-	}
 
 	// Wait until vault-0 pod comes up healthy
 	k8s.WaitUntilPodAvailable(t, kubectlOptions, "vault-0", 60, 10*time.Second)
 
 	// Check that the vault-root secret is not created
-	_, err = k8s.GetSecretE(t, kubectlOptions, "vault-root")
+	_, err := k8s.GetSecretE(t, kubectlOptions, "vault-root")
 	require.Errorf(t, err, `secrets "vault-root" not found`)
 }
 
@@ -293,8 +257,14 @@ func TestPriorityClass(t *testing.T) {
 	// TODO: Disable test for now until examples are fixed
 	return
 
-	kubectlOptions := prepareNamespace(t, "priority-class", vaultVersion)
-	defer k8s.DeleteNamespace(t, kubectlOptions, kubectlOptions.Namespace)
+	// Prepare and apply resources
+	kubectlOptions := prepareEnv(t,
+		"priority-class",
+		[]string{
+			"rbac.yaml",
+			"../deploy/examples/cr-priority.yaml",
+		},
+	)
 
 	// Add ServiceAccount to ClusterRoleBinding
 	clientset, err := k8s.GetKubernetesClientFromOptionsE(t, kubectlOptions)
@@ -306,18 +276,6 @@ func TestPriorityClass(t *testing.T) {
 	})
 	_, err = clientset.RbacV1().ClusterRoleBindings().Update(context.Background(), crb, metav1.UpdateOptions{})
 	require.NoError(t, err)
-
-	// Prepare and apply resources
-	resources, err := prepareResources(
-		kubectlOptions.Namespace,
-		vaultVersion,
-		"../deploy/default/rbac.yaml",
-		"../deploy/examples/cr-priority.yaml",
-	)
-	require.NoError(t, err)
-	for _, resource := range resources {
-		k8s.KubectlApplyFromString(t, kubectlOptions, string(resource))
-	}
 
 	// Wait until vault-0 pod comes up healthy and secrets are populated
 	k8s.WaitUntilPodAvailable(t, kubectlOptions, "vault-0", 60, 10*time.Second)
@@ -338,20 +296,14 @@ func TestOIDC(t *testing.T) {
 	// TODO: Disable test for now until examples are fixed
 	return
 
-	// Use the default namespace for this test
-	kubectlOptions := k8s.NewKubectlOptions("", "", "default")
-
 	// Prepare and apply resources
-	resources, err := prepareResources(
-		kubectlOptions.Namespace,
-		vaultVersion,
-		"../deploy/default/rbac.yaml",
-		"../deploy/examples/cr-oidc.yaml",
+	kubectlOptions := prepareEnv(t,
+		"default",
+		[]string{
+			"rbac.yaml",
+			"../deploy/examples/cr-oidc.yaml",
+		},
 	)
-	require.NoError(t, err)
-	for _, resource := range resources {
-		k8s.KubectlApplyFromString(t, kubectlOptions, string(resource))
-	}
 
 	// Wait until vault-0 pod comes up healthy
 	k8s.WaitUntilPodAvailable(t, kubectlOptions, "vault-0", 60, 10*time.Second)
@@ -370,30 +322,23 @@ func TestOIDC(t *testing.T) {
 	k8s.KubectlDelete(t, kubectlOptions, oidcPodFilePath)
 }
 
-func prepareNamespace(t *testing.T, testName string, vaultVersion string) *k8s.KubectlOptions {
-	// Replace . with - in vaultVersion string
-	vaultVersion = strings.ReplaceAll(vaultVersion, ".", "-")
-
+// Installs k8s and kustomize components from configuration
+func prepareEnv(t *testing.T, testName string, k8sRes []string) *k8s.KubectlOptions {
 	// Setup a unique namespace for the resources for this test.
-	namespaceName := fmt.Sprintf("test-%s-vault-%s", testName, vaultVersion)
+	namespaceName := fmt.Sprintf("test-%s-vault-%s", testName, strings.ReplaceAll(vaultVersion, ".", "-"))
 
 	// Setup the kubectl config (default HOME/.kube/config) and the default current context.
 	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
 
-	// Create namespace
-	k8s.CreateNamespace(t, kubectlOptions, namespaceName)
+	// Prepare namespace
+	prepareNamespace(t, namespaceName, kubectlOptions)
 
-	return kubectlOptions
-}
-
-// Insert namespace name into resource definitions to be applied
-func prepareResources(namespaceName string, vaultVersion string, crds ...string) ([][]byte, error) {
 	// Reading files into byte slices
 	var files [][]byte
-	for _, crd := range crds {
+	for _, crd := range k8sRes {
 		data, err := os.ReadFile(crd)
 		if err != nil {
-			return nil, err
+			t.Fatal(err)
 		}
 		files = append(files, data)
 	}
@@ -410,14 +355,13 @@ func prepareResources(namespaceName string, vaultVersion string, crds ...string)
 				break
 			}
 			if err != nil {
-				return nil, err
+				t.Fatal(err)
 			}
 			documents = append(documents, v)
 		}
 	}
 
 	// Iterate on yaml documents and change namespace name where necessary
-	var resources [][]byte
 	for _, v := range documents {
 		if v.(map[string]interface{})["kind"] == "Vault" {
 			if i, ok := v.(map[string]interface{})["spec"].(map[string]interface{}); ok {
@@ -455,12 +399,20 @@ func prepareResources(namespaceName string, vaultVersion string, crds ...string)
 
 		resource, err := yaml.Marshal(v)
 		if err != nil {
-			return nil, err
+			t.Fatal(err)
 		}
 
-		resources = append(resources, resource)
+		k8s.KubectlApplyFromString(t, kubectlOptions, string(resource))
 	}
-	return resources, nil
+
+	return kubectlOptions
+}
+
+func prepareNamespace(t *testing.T, namespaceName string, kubectlOptions *k8s.KubectlOptions) {
+	k8s.CreateNamespace(t, kubectlOptions, namespaceName)
+	t.Cleanup(func() {
+		k8s.DeleteNamespace(t, kubectlOptions, kubectlOptions.Namespace)
+	})
 }
 
 func executeShellCommand(command string) (string, string, error) {

@@ -22,7 +22,6 @@ import (
 	v1alpha1 "github.com/bank-vaults/vault-operator/pkg/apis/vault/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
-	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	testing "k8s.io/client-go/testing"
@@ -34,9 +33,9 @@ type FakeVaults struct {
 	ns   string
 }
 
-var vaultsResource = schema.GroupVersionResource{Group: "vault.banzaicloud.com", Version: "v1alpha1", Resource: "vaults"}
+var vaultsResource = v1alpha1.SchemeGroupVersion.WithResource("vaults")
 
-var vaultsKind = schema.GroupVersionKind{Group: "vault.banzaicloud.com", Version: "v1alpha1", Kind: "Vault"}
+var vaultsKind = v1alpha1.SchemeGroupVersion.WithKind("Vault")
 
 // Get takes name of the vault, and returns the corresponding vault object, and an error if there is any.
 func (c *FakeVaults) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.Vault, err error) {
@@ -103,7 +102,7 @@ func (c *FakeVaults) Update(ctx context.Context, vault *v1alpha1.Vault, opts v1.
 // Delete takes name of the vault and deletes it. Returns an error if one occurs.
 func (c *FakeVaults) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteAction(vaultsResource, c.ns, name), &v1alpha1.Vault{})
+		Invokes(testing.NewDeleteActionWithOptions(vaultsResource, c.ns, name, opts), &v1alpha1.Vault{})
 
 	return err
 }

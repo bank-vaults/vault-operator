@@ -4,6 +4,7 @@ set -euo pipefail
 
 # REQUIREMENTS:
 # - kubectl
+# - kustomize
 # - helm3
 # - https://github.com/subfuzion/envtpl
 # - jq
@@ -94,7 +95,7 @@ if [ $COMMAND = "install" ]; then
 
         create_aws_secret
 
-        kubectl apply -f operator/deploy/rbac.yaml
+        kubectl apply -k deploy/rbac/
         cat operator/deploy/dev/multi-dc/aws/cr-${INSTANCE}.yaml | envtpl | kubectl apply -f -
 
         echo "Waiting for for ${INSTANCE} vault instance..."

@@ -1161,12 +1161,12 @@ spec:
                     properties:
                       preFlightChecks:
                         type: boolean
-                      storeRootToken:
-                        type: boolean
                       secretShares:
                         type: integer
                       secretThreshold:
                         type: integer
+                      storeRootToken:
+                        type: boolean
                     type: object
                   vault:
                     properties:
@@ -10451,3 +10451,5 @@ spec:
         type: object
     served: true
     storage: true
+    subresources:
+      status: {}
