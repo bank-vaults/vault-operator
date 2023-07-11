@@ -69,10 +69,6 @@
             };
 
             enterShell = ''
-              # Prepare binary path for dependencies in Makefile
-              export LOCALBIN="$DEVENV_PROFILE/bin"
-
-              # Run versions
               versions
             '';
 

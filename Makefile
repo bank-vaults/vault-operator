@@ -25,7 +25,7 @@ default: help
 help: ## Display this help
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
-##@ Development
+##@ Checks
 
 .PHONY: fmt
 fmt: ## Run go fmt against code
@@ -69,34 +69,33 @@ license-check: ## Run license check
 .PHONY: check
 check: lint test ## Run lint checks and tests
 
-##@ Autogeneration
-
-.PHONY: gen-manifests
-gen-manifests: ## Generate webhook, RBAC, and CRD resources
-	$(CONTROLLER_GEN) rbac:roleName=vault crd:maxDescLen=0 webhook paths="./..." \
-		output:rbac:dir=deploy/rbac \
-		output:crd:dir=deploy/crd/bases \
-		output:webhook:dir=deploy/webhook
-	cp deploy/crd/bases/vault.banzaicloud.com_vaults.yaml deploy/charts/vault-operator/crds/crd.yaml
-
-.PHONY: gen-code
-gen-code: ## Generate deepcopy, client, lister, and informer objects
-	$(CONTROLLER_GEN) object:headerFile="hack/custom-boilerplate.go.txt" paths="./..."
-	./hack/update-codegen.sh v${CODE_GENERATOR_VERSION}
-
-.PHONY: gen-helm-docs
-gen-helm-docs: ## Generate Helm chart documentation
-	$(HELM_DOCS) -s file -c deploy/charts/ -t README.md.gotmpl
-
-.PHONY: generate
-generate: gen-manifests gen-code gen-helm-docs
-generate: ## Generate manifests, code, and docs resources
-
-##@ Build
+##@ Development
 
 .PHONY: run
 run: generate deploy ## Run manager from your host
 	OPERATOR_NAME=vault-dev go run cmd/main.go -verbose
+
+.PHONY: up
+up: ## Start kind development environment
+	$(KIND) create cluster --name $(TEST_KIND_CLUSTER)
+
+.PHONY: down
+down: ## Destroy kind development environment
+	$(KIND) delete cluster --name $(TEST_KIND_CLUSTER)
+
+.PHONY: import-image
+import-image: docker-build ## Import manager image to kind image repository
+	$(KIND) load docker-image ${IMG} --name $(TEST_KIND_CLUSTER)
+
+.PHONY: import-test
+import-test: import-image ## Import images required for tests to kind image repository
+	docker pull ghcr.io/banzaicloud/bank-vaults:$(TEST_BANK_VAULTS_VERSION)
+	docker pull vault:$(TEST_VAULT_VERSION)
+
+	$(KIND) load docker-image ghcr.io/banzaicloud/bank-vaults:$(TEST_BANK_VAULTS_VERSION) --name $(TEST_KIND_CLUSTER)
+	$(KIND) load docker-image vault:$(TEST_VAULT_VERSION) --name $(TEST_KIND_CLUSTER)
+
+##@ Build
 
 .PHONY: build
 build: ## Build manager binary
@@ -136,31 +135,35 @@ helm-chart: ## Build helm chart
 artifacts: docker-build helm-chart
 artifacts: ## Build docker image and helm chart
 
+
+##@ Autogeneration
+
+.PHONY: gen-manifests
+gen-manifests: ## Generate webhook, RBAC, and CRD resources
+	$(CONTROLLER_GEN) rbac:roleName=vault crd:maxDescLen=0 webhook paths="./..." \
+		output:rbac:dir=deploy/rbac \
+		output:crd:dir=deploy/crd/bases \
+		output:webhook:dir=deploy/webhook
+	cp deploy/crd/bases/vault.banzaicloud.com_vaults.yaml deploy/charts/vault-operator/crds/crd.yaml
+
+.PHONY: gen-code
+gen-code: ## Generate deepcopy, client, lister, and informer objects
+	$(CONTROLLER_GEN) object:headerFile="hack/custom-boilerplate.go.txt" paths="./..."
+	./hack/update-codegen.sh v${CODE_GENERATOR_VERSION}
+
+.PHONY: gen-helm-docs
+gen-helm-docs: ## Generate Helm chart documentation
+	$(HELM_DOCS) -s file -c deploy/charts/ -t README.md.gotmpl
+
+.PHONY: generate
+generate: gen-manifests gen-code gen-helm-docs
+generate: ## Generate manifests, code, and docs resources
+
 ##@ Deployment
 
 ifndef ignore-not-found
   ignore-not-found = false
 endif
-
-.PHONY: up
-up: ## Start kind development environment
-	$(KIND) create cluster --name $(TEST_KIND_CLUSTER)
-
-.PHONY: down
-down: ## Destroy kind development environment
-	$(KIND) delete cluster --name $(TEST_KIND_CLUSTER)
-
-.PHONY: import-image
-import-image: docker-build ## Import manager image to kind image repository
-	$(KIND) load docker-image ${IMG} --name $(TEST_KIND_CLUSTER)
-
-.PHONY: import-test
-import-test: import-image ## Import images required for tests to kind image repository
-	docker pull ghcr.io/banzaicloud/bank-vaults:$(TEST_BANK_VAULTS_VERSION)
-	docker pull vault:$(TEST_VAULT_VERSION)
-
-	$(KIND) load docker-image ghcr.io/banzaicloud/bank-vaults:$(TEST_BANK_VAULTS_VERSION) --name $(TEST_KIND_CLUSTER)
-	$(KIND) load docker-image vault:$(TEST_VAULT_VERSION) --name $(TEST_KIND_CLUSTER)
 
 .PHONY: install
 install: gen-manifests ## Install CRDs into the K8s cluster
@@ -196,7 +199,7 @@ LOCALBIN ?= $(shell pwd)/bin
 $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
 
-KUSTOMIZE ?= $(LOCALBIN)/kustomize
+KUSTOMIZE ?= $(or $(shell which kustomize),$(LOCALBIN)/kustomize)
 $(KUSTOMIZE): $(LOCALBIN)
 	@if test -x $(LOCALBIN)/kustomize && ! $(LOCALBIN)/kustomize version | grep -q v$(KUSTOMIZE_VERSION); then \
 		echo "$(LOCALBIN)/kustomize version is not expected $(KUSTOMIZE_VERSION). Removing it before installing."; \
@@ -204,42 +207,42 @@ $(KUSTOMIZE): $(LOCALBIN)
 	fi
 	test -s $(LOCALBIN)/kustomize || GOBIN=$(LOCALBIN) GO111MODULE=on go install sigs.k8s.io/kustomize/kustomize/v5@v$(KUSTOMIZE_VERSION)
 
-CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
+CONTROLLER_GEN ?= $(or $(shell which controller-gen),$(LOCALBIN)/controller-gen)
 $(CONTROLLER_GEN): $(LOCALBIN)
 	test -s $(LOCALBIN)/controller-gen && $(LOCALBIN)/controller-gen --version | grep -q v$(CONTROLLER_TOOLS_VERSION) || \
 	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-tools/cmd/controller-gen@v$(CONTROLLER_TOOLS_VERSION)
 
-ENVTEST ?= $(LOCALBIN)/setup-envtest
+ENVTEST ?= $(or $(shell which setup-envtest),$(LOCALBIN)/setup-envtest)
 $(ENVTEST): $(LOCALBIN)
 	test -s $(LOCALBIN)/setup-envtest || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
 
-GOLANGCI_LINT ?= $(LOCALBIN)/golangci-lint
+GOLANGCI_LINT ?= $(or $(shell which golangci-lint),$(LOCALBIN)/golangci-lint)
 $(GOLANGCI_LINT): $(LOCALBIN)
 	test -s $(LOCALBIN)/golangci-lint || curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | bash -s -- v${GOLANGCI_VERSION}
 
-LICENSEI ?= $(LOCALBIN)/licensei
+LICENSEI ?= $(or $(shell which licensei),$(LOCALBIN)/licensei)
 $(LICENSEI): $(LOCALBIN)
 	test -s $(LOCALBIN)/licensei || curl -sfL https://raw.githubusercontent.com/goph/licensei/master/install.sh | bash -s -- v${LICENSEI_VERSION}
 
-HELM ?= $(LOCALBIN)/helm
+HELM ?= $(or $(shell which helm),$(LOCALBIN)/helm)
 $(HELM): $(LOCALBIN)
 	test -s $(LOCALBIN)/helm || curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | USE_SUDO=false HELM_INSTALL_DIR=$(LOCALBIN) bash
 
-KIND ?= $(LOCALBIN)/kind
+KIND ?= $(or $(shell which kind),$(LOCALBIN)/kind)
 $(KIND): $(LOCALBIN)
 	@if [ ! -s "$(LOCALBIN)/kind" ]; then \
 		curl -Lo $(LOCALBIN)/kind https://kind.sigs.k8s.io/dl/v${KIND_VERSION}/kind-$(shell uname -s | tr '[:upper:]' '[:lower:]')-$(shell uname -m | sed -e "s/aarch64/arm64/; s/x86_64/amd64/"); \
 		chmod +x $(LOCALBIN)/kind; \
 	fi
 
-HELM_DOCS ?= $(LOCALBIN)/helm-docs
+HELM_DOCS ?= $(or $(shell which helm-docs),$(LOCALBIN)/helm-docs)
 $(HELM_DOCS): $(LOCALBIN)
 	@if [ ! -s "$(LOCALBIN)/helm-docs" ]; then \
 		curl -L https://github.com/norwoodj/helm-docs/releases/download/v${HELM_DOCS_VERSION}/helm-docs_${HELM_DOCS_VERSION}_$(shell uname)_x86_64.tar.gz | tar -zOxf - helm-docs > ./bin/helm-docs; \
 		chmod +x $(LOCALBIN)/helm-docs; \
 	fi
 
-KURUN ?= $(LOCALBIN)/kurun
+KURUN ?= $(or $(shell which kurun),$(LOCALBIN)/kurun)
 $(KURUN): $(LOCALBIN)
 	@if [ ! -s "$(LOCALBIN)/kurun" ]; then \
 		curl -Lo  $(LOCALBIN)/kurun https://github.com/banzaicloud/kurun/releases/download/${KURUN_VERSION}/kurun-$(shell uname -s | tr '[:upper:]' '[:lower:]')-$(shell uname -m | sed -e "s/aarch64/arm64/; s/x86_64/amd64/"); \
