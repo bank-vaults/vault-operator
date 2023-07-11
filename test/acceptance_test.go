@@ -123,7 +123,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestKvv2(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 
 	// Prepare and apply resources
 	kubectlOptions := prepareEnv(t,
@@ -139,7 +139,7 @@ func TestKvv2(t *testing.T) {
 }
 
 func TestStatsd(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 
 	// Prepare and apply resources
 	kubectlOptions := prepareEnv(t,
@@ -155,7 +155,7 @@ func TestStatsd(t *testing.T) {
 }
 
 func TestExternalSecretsWatcherDeployment(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 
 	// Prepare and apply resources
 	kubectlOptions := prepareEnv(t,
@@ -174,7 +174,7 @@ func TestExternalSecretsWatcherDeployment(t *testing.T) {
 }
 
 func TestExternalSecretsWatcherSecrets(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 
 	// Prepare and apply resources
 	kubectlOptions := prepareEnv(t,
@@ -198,7 +198,7 @@ func TestExternalSecretsWatcherSecrets(t *testing.T) {
 }
 
 func TestRaft(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 
 	// Prepare and apply resources
 	kubectlOptions := prepareEnv(t,
@@ -216,7 +216,7 @@ func TestRaft(t *testing.T) {
 }
 
 func TestSoftHSM(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 
 	// Prepare and apply resources
 	kubectlOptions := prepareEnv(t,
@@ -232,7 +232,7 @@ func TestSoftHSM(t *testing.T) {
 }
 
 func TestDisabledRootTokenStorage(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 
 	// Prepare and apply resources
 	kubectlOptions := prepareEnv(t,
@@ -252,7 +252,7 @@ func TestDisabledRootTokenStorage(t *testing.T) {
 }
 
 func TestPriorityClass(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 
 	// TODO: Disable test for now until examples are fixed
 	return
@@ -291,7 +291,7 @@ func TestPriorityClass(t *testing.T) {
 }
 
 func TestOIDC(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 
 	// TODO: Disable test for now until examples are fixed
 	return
