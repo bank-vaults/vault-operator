@@ -6,7 +6,7 @@ require (
 	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/bank-vaults/vault-sdk v0.9.0
 	github.com/cisco-open/k8s-objectmatcher v1.9.0
-	github.com/gruntwork-io/terratest v0.43.7
+	github.com/gruntwork-io/terratest v0.43.8
 	github.com/hashicorp/vault/api v1.9.2
 	github.com/imdario/mergo v0.3.12
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.66.0
