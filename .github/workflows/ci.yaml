@@ -23,8 +23,18 @@ jobs:
           extra_nix_config: |
             access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
 
-      - name: Magic Nix cache
+      - name: Set up magic Nix cache
         uses: DeterminateSystems/magic-nix-cache-Action@v2
+
+      - name: Set up Go caches
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
 
       - name: Prepare Nix shell
         run: nix develop --impure .#ci
@@ -46,8 +56,18 @@ jobs:
           extra_nix_config: |
             access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
 
-      - name: Magic Nix cache
+      - name: Set up magic Nix cache
         uses: DeterminateSystems/magic-nix-cache-Action@v2
+
+      - name: Set up Go caches
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
 
       - name: Prepare Nix shell
         run: nix develop --impure .#ci
@@ -69,8 +89,18 @@ jobs:
           extra_nix_config: |
             access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
 
-      - name: Magic Nix cache
+      - name: Set up magic Nix cache
         uses: DeterminateSystems/magic-nix-cache-Action@v2
+
+      - name: Set up Go caches
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
 
       - name: Prepare Nix shell
         run: nix develop --impure .#ci
@@ -92,8 +122,18 @@ jobs:
           extra_nix_config: |
             access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
 
-      - name: Magic Nix cache
+      - name: Set up magic Nix cache
         uses: DeterminateSystems/magic-nix-cache-Action@v2
+
+      - name: Set up Go caches
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
 
       - name: Cache license information
         uses: actions/cache@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8 # v3.3.1
@@ -132,7 +172,7 @@ jobs:
           extra_nix_config: |
             access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
 
-      - name: Magic Nix cache
+      - name: Set up magic Nix cache
         uses: DeterminateSystems/magic-nix-cache-Action@v2
 
       - name: Check
@@ -183,7 +223,7 @@ jobs:
           extra_nix_config: |
             access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
 
-      - name: Magic Nix cache
+      - name: Set up magic Nix cache
         uses: DeterminateSystems/magic-nix-cache-Action@v2
 
       - name: Prepare Nix shell
@@ -227,7 +267,7 @@ jobs:
           extra_nix_config: |
             access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
 
-      - name: Magic Nix cache
+      - name: Set up magic Nix cache
         uses: DeterminateSystems/magic-nix-cache-Action@v2
 
       - name: Prepare Nix shell
