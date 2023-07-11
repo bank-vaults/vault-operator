@@ -64,14 +64,14 @@ func TestMain(m *testing.M) {
 		vaultVersion = v
 	}
 
-	// Set Operator version
-	if v := os.Getenv("OPERATOR_VERSION"); v != "" {
-		operatorVersion = v
-	}
-
 	// Set Bank vaults version
 	if v := os.Getenv("BANK_VAULTS_VERSION"); v != "" {
 		bankVaultsVersion = v
+	}
+
+	// Set Operator version
+	if v := os.Getenv("OPERATOR_VERSION"); v != "" {
+		operatorVersion = v
 	}
 
 	// Set Helm chart
@@ -403,9 +403,6 @@ func prepareEnv(t *testing.T, testName string, k8sRes []string) *k8s.KubectlOpti
 		}
 
 		k8s.KubectlApplyFromString(t, kubectlOptions, string(resource))
-		t.Cleanup(func() {
-			k8s.KubectlDeleteFromString(t, kubectlOptions, string(resource))
-		})
 	}
 
 	return kubectlOptions

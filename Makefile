@@ -158,10 +158,9 @@ import-image: docker-build ## Import manager image to kind image repository
 import-test: import-image ## Import images required for tests to kind image repository
 	docker pull ghcr.io/banzaicloud/bank-vaults:$(TEST_BANK_VAULTS_VERSION)
 	docker pull vault:$(TEST_VAULT_VERSION)
-	docker tag vault:$(TEST_VAULT_VERSION) vault:latest
 
 	$(KIND) load docker-image ghcr.io/banzaicloud/bank-vaults:$(TEST_BANK_VAULTS_VERSION) --name $(TEST_KIND_CLUSTER)
-	$(KIND) load docker-image vault:latest --name $(TEST_KIND_CLUSTER)
+	$(KIND) load docker-image vault:$(TEST_VAULT_VERSION) --name $(TEST_KIND_CLUSTER)
 
 .PHONY: install
 install: gen-manifests ## Install CRDs into the K8s cluster
