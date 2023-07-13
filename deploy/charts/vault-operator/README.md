@@ -7,7 +7,7 @@ Kubernetes operator for Hashicorp Vault
 ## TL;DR;
 
 ```bash
-helm install --generate-name --wait ghcr.io/bank-vaults/helm-charts/vault-operator
+helm install --generate-name --wait oci://ghcr.io/bank-vaults/helm-charts/vault-operator
 ```
 
 ## Values
