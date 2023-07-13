@@ -16,6 +16,7 @@ spec:
     aws:
       kmsKeyId: "9f054126-2a98-470c-9f10-9b3b0cad94a1"
       kmsRegion: "eu-west-1"
+      kmsEncryptionContext: "Service=Vault"
       s3Bucket: "bank-vaults"
       s3Prefix: "vault-operator/"
       s3Region: "eu-west-1"
