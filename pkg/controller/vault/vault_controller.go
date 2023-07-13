@@ -1273,16 +1273,8 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 	}
 	containers = withVaultContainers(v, containers)
 
-	affinity := &corev1.Affinity{
-		PodAntiAffinity: getPodAntiAffinity(v),
-		NodeAffinity:    getNodeAffinity(v),
-	}
-	if v.Spec.Affinity != nil {
-		affinity = v.Spec.Affinity
-	}
-
 	podSpec := corev1.PodSpec{
-		Affinity: affinity,
+		Affinity: v.Spec.Affinity,
 
 		ServiceAccountName:           v.Spec.GetServiceAccount(),
 		AutomountServiceAccountToken: pointer.Bool(true),
@@ -1428,7 +1420,7 @@ func withVaultConfigurerAnnotations(v *vaultv1alpha1.Vault, annotations map[stri
 	return annotations
 }
 
-func withVaultWatchedExternalSecrets(v *vaultv1alpha1.Vault, secrets []corev1.Secret, annotations map[string]string) map[string]string {
+func withVaultWatchedExternalSecrets(_ *vaultv1alpha1.Vault, secrets []corev1.Secret, annotations map[string]string) map[string]string {
 	if len(secrets) == 0 {
 		// No Labels Selector was defined in the spec , return the annotations without changes
 		return annotations
@@ -1801,31 +1793,6 @@ func withHSMVolumeMount(v *vaultv1alpha1.Vault, volumeMounts []corev1.VolumeMoun
 		})
 	}
 	return volumeMounts
-}
-
-func getPodAntiAffinity(v *vaultv1alpha1.Vault) *corev1.PodAntiAffinity {
-	if v.Spec.PodAntiAffinity == "" {
-		return nil
-	}
-
-	ls := v.LabelsForVault()
-	return &corev1.PodAntiAffinity{
-		RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
-			{
-				LabelSelector: &metav1.LabelSelector{
-					MatchLabels: ls,
-				},
-				TopologyKey: v.Spec.PodAntiAffinity,
-			},
-		},
-	}
-}
-
-func getNodeAffinity(v *vaultv1alpha1.Vault) *corev1.NodeAffinity {
-	if v.Spec.NodeAffinity.Size() == 0 {
-		return nil
-	}
-	return &v.Spec.NodeAffinity
 }
 
 func getVaultURIScheme(v *vaultv1alpha1.Vault) corev1.URIScheme {
