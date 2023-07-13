@@ -72,7 +72,7 @@ check: lint test ## Run lint checks and tests
 ##@ Development
 
 .PHONY: run
-run: generate deploy ## Run manager from your host
+run: deploy ## Run manager from your host
 	OPERATOR_NAME=vault-dev go run cmd/main.go -verbose
 
 .PHONY: up

@@ -54,13 +54,9 @@ Build artifacts locally:
 make artifacts
 ```
 
-Once you are done either stop or tear down dependencies:
+Once you are done, you can tear down project dependencies:
 
 ```shell
-make stop
-
-# OR
-
 make down
 ```
 
