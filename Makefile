@@ -7,6 +7,7 @@ IMG ?= ghcr.io/bank-vaults/vault-operator:dev
 TEST_K8S_VERSION ?= 1.27.1
 TEST_VAULT_VERSION ?= 1.13.3
 TEST_BANK_VAULTS_VERSION ?= 1.19.0
+TEST_BANK_VAULTS_IMAGE ?= ghcr.io/banzaicloud/bank-vaults:$(TEST_BANK_VAULTS_VERSION)
 TEST_OPERATOR_VERSION ?= $(lastword $(subst :, ,$(IMG)))
 TEST_KIND_CLUSTER ?= vault-operator
 
@@ -73,7 +74,7 @@ check: lint test ## Run lint checks and tests
 
 .PHONY: run
 run: deploy ## Run manager from your host
-	OPERATOR_NAME=vault-dev go run cmd/main.go -verbose
+	OPERATOR_NAME=vault-dev BANK_VAULTS_IMAGE=$(TEST_BANK_VAULTS_IMAGE)  go run cmd/main.go -verbose
 
 .PHONY: up
 up: ## Start kind development environment
@@ -191,7 +192,7 @@ KIND_VERSION = 0.20.0
 KURUN_VERSION = 0.7.0
 CODE_GENERATOR_VERSION = 0.27.1
 HELM_DOCS_VERSION = 1.11.0
-KUSTOMIZE_VERSION = 5.0.1
+KUSTOMIZE_VERSION = 5.1.0
 CONTROLLER_TOOLS_VERSION = 0.12.0
 
 ## Location to install dependencies to
