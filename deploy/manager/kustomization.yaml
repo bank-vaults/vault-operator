@@ -5,4 +5,4 @@ kind: Kustomization
 images:
 - name: controller
   newName: ghcr.io/bank-vaults/vault-operator
-  newTag: latest
+  newTag: dev
