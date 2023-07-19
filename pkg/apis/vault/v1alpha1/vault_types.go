@@ -445,7 +445,7 @@ func (spec *VaultSpec) getListener() map[string]interface{} {
 // GetVaultImage returns the Vault image to use
 func (spec *VaultSpec) GetVaultImage() string {
 	if spec.Image == "" {
-		return "vault:latest"
+		return "hashicorp/vault:latest"
 	}
 	return spec.Image
 }
