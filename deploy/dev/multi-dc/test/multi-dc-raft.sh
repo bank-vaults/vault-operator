@@ -72,7 +72,7 @@ function infra_setup {
 
     node_setup tertiary 172.18.3.255/25
 
-    docker run -d --rm --network kind -e VAULT_DEV_ROOT_TOKEN_ID="${VAULT_TOKEN}" --name central-vault vault:"${VAULT_VERSION}"
+    docker run -d --rm --network kind -e VAULT_DEV_ROOT_TOKEN_ID="${VAULT_TOKEN}" --name central-vault hashicorp/vault:"${VAULT_VERSION}"
     CENTRAL_VAULT_ADDRESS=$(docker inspect central-vault --format '{{.NetworkSettings.Networks.kind.IPAddress}}')
     export CENTRAL_VAULT_ADDRESS
 }

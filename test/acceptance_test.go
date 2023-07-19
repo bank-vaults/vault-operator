@@ -366,7 +366,7 @@ func prepareEnv(t *testing.T, testName string, k8sRes []string) *k8s.KubectlOpti
 		if v.(map[string]interface{})["kind"] == "Vault" {
 			if i, ok := v.(map[string]interface{})["spec"].(map[string]interface{}); ok {
 				if i["image"] != "" {
-					i["image"] = "vault:" + vaultVersion
+					i["image"] = "hashicorp/vault:" + vaultVersion
 				}
 			}
 
