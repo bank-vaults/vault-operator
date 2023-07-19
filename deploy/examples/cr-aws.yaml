@@ -4,7 +4,7 @@ metadata:
   name: "vault"
 spec:
   size: 1
-  image: hashicorp/vault:1.13.3
+  image: hashicorp/vault:1.14.0
 
   # Instead of credentialsConfig one can use IAM instance profiles, or kube2iam for example:
   annotations:
