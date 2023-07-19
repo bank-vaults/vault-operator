@@ -63,7 +63,7 @@ type VaultSpec struct {
 	Size int32 `json:"size,omitempty"`
 
 	// Image specifies the Vault image to use for the Vault instances
-	// default: library/hashicorp/vault:latest
+	// default: hashicorp/vault:latest
 	Image string `json:"image,omitempty"`
 
 	// BankVaultsImage specifies the Bank Vaults image to use for Vault unsealing and configuration
