@@ -5,7 +5,7 @@ IMG ?= ghcr.io/bank-vaults/vault-operator:dev
 
 # Default test data
 TEST_K8S_VERSION ?= 1.27.1
-TEST_VAULT_VERSION ?= 1.13.3
+TEST_VAULT_VERSION ?= 1.14.0
 TEST_BANK_VAULTS_VERSION ?= 1.19.0
 TEST_BANK_VAULTS_IMAGE ?= ghcr.io/banzaicloud/bank-vaults:$(TEST_BANK_VAULTS_VERSION)
 TEST_OPERATOR_VERSION ?= $(lastword $(subst :, ,$(IMG)))
