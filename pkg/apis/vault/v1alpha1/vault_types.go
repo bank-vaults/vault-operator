@@ -39,7 +39,7 @@ var (
 	log = ctrl.Log.WithName("controller_vault")
 
 	// DefaultBankVaultsImage defines the image used when VaultSpec.BankVaultsImage is empty.
-	DefaultBankVaultsImage = "ghcr.io/banzaicloud/bank-vaults:latest"
+	DefaultBankVaultsImage = "ghcr.io/bank-vaults/bank-vaults:latest"
 
 	// HAStorageTypes is the set of storage backends supporting High Availability
 	HAStorageTypes = map[string]bool{
@@ -67,7 +67,7 @@ type VaultSpec struct {
 	Image string `json:"image,omitempty"`
 
 	// BankVaultsImage specifies the Bank Vaults image to use for Vault unsealing and configuration
-	// default: ghcr.io/banzaicloud/bank-vaults:latest
+	// default: ghcr.io/bank-vaults/bank-vaults:latest
 	BankVaultsImage string `json:"bankVaultsImage,omitempty"`
 
 	// BankVaultsVolumeMounts define some extra Kubernetes Volume mounts for the Bank Vaults Sidecar container.
