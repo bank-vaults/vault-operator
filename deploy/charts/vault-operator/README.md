@@ -22,7 +22,7 @@ helm install --generate-name --wait ghcr.io/bank-vaults/helm-charts/vault-operat
 | image.bankVaultsRepository | string | `""` | Bank-Vaults image repository **Deprecated:** use `bankVaults.image.repository` instead. |
 | image.bankVaultsTag | string | `""` | Bank-Vaults image tag **Deprecated:** use `bankVaults.image.tag` instead. |
 | bankVaults.image.repository | string | `"ghcr.io/bank-vaults/bank-vaults"` | Bank-Vaults image repository. |
-| bankVaults.image.tag | string | `"1.20.0"` | Bank-Vaults image tag (pinned to supported Bank-Vaults version). |
+| bankVaults.image.tag | string | `"1.20.2"` | Bank-Vaults image tag (pinned to supported Bank-Vaults version). |
 | nameOverride | string | `""` | A name in place of the chart name for `app:` labels. |
 | fullnameOverride | string | `""` | A name to substitute for the full names of resources. |
 | watchNamespace | string | `""` | The namespace where the operator watches for vault CR objects. If not defined all namespaces are watched. |

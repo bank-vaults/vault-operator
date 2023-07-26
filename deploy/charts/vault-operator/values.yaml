@@ -33,7 +33,7 @@ bankVaults:
     repository: ghcr.io/bank-vaults/bank-vaults
 
     # -- Bank-Vaults image tag (pinned to supported Bank-Vaults version).
-    tag: "1.20.0"
+    tag: "1.20.2"
 
 # -- A name in place of the chart name for `app:` labels.
 nameOverride: ""
@@ -50,16 +50,13 @@ syncPeriod: "1m"
 crdAnnotations: {}
 
 # -- Labels to be added to deployments.
-labels: {}
-  # team: banzai
+labels: {} # team: banzai
 
 # -- Labels to be added to pods.
-podLabels: {}
-  # team: banzai
+podLabels: {} # team: banzai
 
 # -- Annotations to be added to pods.
-podAnnotations: {}
-  # team: banzai
+podAnnotations: {} # team: banzai
 
 serviceAccount:
   # -- Enable service account creation.

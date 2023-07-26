@@ -79,7 +79,7 @@ spec:
       # The HSM SO module path (softhsm is built into the bank-vaults image)
       modulePath: /usr/lib/softhsm/libsofthsm2.so
       tokenLabel: bank-vaults
-      pin: banzai
+      pin: bank-vaults
       keyLabel: bank-vaults
     kubernetes:
       secretName: vault-unseal-keys
