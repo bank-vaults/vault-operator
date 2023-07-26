@@ -4,7 +4,7 @@ metadata:
   name: "vault"
 spec:
   size: 1
-  image: hashicorp/vault:1.14.0
+  image: hashicorp/vault:1.14.1
 
   # Describe where you would like to store the Vault unseal keys and root token
   # in Azure KeyVault.
