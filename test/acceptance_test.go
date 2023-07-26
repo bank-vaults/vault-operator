@@ -84,9 +84,9 @@ func TestMain(m *testing.M) {
 	helmOptions := &helm.Options{
 		KubectlOptions: defaultKubectlOptions,
 		SetValues: map[string]string{
-			"image.tag":           operatorVersion,
-			"image.bankVaultsTag": bankVaultsVersion,
-			"image.pullPolicy":    "Never",
+			"image.tag":            operatorVersion,
+			"image.pullPolicy":     "Never",
+			"bankVaults.image.tag": bankVaultsVersion,
 		},
 	}
 
