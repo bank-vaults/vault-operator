@@ -4,7 +4,7 @@ metadata:
   name: vault-dev
 spec:
   size: 1
-  image: hashicorp/vault:1.14.0
+  image: hashicorp/vault:1.14.1
   bankVaultsImage: ghcr.io/banzaicloud/bank-vaults:<branch_name>
 
   # Common annotations for all created resources

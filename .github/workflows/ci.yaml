@@ -211,7 +211,7 @@ jobs:
     strategy:
       matrix:
         k8s_version: ["v1.24.15", "v1.25.11", "v1.26.6", "v1.27.3"]
-        vault_version: ["1.11.12", "1.12.8", "1.13.4", "1.14.0"]
+        vault_version: ["1.11.12", "1.12.8", "1.13.4", "1.14.1"]
 
     steps:
       - name: Checkout repository
