@@ -82,7 +82,7 @@ function install_instance {
 
     kind load image-archive docker.tar --name "${INSTANCE}"
 
-    helm upgrade --install vault-operator ./deploy/charts/vault-operator --wait --set image.tag=${OPERATOR_VERSION} --set image.pullPolicy=Never --set image.bankVaultsTag=${BANK_VAULTS_VERSION}
+    helm upgrade --install vault-operator ./deploy/charts/vault-operator --wait --set image.tag=${OPERATOR_VERSION} --set image.pullPolicy=Never --set bankVaults.image.tag=${BANK_VAULTS_VERSION}
 
     kubectl apply -k deploy/rbac/
     envtpl deploy/dev/multi-dc/test/cr-"${INSTANCE}".yaml | kubectl apply -f -

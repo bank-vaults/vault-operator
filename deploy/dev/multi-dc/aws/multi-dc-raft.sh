@@ -91,7 +91,7 @@ if [ $COMMAND = "install" ]; then
 
         local REGION=$(get_region)
 
-        helm upgrade --install vault-operator deploy/charts/vault-operator --wait --set image.tag=latest --set image.pullPolicy=Always --set image.bankVaultsTag=latest
+        helm upgrade --install vault-operator deploy/charts/vault-operator --wait --set image.tag=latest --set image.pullPolicy=Always --set bankVaults.image.tag=latest
 
         create_aws_secret
 
@@ -143,13 +143,13 @@ elif [ $COMMAND = "status" ]; then
 
     aws s3api get-object --bucket ${BUCKET} --key raft-vault-root raft-vault-root > /dev/null
     export VAULT_TOKEN=$(aws --region $REGION kms decrypt --ciphertext-blob fileb://raft-vault-root --query Plaintext --output text --encryption-context Tool=bank-vaults | base64 -D)
-    
+
     rm raft-vault-root
 
     export VAULT_SKIP_VERIFY="true"
 
     export VAULT_ADDR=https://$(get_elb_dns):8200
-    
+
     vault operator raft list-peers -format json | jq
 
 elif [ $COMMAND = "uninstall" ]; then
