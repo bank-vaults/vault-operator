@@ -1088,6 +1088,8 @@ spec:
                     type: object
                   aws:
                     properties:
+                      kmsEncryptionContext:
+                        type: string
                       kmsKeyId:
                         type: string
                       kmsRegion:
