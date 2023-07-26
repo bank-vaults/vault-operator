@@ -5,7 +5,7 @@ metadata:
 spec:
   size: 1
   image: hashicorp/vault:1.14.1
-  bankVaultsImage: ghcr.io/banzaicloud/bank-vaults:<branch_name>
+  bankVaultsImage: ghcr.io/bank-vaults/bank-vaults:<branch_name>
 
   # Common annotations for all created resources
   annotations:
@@ -71,16 +71,18 @@ spec:
       statsd_address: localhost:9125
     ui: true
 
-  # See: https://github.com/banzaicloud/bank-vaults#example-external-vault-configuration for more details.
+  # See: https://github.com/bank-vaults/bank-vaults#example-external-vault-configuration for more details.
   externalConfig:
     policies:
       - name: allow_secrets
-        rules: path "secret/*" {
-          capabilities = ["create", "read", "update", "delete", "list"]
+        rules: |
+          path "secret/*" {
+            capabilities = ["create", "read", "update", "delete", "list"]
           }
       - name: allow_pki
-        rules: path "pki/*" {
-          capabilities = ["create", "read", "update", "delete", "list"]
+        rules: |
+          path "pki/*" {
+            capabilities = ["create", "read", "update", "delete", "list"]
           }
     auth:
       - type: ldap
@@ -114,18 +116,18 @@ spec:
           max_lease_ttl: 720h
         configuration:
           config:
-          - name: urls
-            issuing_certificates: https://vault.vault:8200/v1/pki/ca
-            crl_distribution_points: https://vault.vault:8200/v1/pki/crl
+            - name: urls
+              issuing_certificates: https://vault.vault:8200/v1/pki/ca
+              crl_distribution_points: https://vault.vault:8200/v1/pki/crl
           root/generate:
-          - name: internal
-            common_name: vault.vault
+            - name: internal
+              common_name: vault.vault
           roles:
-          - name: default
-            allowed_domains: localhost,pod,svc,vault
-            allow_subdomains: true
-            generate_lease: true
-            ttl: 1m
+            - name: default
+              allowed_domains: localhost,pod,svc,vault
+              allow_subdomains: true
+              generate_lease: true
+              ttl: 1m
 
   vaultEnvsConfig:
     - name: VAULT_LOG_LEVEL

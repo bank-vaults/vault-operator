@@ -6,8 +6,8 @@ IMG ?= ghcr.io/bank-vaults/vault-operator:dev
 # Default test data
 TEST_K8S_VERSION ?= 1.27.1
 TEST_VAULT_VERSION ?= 1.14.1
-TEST_BANK_VAULTS_VERSION ?= 1.19.0
-TEST_BANK_VAULTS_IMAGE ?= ghcr.io/banzaicloud/bank-vaults:$(TEST_BANK_VAULTS_VERSION)
+TEST_BANK_VAULTS_VERSION ?= 1.20.3-softhsm
+TEST_BANK_VAULTS_IMAGE ?= ghcr.io/bank-vaults/bank-vaults:$(TEST_BANK_VAULTS_VERSION)
 TEST_OPERATOR_VERSION ?= $(lastword $(subst :, ,$(IMG)))
 TEST_KIND_CLUSTER ?= vault-operator
 
@@ -90,10 +90,10 @@ import-image: docker-build ## Import manager image to kind image repository
 
 .PHONY: import-test
 import-test: import-image ## Import images required for tests to kind image repository
-	docker pull ghcr.io/banzaicloud/bank-vaults:$(TEST_BANK_VAULTS_VERSION)
+	docker pull ghcr.io/bank-vaults/bank-vaults:$(TEST_BANK_VAULTS_VERSION)
 	docker pull hashicorp/vault:$(TEST_VAULT_VERSION)
 
-	$(KIND) load docker-image ghcr.io/banzaicloud/bank-vaults:$(TEST_BANK_VAULTS_VERSION) --name $(TEST_KIND_CLUSTER)
+	$(KIND) load docker-image ghcr.io/bank-vaults/bank-vaults:$(TEST_BANK_VAULTS_VERSION) --name $(TEST_KIND_CLUSTER)
 	$(KIND) load docker-image hashicorp/vault:$(TEST_VAULT_VERSION) --name $(TEST_KIND_CLUSTER)
 
 ##@ Build

@@ -47,7 +47,7 @@ import (
 
 var (
 	vaultVersion      = "latest"
-	bankVaultsVersion = "latest"
+	bankVaultsVersion = "latest-softhsm"
 	operatorVersion   = "latest"
 )
 
