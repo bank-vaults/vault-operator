@@ -2,6 +2,7 @@
 
 [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/bank-vaults/vault-operator/ci.yaml?style=flat-square)](https://github.com/bank-vaults/vault-operator/actions/workflows/ci.yaml)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/bank-vaults/vault-operator/badge?style=flat-square)](https://api.securityscorecards.dev/projects/github.com/bank-vaults/vault-operator)
+[![Artifact Hub](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/vault-operator)](https://artifacthub.io/packages/search?repo=vault-operator)
 
 **Kubernetes operator for [Hashicorp Vault](https://www.vaultproject.io/).**
 
