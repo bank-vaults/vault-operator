@@ -6,7 +6,7 @@ IMG ?= ghcr.io/bank-vaults/vault-operator:dev
 # Default test data
 TEST_K8S_VERSION ?= 1.27.1
 TEST_VAULT_VERSION ?= 1.14.1
-TEST_BANK_VAULTS_VERSION ?= 1.20.2-softhsm
+TEST_BANK_VAULTS_VERSION ?= 1.20.3-softhsm
 TEST_BANK_VAULTS_IMAGE ?= ghcr.io/bank-vaults/bank-vaults:$(TEST_BANK_VAULTS_VERSION)
 TEST_OPERATOR_VERSION ?= $(lastword $(subst :, ,$(IMG)))
 TEST_KIND_CLUSTER ?= vault-operator
