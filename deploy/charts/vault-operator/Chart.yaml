@@ -4,7 +4,7 @@ name: vault-operator
 version: 0.0.0
 appVersion: latest
 description: Kubernetes operator for Hashicorp Vault
-icon: https://raw.githubusercontent.com/bank-vaults/bank-vaults.dev/main/assets/icons/logo.svg
+icon: https://avatars.githubusercontent.com/u/129937617
 keywords:
   - vault
   - hashicorp
