@@ -15,24 +15,24 @@
 package v1alpha1
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
-	"github.com/Masterminds/semver/v3"
-	"github.com/imdario/mergo"
-	"github.com/spf13/cast"
-	netv1 "k8s.io/api/networking/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
 	"reflect"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sort"
 	"strings"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
+	"github.com/imdario/mergo"
+	"github.com/sagikazarmark/docker-ref/reference"
+	"github.com/spf13/cast"
 	v1 "k8s.io/api/core/v1"
-
-	"encoding/json"
-	"errors"
+	netv1 "k8s.io/api/networking/v1"
 	extv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
+	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 var (
@@ -57,7 +57,6 @@ var (
 
 // VaultSpec defines the desired state of Vault
 type VaultSpec struct {
-
 	// Size defines the number of Vault instances in the cluster (>= 1 means HA)
 	// default: 1
 	Size int32 `json:"size,omitempty"`
@@ -377,11 +376,17 @@ func (spec *VaultSpec) GetHAStorageType() string {
 
 // GetVersion returns the version of Vault
 func (spec *VaultSpec) GetVersion() (*semver.Version, error) {
-	version := strings.Split(spec.Image, ":")
-	if len(version) != 2 {
-		return nil, errors.New("failed to find Vault version")
+	ref, err := reference.ParseAnyReference(spec.Image)
+	if err != nil {
+		return nil, fmt.Errorf("parsing image ref for Vault version: %w", err)
 	}
-	return semver.NewVersion(version[1])
+
+	taggedRef, ok := ref.(reference.Tagged)
+	if !ok {
+		return nil, errors.New("Vault image ref does not have a tag")
+	}
+
+	return semver.NewVersion(taggedRef.Tag())
 }
 
 // GetServiceAccount returns the Kubernetes Service Account to use for Vault
@@ -670,7 +675,6 @@ func (usc *UnsealConfig) ToArgs(vault *Vault) []string {
 	}
 
 	if usc.Google != nil {
-
 		args = append(args,
 			"--mode",
 			"google-cloud-kms-gcs",
@@ -685,18 +689,14 @@ func (usc *UnsealConfig) ToArgs(vault *Vault) []string {
 			"--google-cloud-storage-bucket",
 			usc.Google.StorageBucket,
 		)
-
 	} else if usc.Azure != nil {
-
 		args = append(args,
 			"--mode",
 			"azure-key-vault",
 			"--azure-key-vault-name",
 			usc.Azure.KeyVaultName,
 		)
-
 	} else if usc.AWS != nil {
-
 		args = append(args,
 			"--mode",
 			"aws-kms-s3",
@@ -715,9 +715,7 @@ func (usc *UnsealConfig) ToArgs(vault *Vault) []string {
 			"--aws-s3-sse-algo",
 			usc.AWS.S3SSE,
 		)
-
 	} else if usc.Alibaba != nil {
-
 		args = append(args,
 			"--mode",
 			"alibaba-kms-oss",
@@ -732,7 +730,6 @@ func (usc *UnsealConfig) ToArgs(vault *Vault) []string {
 			"--alibaba-oss-prefix",
 			usc.Alibaba.OSSPrefix,
 		)
-
 	} else if usc.Vault != nil {
 
 		args = append(args,
