@@ -704,8 +704,6 @@ func (usc *UnsealConfig) ToArgs(vault *Vault) []string {
 			usc.AWS.KMSKeyID,
 			"--aws-kms-region",
 			usc.AWS.KMSRegion,
-			"--aws-kms-encryption-context",
-			usc.AWS.KMSEncryptionContext,
 			"--aws-s3-bucket",
 			usc.AWS.S3Bucket,
 			"--aws-s3-prefix",
@@ -715,6 +713,13 @@ func (usc *UnsealConfig) ToArgs(vault *Vault) []string {
 			"--aws-s3-sse-algo",
 			usc.AWS.S3SSE,
 		)
+
+		if usc.AWS.KMSEncryptionContext != "" {
+			args = append(args,
+				"--aws-kms-encryption-context",
+				usc.AWS.KMSEncryptionContext,
+			)
+		}
 	} else if usc.Alibaba != nil {
 		args = append(args,
 			"--mode",
