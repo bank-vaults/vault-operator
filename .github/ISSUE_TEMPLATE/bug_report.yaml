@@ -1,6 +1,6 @@
 name: 🐛 Bug report
 description: Report a bug to help us improve the Vault Operator
-labels: [bug]
+labels: [kind/bug]
 body:
   - type: markdown
     attributes:
@@ -18,6 +18,8 @@ body:
         - label: I have searched the [issue tracker](https://www.github.com/bank-vaults/vault-operator/issues) for an issue that matches the one I want to file, without success.
           required: true
         - label: I am not looking for support or already pursued the available [support channels](https://github.com/bank-vaults/vault-operator/issues/new/choose) without success.
+          required: true
+        - label: I agree to follow the [Code of Conduct](https://bank-vaults.dev/docs/code-of-conduct/).
           required: true
   - type: input
     attributes:
