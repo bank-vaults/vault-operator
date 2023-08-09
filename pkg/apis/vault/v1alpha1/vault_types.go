@@ -937,7 +937,6 @@ type Ingress struct {
 // +genclient
 // +genclient:noStatus
 // +kubebuilder:object:root=true
-// +kubebuilder:subresource:status
 
 // Vault is the Schema for the vaults API
 type Vault struct {
