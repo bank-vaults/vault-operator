@@ -41,6 +41,12 @@ const (
 	envKubeServiceHost     = "KUBERNETES_SERVICE_HOST"
 	envKubeServicePort     = "KUBERNETES_SERVICE_PORT"
 	envBankVaultsImage     = "BANK_VAULTS_IMAGE"
+	envLeaseDuration       = "LEASE_DURATION"
+	defaultLeaseDuration   = 15 * time.Second
+	envRenewDeadline       = "RENEW_DEADLINE"
+	defaultRenewDeadline   = 10 * time.Second
+	envRetryPeriod         = "RETRY_PERIOD"
+	defaultRetryPeriod     = 2 * time.Second
 	healthProbeBindAddress = ":8080"
 	metricsBindAddress     = ":8383"
 	defaultSyncPeriod      = 30 * time.Second
@@ -95,6 +101,33 @@ func main() {
 	if k8sConfig.Host != "https://"+net.JoinHostPort(host, port) {
 		leaderElectionNamespace = "default"
 	}
+	leaseDuration := os.Getenv(envLeaseDuration)
+	if leaseDuration == "" {
+		leaseDuration = defaultLeaseDuration.String()
+	}
+	leaseDurationDuration, err := time.ParseDuration(leaseDuration)
+	if err != nil {
+		log.Error(err, "unable to parse lease duration")
+		os.Exit(1)
+	}
+	renewDeadline := os.Getenv(envRenewDeadline)
+	if renewDeadline == "" {
+		renewDeadline = defaultRenewDeadline.String()
+	}
+	renewDeadlineDuration, err := time.ParseDuration(renewDeadline)
+	if err != nil {
+		log.Error(err, "unable to parse renew deadline")
+		os.Exit(1)
+	}
+	retryPeriod := os.Getenv(envRetryPeriod)
+	if retryPeriod == "" {
+		retryPeriod = defaultRetryPeriod.String()
+	}
+	retryPeriodDuration, err := time.ParseDuration(retryPeriod)
+	if err != nil {
+		log.Error(err, "unable to parse retry period")
+		os.Exit(1)
+	}
 
 	// Create a new Cmd to provide shared dependencies and start components
 	mgr, err := manager.New(k8sConfig, manager.Options{
@@ -102,13 +135,16 @@ func main() {
 			Namespaces: namespaces,
 			SyncPeriod: syncPeriod,
 		},
-		LeaderElection:          true,
-		LeaderElectionNamespace: leaderElectionNamespace,
-		LeaderElectionID:        "vault-operator-lock",
-		HealthProbeBindAddress:  healthProbeBindAddress,
-		MetricsBindAddress:      metricsBindAddress,
-		LivenessEndpointName:    "/",      // For Chart backwards compatibility
-		ReadinessEndpointName:   "/ready", // For Chart backwards compatibility
+		LeaderElectionNamespace:       leaderElectionNamespace,
+		LeaderElectionID:              "vault-operator-lock",
+		LeaderElectionReleaseOnCancel: false,
+		LeaseDuration:                 &leaseDurationDuration,
+		RenewDeadline:                 &renewDeadlineDuration,
+		RetryPeriod:                   &retryPeriodDuration,
+		MetricsBindAddress:            metricsBindAddress,
+		HealthProbeBindAddress:        healthProbeBindAddress,
+		ReadinessEndpointName:         "/ready", // For Chart backwards compatibility
+		LivenessEndpointName:          "/",      // For Chart backwards compatibility
 	})
 	if err != nil {
 		log.Error(err, "unable to create manager as defined")
