@@ -20,8 +20,6 @@ import (
 	"os"
 	"time"
 
-	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
-	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -29,6 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"github.com/bank-vaults/vault-operator/pkg/apis"
 	vaultv1alpha1 "github.com/bank-vaults/vault-operator/pkg/apis/vault/v1alpha1"
@@ -73,11 +72,11 @@ func main() {
 		namespace = os.Getenv(envWatchNamespace)
 	}
 
-	namespaces := []string{}
+	namespaces := make(map[string]cache.Config)
 	if namespace == "" {
 		log.Info("no watched namespace found, watching the entire cluster")
 	} else {
-		namespaces = []string{namespace}
+		namespaces[namespace] = cache.Config{}
 		log.Info("watched namespace: " + namespace)
 	}
 
@@ -99,14 +98,14 @@ func main() {
 	// Create a new Cmd to provide shared dependencies and start components
 	mgr, err := manager.New(k8sConfig, manager.Options{
 		Cache: cache.Options{
-			Namespaces: namespaces,
-			SyncPeriod: syncPeriod,
+			DefaultNamespaces: namespaces,
+			SyncPeriod:        syncPeriod,
 		},
 		LeaderElection:          true,
 		LeaderElectionNamespace: leaderElectionNamespace,
 		LeaderElectionID:        "vault-operator-lock",
 		HealthProbeBindAddress:  healthProbeBindAddress,
-		MetricsBindAddress:      metricsBindAddress,
+		Metrics:                 metricsserver.Options{BindAddress: metricsBindAddress},
 		LivenessEndpointName:    "/",      // For Chart backwards compatibility
 		ReadinessEndpointName:   "/ready", // For Chart backwards compatibility
 	})
