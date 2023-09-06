@@ -23,10 +23,10 @@ import (
 func TestGetVersion(t *testing.T) {
 	t.Run("Good", func(t *testing.T) {
 		tests := []string{
-			"hashicorp/vault:1.14.0",
-			"hashicorp/vault:1.14",
-			"my.local.proxy/hashicorp/vault:1.14.0",
-			"my.local.proxy:5000/hashicorp/vault:1.14.0",
+			"bank-vaults/my-vault:1.2.3",
+			"bank-vaults/my-vault:1.2",
+			"my.local.proxy/bank-vaults/my-vault:1.2.3",
+			"my.local.proxy:5000/bank-vaults/my-vault:1.2.3",
 		}
 
 		for _, tt := range tests {
@@ -45,9 +45,9 @@ func TestGetVersion(t *testing.T) {
 
 	t.Run("Bad", func(t *testing.T) {
 		tests := []string{
-			"hashicorp/vault",
-			"hashicorp/vault:latest",
-			"hashicorp/vault:my-custom-build",
+			"bank-vaults/my-vault",
+			"bank-vaults/my-vault:latest",
+			"bank-vaults/my-vault:my-custom-build",
 		}
 
 		for _, tt := range tests {
