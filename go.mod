@@ -7,7 +7,7 @@ require (
 	github.com/bank-vaults/vault-sdk v0.9.0
 	github.com/cisco-open/k8s-objectmatcher v1.9.0
 	github.com/gruntwork-io/terratest v0.43.13
-	github.com/hashicorp/vault/api v1.9.2
+	github.com/hashicorp/vault/api v1.10.0
 	github.com/imdario/mergo v0.3.12
 	github.com/onsi/ginkgo/v2 v2.12.0
 	github.com/onsi/gomega v1.27.10
