@@ -1,0 +1,32 @@
+apiVersion: vault.banzaicloud.com/v1alpha1
+kind: Vault
+metadata:
+  name: vault
+spec:
+  # Use local disk to store Vault file data, see config section.
+  volumes:
+    - name: vault-file
+      persistentVolumeClaim:
+        claimName: vault-file
+
+  volumeMounts:
+    - name: vault-file
+      mountPath: /vault/file
+
+  volumeClaimTemplates:
+    - metadata:
+        name: vault-file
+      spec:
+        # https://kubernetes.io/docs/concepts/storage/persistent-volumes/#class-1
+        # storageClassName: ""
+        accessModes:
+          - ReadWriteOnce
+        volumeMode: Filesystem
+        resources:
+          requests:
+            storage: 1Gi
+
+  config:
+    storage:
+      file:
+        path: /vault/file

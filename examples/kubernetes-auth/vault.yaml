@@ -1,0 +1,40 @@
+apiVersion: vault.banzaicloud.com/v1alpha1
+kind: Vault
+metadata:
+  name: vault
+spec:
+  # See: https://bank-vaults.dev/docs/cli-tool/#example-external-vault-configuration
+  externalConfig:
+    policies:
+      - name: allow_shared_secrets
+        rules: |
+          path "shared/*" {
+            capabilities = ["create", "read", "update", "delete", "list"]
+          }
+
+      - name: allow_namespaced_secrets
+        rules: |
+          path "namespaces/data/{{identity.entity.aliases.${ accessor `kubernetes/` }.metadata.service_account_namespace}}/*" {
+            capabilities = ["create", "read", "update", "delete", "list"]
+          }
+
+    secrets:
+      - path: shared
+        type: kv
+        options:
+          version: 2
+
+      - path: namespaces
+        type: kv
+        options:
+          version: 2
+
+    auth:
+      - type: kubernetes
+        roles:
+          # Allow every pod in the default namespace to use the secret kv store
+          - name: default
+            bound_service_account_names: ["*"]
+            bound_service_account_namespaces: ["default"]
+            policies: ["allow_shared_secrets", "allow_namespaced_secrets"]
+            ttl: 1h
