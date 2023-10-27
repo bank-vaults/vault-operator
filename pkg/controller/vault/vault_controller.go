@@ -48,7 +48,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -913,7 +913,7 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 
 	podSpec := corev1.PodSpec{
 		ServiceAccountName:           v.Spec.GetServiceAccount(),
-		AutomountServiceAccountToken: pointer.Bool(true),
+		AutomountServiceAccountToken: ptr.To(true),
 
 		Containers: []corev1.Container{
 			{
@@ -959,7 +959,7 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 			Selector: &metav1.LabelSelector{
 				MatchLabels: ls,
 			},
-			RevisionHistoryLimit: pointer.Int32(0),
+			RevisionHistoryLimit: ptr.To(int32(0)),
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels:      withVaultConfigurerLabels(v, ls),
@@ -1266,8 +1266,8 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 			VolumeMounts:    withHSMVolumeMount(v, nil),
 			Resources:       getHSMDaemonResource(v),
 			SecurityContext: &corev1.SecurityContext{
-				Privileged: pointer.Bool(true),
-				RunAsUser:  pointer.Int64(0),
+				Privileged: ptr.To(true),
+				RunAsUser:  ptr.To(int64(0)),
 			},
 		})
 	}
@@ -1285,7 +1285,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 		Affinity: affinity,
 
 		ServiceAccountName:           v.Spec.GetServiceAccount(),
-		AutomountServiceAccountToken: pointer.Bool(true),
+		AutomountServiceAccountToken: ptr.To(true),
 
 		InitContainers: withVaultInitContainers(v, []corev1.Container{
 			{
@@ -1676,7 +1676,7 @@ func withVeleroContainer(v *vaultv1alpha1.Vault, containers []corev1.Container) 
 			Command:         []string{"/bin/bash", "-c", "sleep infinity"},
 			VolumeMounts:    withVaultVolumeMounts(v, nil),
 			SecurityContext: &corev1.SecurityContext{
-				Privileged: pointer.Bool(true),
+				Privileged: ptr.To(true),
 			},
 			Resources: corev1.ResourceRequirements{
 				Requests: corev1.ResourceList{
