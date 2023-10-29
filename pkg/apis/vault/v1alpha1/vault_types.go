@@ -781,9 +781,14 @@ func (usc *UnsealConfig) ToArgs(vault *Vault) []string {
 			fmt.Sprint(usc.HSM.SlotID),
 			"--hsm-key-label",
 			usc.HSM.KeyLabel,
-			"--hsm-pin",
-			usc.HSM.Pin,
 		)
+
+		if usc.HSM.Pin != "" {
+			args = append(args,
+				"--hsm-pin",
+				usc.HSM.Pin,
+			)
+		}
 
 		if usc.HSM.TokenLabel != "" {
 			args = append(args,
@@ -908,6 +913,7 @@ type HSMUnsealConfig struct {
 	ModulePath string `json:"modulePath"`
 	SlotID     uint   `json:"slotId,omitempty"`
 	TokenLabel string `json:"tokenLabel,omitempty"`
+	// +optional
 	Pin        string `json:"pin"`
 	KeyLabel   string `json:"keyLabel"`
 }
