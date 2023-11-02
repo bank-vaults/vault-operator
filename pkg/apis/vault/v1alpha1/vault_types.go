@@ -31,7 +31,7 @@ import (
 	netv1 "k8s.io/api/networking/v1"
 	extv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
@@ -1037,7 +1037,7 @@ func (vault *Vault) AsOwnerReference() metav1.OwnerReference {
 		Kind:       vault.Kind,
 		Name:       vault.Name,
 		UID:        vault.UID,
-		Controller: pointer.Bool(true),
+		Controller: ptr.To(true),
 	}
 }
 
