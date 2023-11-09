@@ -23,6 +23,7 @@ _Alternatively, install [Go](https://go.dev/dl/) on your computer then run `make
 Make sure Docker is installed with Compose and Buildx.
 
 Fetch required tools:
+
 ```shell
 make deps
 ```
