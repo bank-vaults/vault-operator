@@ -28,47 +28,47 @@ help: ## Display this help
 
 ##@ Checks
 
-.PHONY: fmt
-fmt: ## Run go fmt against code
-	$(GOLANGCI_LINT) run --fix
+.PHONY: check
+check: lint test ## Run lint checks and tests
 
-.PHONY: lint-go
-lint-go: # Run golang lint check
-	$(GOLANGCI_LINT) run $(if ${CI},--out-format github-actions,)
+.PHONY: test
+test: ## Run tests
+	KUBEBUILDER_ASSETS="$(shell $(SETUP_ENVTEST_BIN) use $(TEST_K8S_VERSION) --bin-dir ./bin -p path)" \
+		go test -race -v ./... -coverprofile cover.out
 
-.PHONY: lint-helm
-lint-helm: # Run helm lint check
-	$(HELM) lint deploy/charts/vault-operator
-
-.PHONY: lint-docker
-lint-docker: # Run Dockerfile lint check
-	$(HADOLINT) Dockerfile
-
-.PHONY: lint-yaml
-lint-yaml: # Run yaml lint check
-	$(YAMLLINT) $(if ${CI},-f github,) --no-warnings .
+.PHONY: test-acceptance
+test-acceptance: ## Run acceptance tests
+	VAULT_VERSION=$(TEST_VAULT_VERSION) BANK_VAULTS_VERSION=$(TEST_BANK_VAULTS_VERSION) OPERATOR_VERSION=$(TEST_OPERATOR_VERSION) \
+		go test -race -v -timeout 900s -tags kubeall ./test
 
 .PHONY: lint
 lint: lint-go lint-helm lint-docker lint-yaml
 lint: ## Run lint checks
 
-.PHONY: test
-test: ## Run tests
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(TEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" \
-		go test -race -v ./... -coverprofile cover.out
+.PHONY: lint-go
+lint-go:
+	$(GOLANGCI_LINT_BIN) run $(if ${CI},--out-format github-actions,)
 
-.PHONY: test-acceptance
-test-acceptance: ## Run acceptance tests. If running on a local kind cluster, run "make import-test" before this
-	VAULT_VERSION=$(TEST_VAULT_VERSION) BANK_VAULTS_VERSION=$(TEST_BANK_VAULTS_VERSION) OPERATOR_VERSION=$(TEST_OPERATOR_VERSION) \
-		go test -race -v -timeout 900s -tags kubeall ./test
+.PHONY: lint-helm
+lint-helm:
+	$(HELM_BIN) lint deploy/charts/vault-operator
+
+.PHONY: lint-docker
+lint-docker:
+	$(HADOLINT_BIN) Dockerfile
+
+.PHONY: lint-yaml
+lint-yaml:
+	$(YAMLLINT_BIN) $(if ${CI},-f github,) --no-warnings .
 
 .PHONY: license-check
 license-check: ## Run license check
-	$(LICENSEI) check
-	$(LICENSEI) header
+	$(LICENSEI_BIN) check
+	$(LICENSEI_BIN) header
 
-.PHONY: check
-check: lint test ## Run lint checks and tests
+.PHONY: fmt
+fmt: ## Format code
+	$(GOLANGCI_LINT_BIN) run --fix
 
 ##@ Development
 
@@ -78,28 +78,25 @@ run: deploy ## Run manager from your host
 
 .PHONY: up
 up: ## Start kind development environment
-	$(KIND) create cluster --name $(TEST_KIND_CLUSTER)
+	$(KIND_BIN) create cluster --name $(TEST_KIND_CLUSTER)
 
 .PHONY: down
 down: ## Destroy kind development environment
-	$(KIND) delete cluster --name $(TEST_KIND_CLUSTER)
+	$(KIND_BIN) delete cluster --name $(TEST_KIND_CLUSTER)
 
-.PHONY: import-image
-import-image: docker-build ## Import manager image to kind image repository
-	$(KIND) load docker-image ${IMG} --name $(TEST_KIND_CLUSTER)
-
-.PHONY: import-test
-import-test: import-image ## Import images required for tests to kind image repository
+.PHONY: prepare-kind
+prepare-kind: ## Prepare kind cluster for development/testing
 	docker pull ghcr.io/bank-vaults/bank-vaults:$(TEST_BANK_VAULTS_VERSION)
 	docker pull hashicorp/vault:$(TEST_VAULT_VERSION)
 
-	$(KIND) load docker-image ghcr.io/bank-vaults/bank-vaults:$(TEST_BANK_VAULTS_VERSION) --name $(TEST_KIND_CLUSTER)
-	$(KIND) load docker-image hashicorp/vault:$(TEST_VAULT_VERSION) --name $(TEST_KIND_CLUSTER)
+	$(KIND_BIN) load docker-image ${IMG} --name $(TEST_KIND_CLUSTER)
+	$(KIND_BIN) load docker-image ghcr.io/bank-vaults/bank-vaults:$(TEST_BANK_VAULTS_VERSION) --name $(TEST_KIND_CLUSTER)
+	$(KIND_BIN) load docker-image hashicorp/vault:$(TEST_VAULT_VERSION) --name $(TEST_KIND_CLUSTER)
 
 ##@ Build
 
 .PHONY: build
-build: ## Build manager binary
+build: ## Build binary
 	@mkdir -p build
 	go build -race -o build/manager ./cmd
 
@@ -130,18 +127,17 @@ docker-buildx: ## Build docker image for cross-platform support
 .PHONY: helm-chart
 helm-chart: ## Build helm chart
 	@mkdir -p build
-	$(HELM) package -d build/ deploy/charts/vault-operator
+	$(HELM_BIN) package -d build/ deploy/charts/vault-operator
 
 .PHONY: artifacts
 artifacts: docker-build helm-chart
 artifacts: ## Build docker image and helm chart
 
-
 ##@ Autogeneration
 
 .PHONY: gen-manifests
 gen-manifests: ## Generate webhook, RBAC, and CRD resources
-	$(CONTROLLER_GEN) rbac:roleName=vault crd:maxDescLen=0 webhook paths="./..." \
+	$(CONTROLLER_GEN_BIN) rbac:roleName=vault crd:maxDescLen=0 webhook paths="./..." \
 		output:rbac:dir=deploy/rbac \
 		output:crd:dir=deploy/crd/bases \
 		output:webhook:dir=deploy/webhook
@@ -149,12 +145,12 @@ gen-manifests: ## Generate webhook, RBAC, and CRD resources
 
 .PHONY: gen-code
 gen-code: ## Generate deepcopy, client, lister, and informer objects
-	$(CONTROLLER_GEN) object:headerFile="hack/custom-boilerplate.go.txt" paths="./..."
+	$(CONTROLLER_GEN_BIN) object:headerFile="hack/custom-boilerplate.go.txt" paths="./..."
 	./hack/update-codegen.sh v${CODE_GENERATOR_VERSION}
 
 .PHONY: gen-helm-docs
 gen-helm-docs: ## Generate Helm chart documentation
-	$(HELM_DOCS) -s file -c deploy/charts/ -t README.md.gotmpl
+	$(HELM_DOCS_BIN) -s file -c deploy/charts/ -t README.md.gotmpl
 
 .PHONY: generate
 generate: gen-manifests gen-code gen-helm-docs
@@ -162,30 +158,31 @@ generate: ## Generate manifests, code, and docs resources
 
 ##@ Deployment
 
-ifndef ignore-not-found
-  ignore-not-found = false
-endif
-
 .PHONY: install
 install: gen-manifests ## Install CRDs into the K8s cluster
-	$(KUSTOMIZE) build deploy/crd | kubectl apply -f -
+	$(KUSTOMIZE_BIN) build deploy/crd | kubectl apply -f -
 
 .PHONY: uninstall
-uninstall: gen-manifests ## Uninstall CRDs from the K8s cluster. Call with ignore-not-found=true to ignore resource not found errors during deletion.
-	$(KUSTOMIZE) build deploy/crd | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
+uninstall: gen-manifests ## Uninstall CRDs from the K8s cluster
+	$(KUSTOMIZE_BIN) build deploy/crd | kubectl delete -f -
 
 .PHONY: deploy
-deploy: gen-manifests ## Deploy manager resources to the K8s cluster
-	cd deploy/manager && $(KUSTOMIZE) edit set image controller=${IMG}
-	$(KUSTOMIZE) build deploy/default | kubectl apply -f -
+deploy: gen-manifests ## Deploy resources to the K8s cluster
+	cd deploy/manager && $(KUSTOMIZE_BIN) edit set image controller=${IMG}
+	$(KUSTOMIZE_BIN) build deploy/default | kubectl apply -f -
 
 .PHONY: undeploy
-clean: ## Clean manager resources from the K8s cluster. Call with ignore-not-found=true to ignore resource not found errors during deletion.
-	$(KUSTOMIZE) build deploy/default | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
+clean: ## Clean resources from the K8s cluster
+	$(KUSTOMIZE_BIN) build deploy/default | kubectl delete -f -
 
 ##@ Dependencies
 
-# Dependency tool chain
+.PHONY: deps
+deps: bin/controller-gen bin/golangci-lint bin/helm bin/helm-docs bin/kind
+deps: bin/kurun bin/kustomize bin/licensei bin/setup-envtest
+deps: ## Install dependencies
+
+# Dependency versions
 GOLANGCI_VERSION = 1.53.3
 LICENSEI_VERSION = 0.8.0
 KIND_VERSION = 0.20.0
@@ -195,66 +192,71 @@ HELM_DOCS_VERSION = 1.11.0
 KUSTOMIZE_VERSION = 5.1.0
 CONTROLLER_TOOLS_VERSION = 0.12.1
 
-## Location to install dependencies to
-LOCALBIN ?= $(shell pwd)/bin
-$(LOCALBIN):
-	mkdir -p $(LOCALBIN)
-
-KUSTOMIZE ?= $(or $(shell which kustomize),$(LOCALBIN)/kustomize)
-$(KUSTOMIZE): $(LOCALBIN)
-	@if test -x $(LOCALBIN)/kustomize && ! $(LOCALBIN)/kustomize version | grep -q v$(KUSTOMIZE_VERSION); then \
-		echo "$(LOCALBIN)/kustomize version is not expected $(KUSTOMIZE_VERSION). Removing it before installing."; \
-		rm -rf $(LOCALBIN)/kustomize; \
-	fi
-	test -s $(LOCALBIN)/kustomize || GOBIN=$(LOCALBIN) GO111MODULE=on go install sigs.k8s.io/kustomize/kustomize/v5@v$(KUSTOMIZE_VERSION)
-
-CONTROLLER_GEN ?= $(or $(shell which controller-gen),$(LOCALBIN)/controller-gen)
-$(CONTROLLER_GEN): $(LOCALBIN)
-	test -s $(LOCALBIN)/controller-gen && $(LOCALBIN)/controller-gen --version | grep -q v$(CONTROLLER_TOOLS_VERSION) || \
-	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-tools/cmd/controller-gen@v$(CONTROLLER_TOOLS_VERSION)
-
-ENVTEST ?= $(or $(shell which setup-envtest),$(LOCALBIN)/setup-envtest)
-$(ENVTEST): $(LOCALBIN)
-	test -s $(LOCALBIN)/setup-envtest || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
-
-GOLANGCI_LINT ?= $(or $(shell which golangci-lint),$(LOCALBIN)/golangci-lint)
-$(GOLANGCI_LINT): $(LOCALBIN)
-	test -s $(LOCALBIN)/golangci-lint || curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | bash -s -- v${GOLANGCI_VERSION}
-
-LICENSEI ?= $(or $(shell which licensei),$(LOCALBIN)/licensei)
-$(LICENSEI): $(LOCALBIN)
-	test -s $(LOCALBIN)/licensei || curl -sfL https://raw.githubusercontent.com/goph/licensei/master/install.sh | bash -s -- v${LICENSEI_VERSION}
-
-HELM ?= $(or $(shell which helm),$(LOCALBIN)/helm)
-$(HELM): $(LOCALBIN)
-	test -s $(LOCALBIN)/helm || curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | USE_SUDO=false HELM_INSTALL_DIR=$(LOCALBIN) bash
-
-KIND ?= $(or $(shell which kind),$(LOCALBIN)/kind)
-$(KIND): $(LOCALBIN)
-	@if [ ! -s "$(LOCALBIN)/kind" ]; then \
-		curl -Lo $(LOCALBIN)/kind https://kind.sigs.k8s.io/dl/v${KIND_VERSION}/kind-$(shell uname -s | tr '[:upper:]' '[:lower:]')-$(shell uname -m | sed -e "s/aarch64/arm64/; s/x86_64/amd64/"); \
-		chmod +x $(LOCALBIN)/kind; \
-	fi
-
-HELM_DOCS ?= $(or $(shell which helm-docs),$(LOCALBIN)/helm-docs)
-$(HELM_DOCS): $(LOCALBIN)
-	@if [ ! -s "$(LOCALBIN)/helm-docs" ]; then \
-		curl -L https://github.com/norwoodj/helm-docs/releases/download/v${HELM_DOCS_VERSION}/helm-docs_${HELM_DOCS_VERSION}_$(shell uname)_x86_64.tar.gz | tar -zOxf - helm-docs > ./bin/helm-docs; \
-		chmod +x $(LOCALBIN)/helm-docs; \
-	fi
-
-KURUN ?= $(or $(shell which kurun),$(LOCALBIN)/kurun)
-$(KURUN): $(LOCALBIN)
-	@if [ ! -s "$(LOCALBIN)/kurun" ]; then \
-		curl -Lo  $(LOCALBIN)/kurun https://github.com/banzaicloud/kurun/releases/download/${KURUN_VERSION}/kurun-$(shell uname -s | tr '[:upper:]' '[:lower:]')-$(shell uname -m | sed -e "s/aarch64/arm64/; s/x86_64/amd64/"); \
-		chmod +x  $(LOCALBIN)/kurun; \
-	fi
+# Dependency binaries
+GOLANGCI_LINT_BIN := golangci-lint
+LICENSEI_BIN := licensei
+KIND_BIN := kind
+HELM_BIN := helm
+HELM_DOCS_BIN := helm-docs
+SETUP_ENVTEST_BIN := setup-envtest
+KUSTOMIZE_BIN := kustomize
+CONTROLLER_GEN_BIN := controller-gen
 
 # TODO: add support for hadolint and yamllint dependencies
-HADOLINT ?= hadolint
-YAMLLINT ?= yamllint
+HADOLINT_BIN := hadolint
+YAMLLINT_BIN := yamllint
 
-.PHONY: deps
-deps: $(HELM) $(CONTROLLER_GEN) $(KUSTOMIZE) $(KIND)
-deps: $(HELM_DOCS) $(ENVTEST) $(GOLANGCI_LINT) $(LICENSEI) $(KURUN)
-deps: ## Download and install dependencies
+# If we have "bin" dir, use those binaries instead
+ifneq ($(wildcard ./bin/.),)
+	GOLANGCI_LINT_BIN := bin/$(GOLANGCI_LINT_BIN)
+	LICENSEI_BIN := bin/$(LICENSEI_BIN)
+	KIND_BIN := bin/$(KIND_BIN)
+	HELM_BIN := bin/$(HELM_BIN)
+	HELM_DOCS_BIN := bin/$(HELM_DOCS_BIN)
+	SETUP_ENVTEST_BIN := bin/$(SETUP_ENVTEST_BIN)
+	KUSTOMIZE_BIN := bin/$(KUSTOMIZE_BIN)
+	CONTROLLER_GEN_BIN := bin/$(CONTROLLER_GEN_BIN)
+endif
+
+# full path to "bin" required for go install
+DEPS_BIN_PATH ?= $(shell pwd)/bin
+
+bin/kustomize:
+	@mkdir -p bin
+	GOBIN=$(DEPS_BIN_PATH) GO111MODULE=on go install sigs.k8s.io/kustomize/kustomize/v5@v$(KUSTOMIZE_VERSION)
+
+bin/controller-gen:
+	@mkdir -p bin
+	GOBIN=$(DEPS_BIN_PATH) go install sigs.k8s.io/controller-tools/cmd/controller-gen@v$(CONTROLLER_TOOLS_VERSION)
+
+bin/setup-envtest:
+	@mkdir -p bin
+	GOBIN=$(DEPS_BIN_PATH) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+
+bin/golangci-lint:
+	@mkdir -p bin
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | bash -s -- v${GOLANGCI_VERSION}
+
+bin/licensei:
+	@mkdir -p bin
+	curl -sfL https://raw.githubusercontent.com/goph/licensei/master/install.sh | bash -s -- v${LICENSEI_VERSION}
+
+bin/kind:
+	@mkdir -p bin
+	curl -Lo bin/kind https://kind.sigs.k8s.io/dl/v${KIND_VERSION}/kind-$(shell uname -s | tr '[:upper:]' '[:lower:]')-$(shell uname -m | sed -e "s/aarch64/arm64/; s/x86_64/amd64/")
+	@chmod +x bin/kind
+
+bin/helm:
+	@mkdir -p bin
+	curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | USE_SUDO=false HELM_INSTALL_DIR=bin bash
+	@chmod +x bin/helm
+
+bin/helm-docs:
+	@mkdir -p bin
+	curl -L https://github.com/norwoodj/helm-docs/releases/download/v${HELM_DOCS_VERSION}/helm-docs_${HELM_DOCS_VERSION}_$(shell uname)_x86_64.tar.gz | tar -zOxf - helm-docs > ./bin/helm-docs
+	@chmod +x bin/helm-docs
+
+bin/kurun:
+	@mkdir -p bin
+	curl -Lo  bin/kurun https://github.com/banzaicloud/kurun/releases/download/${KURUN_VERSION}/kurun-$(shell uname -s | tr '[:upper:]' '[:lower:]')-$(shell uname -m | sed -e "s/aarch64/arm64/; s/x86_64/amd64/")
+	@chmod +x  bin/kurun
