@@ -27,6 +27,10 @@ func TestGetVersion(t *testing.T) {
 			"bank-vaults/my-vault:1.2",
 			"my.local.proxy/bank-vaults/my-vault:1.2.3",
 			"my.local.proxy:5000/bank-vaults/my-vault:1.2.3",
+			"bank-vaults/my-vault:v1.2.3",
+			"bank-vaults/my-vault:v1.2",
+			"my.local.proxy/bank-vaults/my-vault:v1.2.3",
+			"my.local.proxy:5000/bank-vaults/my-vault:v1.2.3",
 		}
 
 		for _, tt := range tests {
