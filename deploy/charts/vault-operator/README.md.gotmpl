@@ -1,41 +1,27 @@
-{{- define "chart.kubeVersionBadge" -}}
-{{- if .KubeVersion -}}![kube version: {{ .KubeVersion }}](https://img.shields.io/badge/kube%20version-{{ .KubeVersion | replace "-" "--" }}-informational?style=flat-square){{- end -}}
-{{- end -}}
+{{ template "chart.header" . }}
 
-{{- define "tldr" -}}
+{{ template "chart.description" . }}
+
+{{ template "chart.homepageLine" . }}
+
 ## TL;DR;
 
 ```bash
-helm install --generate-name --wait ghcr.io/bank-vaults/helm-charts/{{ .Name }}
+helm install --generate-name --wait oci://ghcr.io/bank-vaults/helm-charts/{{ .Name }}
 ```
-{{- end -}}
 
-{{- define "chart.baseHead" -}}
-{{ template "chart.header" . }}
+{{ define "chart.valuesTableHtml" }}
 
-{{ template "chart.kubeVersionBadge" . }}
+The following table lists the configurable parameters of the Helm chart.
 
-{{ template "chart.description" . }}
+| Parameter | Type | Default | Description |
+| --- | ---- | ------- | ----------- |
+{{- range .Values }}
+| `{{ .Key }}` | {{ .Type }} | {{ .Default }} | {{ if .Description }}{{ .Description }}{{ else }}{{ .AutoDescription }}{{ end }} |
+{{- end }}
 
-{{ template "chart.homepageLine" . }}
+Specify each parameter using the `--set key=value[,key=value]` argument to `helm install`.
 
-{{ template "tldr" . }}
-{{- end -}}
+{{ end }}
 
-{{- define "chart.base" -}}
-{{ template "chart.baseHead" . }}
-
-{{ template "chart.valuesSection" . }}
-{{- end -}}
-
-{{ template "chart.header" . }}
-
-{{ template "chart.kubeVersionBadge" . }}
-
-{{ template "chart.description" . }}
-
-{{ template "chart.homepageLine" . }}
-
-{{ template "tldr" . }}
-
-{{ template "chart.valuesSection" . }}
+{{ template "chart.valuesSectionHtml" . }}
