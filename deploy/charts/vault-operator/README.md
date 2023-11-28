@@ -7,7 +7,7 @@ Kubernetes operator for Hashicorp Vault
 ## TL;DR;
 
 ```bash
-helm install --generate-name --wait oci://ghcr.io/bank-vaults/helm-charts/vault-operator
+helm install --generate-name --wait ghcr.io/bank-vaults/helm-charts/vault-operator
 ```
 
 ## Values
@@ -22,7 +22,7 @@ helm install --generate-name --wait oci://ghcr.io/bank-vaults/helm-charts/vault-
 | image.bankVaultsRepository | string | `""` | Bank-Vaults image repository **Deprecated:** use `bankVaults.image.repository` instead. |
 | image.bankVaultsTag | string | `""` | Bank-Vaults image tag **Deprecated:** use `bankVaults.image.tag` instead. |
 | bankVaults.image.repository | string | `"ghcr.io/bank-vaults/bank-vaults"` | Bank-Vaults image repository. |
-| bankVaults.image.tag | string | `"1.20.3"` | Bank-Vaults image tag (pinned to supported Bank-Vaults version). |
+| bankVaults.image.tag | string | `"v1.30.0"` | Bank-Vaults image tag (pinned to supported Bank-Vaults version). |
 | nameOverride | string | `""` | A name in place of the chart name for `app:` labels. |
 | fullnameOverride | string | `""` | A name to substitute for the full names of resources. |
 | watchNamespace | string | `""` | The namespace where the operator watches for vault CR objects. If not defined all namespaces are watched. |
@@ -39,7 +39,7 @@ helm install --generate-name --wait oci://ghcr.io/bank-vaults/helm-charts/vault-
 | service.name | string | `""` | The name of the service to use. If not set, a name is generated using the fullname template. |
 | service.externalPort | int | `80` |  |
 | service.internalPort | int | `8080` |  |
-| resources | object | `{"limits":{"cpu":"100m","memory":"256Mi"},"requests":{"cpu":"100m","memory":"128Mi"}}` | Container resource [requests and limits](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/). See the [API reference](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#resources) for details. |
+| resources | object | `{}` | Container resource [requests and limits](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/). See the [API reference](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#resources) for details. |
 | nodeSelector | object | `{}` | [Node selector](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#nodeselector) configuration. |
 | tolerations | list | `[]` | [Tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) for node taints. See the [API reference](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#scheduling) for details. |
 | affinity | object | `{}` | [Affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity) configuration. See the [API reference](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#scheduling) for details. |

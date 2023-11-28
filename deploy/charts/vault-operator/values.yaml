@@ -33,7 +33,7 @@ bankVaults:
     repository: ghcr.io/bank-vaults/bank-vaults
 
     # -- Bank-Vaults image tag (pinned to supported Bank-Vaults version).
-    tag: "1.20.3"
+    tag: "v1.30.0"
 
 # -- A name in place of the chart name for `app:` labels.
 nameOverride: ""
@@ -86,9 +86,11 @@ service:
 # -- Container resource [requests and limits](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/).
 # See the [API reference](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#resources) for details.
 resources:
+  # -- @ignored
   limits:
     cpu: 100m
     memory: 256Mi
+  # -- @ignored
   requests:
     cpu: 100m
     memory: 128Mi
