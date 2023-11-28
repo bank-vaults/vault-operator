@@ -212,7 +212,6 @@ jobs:
       matrix:
         k8s_version: ["v1.24.15", "v1.25.11", "v1.26.6", "v1.27.3"]
         vault_version: ["1.11.12", "1.12.9", "1.13.5", "1.14.1"] # latest versions with MPL 2.0 license
-        bank_vaults_version: ["1.20.4-softhsm", "v1.30.0-softhsm"]
 
     steps:
       - name: Checkout repository
@@ -251,7 +250,6 @@ jobs:
         env:
           TEST_VAULT_VERSION: ${{ matrix.vault_version }}
           TEST_OPERATOR_VERSION: ${{ needs.artifacts.outputs.container-image-tag }}
-          TEST_BANK_VAULTS_VERSION: ${{ matrix.bank_vaults_version }}
           HELM_CHART: "${{ github.workspace }}/${{ needs.artifacts.outputs.helm-chart-package }}"
 
   multi-cluster-acceptance-test:
