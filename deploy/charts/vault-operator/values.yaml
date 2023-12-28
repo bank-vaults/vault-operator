@@ -5,6 +5,14 @@
 # -- Number of replicas (pods) to launch.
 replicaCount: 1
 
+pdb:
+  # -- Create pod disruption budget if replicaCount > 1.
+  create: true
+  # -- Min available for PDB.
+  minAvailable: 1
+  # -- Max unavailable for PDB.
+  # maxUnavailable: 1
+
 image:
   # -- Name of the image repository to pull the container image from.
   repository: ghcr.io/bank-vaults/vault-operator
