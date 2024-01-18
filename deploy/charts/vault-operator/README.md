@@ -17,6 +17,8 @@ The following table lists the configurable parameters of the Helm chart.
 | Parameter | Type | Default | Description |
 | --- | ---- | ------- | ----------- |
 | `replicaCount` | int | `1` | Number of replicas (pods) to launch. |
+| `pdb.create` | bool | `true` | Create pod disruption budget if replicaCount > 1. |
+| `pdb.minAvailable` | int | `1` | Min available for PDB. |
 | `image.repository` | string | `"ghcr.io/bank-vaults/vault-operator"` | Name of the image repository to pull the container image from. |
 | `image.pullPolicy` | string | `"IfNotPresent"` | [Image pull policy](https://kubernetes.io/docs/concepts/containers/images/#updating-images) for updating already existing images on a node. |
 | `image.tag` | string | `""` | Image tag override for the default value (chart appVersion). |
