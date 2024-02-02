@@ -2200,8 +2200,9 @@ func (r *ReconcileVault) deployConfigurer(ctx context.Context, v *vaultv1alpha1.
 	return nil
 }
 
+// handleStorageConfiguration checks if storage configuration is present in the Vault CRD
+// and updates status with a condition if it's missing
 func (r *ReconcileVault) handleStorageConfiguration(ctx context.Context, v *vaultv1alpha1.Vault) error {
-	// Check for missing storage configuration
 	storage := v.Spec.GetStorage()
 	if len(storage) == 0 {
 		// Create a condition indicating the missing storage configuration
@@ -2211,20 +2212,19 @@ func (r *ReconcileVault) handleStorageConfiguration(ctx context.Context, v *vaul
 			Message: "storage configuration is missing",
 		}
 
-		// Update the Vault's status with the new condition
+		// Update Vault's status with the new condition
 		v.Status = vaultv1alpha1.VaultStatus{
 			Nodes:      v.Status.Nodes,
 			Leader:     v.Status.Leader,
 			Conditions: []corev1.ComponentCondition{condition},
 		}
 
-		// Update the status in the Kubernetes API
+		// Update Kubernetes with the new Vault status
 		err := r.client.Status().Update(ctx, v)
 		if err != nil {
 			return err
 		}
 
-		// Requeue the request with a delay
 		return fmt.Errorf("storage configuration is missing")
 	}
 

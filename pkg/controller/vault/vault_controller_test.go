@@ -21,6 +21,7 @@ import (
 
 	vaultv1alpha1 "github.com/bank-vaults/vault-operator/pkg/apis/vault/v1alpha1"
 	"github.com/stretchr/testify/assert"
+	extv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -73,7 +74,11 @@ func TestHandleStorageConfiguration_MissingStorage(t *testing.T) {
 			Name:      "test-vault",
 			Namespace: "default",
 		},
-		Spec: vaultv1alpha1.VaultSpec{},
+		Spec: vaultv1alpha1.VaultSpec{
+			Config: extv1beta1.JSON{
+				Raw: []byte(`{"listener": {"tcp": {"address": "127.0.0.1:8200", "tls_disable": 1}}, "storage": {}}`),
+			},
+		},
 	}
 
 	// ReconcileVault instance with a fake client and scheme
