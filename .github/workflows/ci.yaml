@@ -233,7 +233,7 @@ jobs:
         run: kind create cluster --config test/kind.yaml --image kindest/node:${{ matrix.k8s_version }} --wait 1m
 
       - name: Download docker image
-        uses: actions/download-artifact@6b208ae046db98c579e8a3aa621ab581ff575935 # v4.1.1
+        uses: actions/download-artifact@eaceaf801fd36c7dee90939fad912460b18a1ffe # v4.1.2
         with:
           name: "[container-image] Docker tarball"
 
@@ -241,7 +241,7 @@ jobs:
         run: kind load image-archive docker.tar
 
       - name: Download helm chart
-        uses: actions/download-artifact@6b208ae046db98c579e8a3aa621ab581ff575935 # v4.1.1
+        uses: actions/download-artifact@eaceaf801fd36c7dee90939fad912460b18a1ffe # v4.1.2
         with:
           name: "[helm-chart] package"
 
@@ -274,7 +274,7 @@ jobs:
         run: nix develop --impure .#ci
 
       - name: Download operator docker image
-        uses: actions/download-artifact@6b208ae046db98c579e8a3aa621ab581ff575935 # v4.1.1
+        uses: actions/download-artifact@eaceaf801fd36c7dee90939fad912460b18a1ffe # v4.1.2
         with:
           name: "[container-image] Docker tarball"
 
