@@ -1,6 +1,6 @@
 FROM --platform=$BUILDPLATFORM tonistiigi/xx:1.3.0@sha256:904fe94f236d36d65aeb5a2462f88f2c537b8360475f6342e7599194f291fb7e AS xx
 
-FROM --platform=$BUILDPLATFORM golang:1.21.6-alpine3.18@sha256:3354c3a94c3cf67cb37eb93a8e9474220b61a196b13c26f1c01715c301b22a69 AS builder
+FROM --platform=$BUILDPLATFORM golang:1.22.0-alpine3.18@sha256:09dd80cf5c7100c4c9fc8b9b8f9433181b2db2b38a7c8fe29d92471a1817544b AS builder
 
 COPY --from=xx / /
 
