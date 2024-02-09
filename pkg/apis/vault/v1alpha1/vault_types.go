@@ -362,7 +362,11 @@ func (spec *VaultSpec) GetVaultConfig() map[string]interface{} {
 // GetStorageType returns the type of Vault's storage stanza
 func (spec *VaultSpec) GetStorageType() string {
 	storage := spec.getStorage()
-	return reflect.ValueOf(storage).MapKeys()[0].String()
+	keys := reflect.ValueOf(storage).MapKeys()
+	if len(keys) == 0 {
+		return ""
+	}
+	return keys[0].String()
 }
 
 // GetHAStorageType returns the type of Vault's ha_storage stanza

@@ -257,6 +257,11 @@ func (r *ReconcileVault) Reconcile(ctx context.Context, request reconcile.Reques
 		return reconcile.Result{}, err
 	}
 
+	err = r.handleStorageConfiguration(ctx, v)
+	if err != nil {
+		return reconcile.Result{Requeue: true, RequeueAfter: 5 * time.Second}, err
+	}
+
 	// Create the service if it doesn't exist
 	service := serviceForVault(v)
 	// Set Vault instance as the owner and controller
@@ -2190,6 +2195,37 @@ func (r *ReconcileVault) deployConfigurer(ctx context.Context, v *vaultv1alpha1.
 	err = r.createOrUpdateObject(ctx, configurerSer)
 	if err != nil {
 		return fmt.Errorf("failed to create/update service: %v", err)
+	}
+
+	return nil
+}
+
+// handleStorageConfiguration checks if storage configuration is present in the Vault CRD
+// and updates status with a condition if it's missing
+func (r *ReconcileVault) handleStorageConfiguration(ctx context.Context, v *vaultv1alpha1.Vault) error {
+	storage := v.Spec.GetStorage()
+	if len(storage) == 0 {
+		// Create a condition indicating the missing storage configuration
+		condition := corev1.ComponentCondition{
+			Type:    corev1.ComponentHealthy,
+			Status:  corev1.ConditionFalse,
+			Message: "storage configuration is missing",
+		}
+
+		// Update Vault's status with the new condition
+		v.Status = vaultv1alpha1.VaultStatus{
+			Nodes:      v.Status.Nodes,
+			Leader:     v.Status.Leader,
+			Conditions: []corev1.ComponentCondition{condition},
+		}
+
+		// Update Kubernetes with the new Vault status
+		err := r.client.Status().Update(ctx, v)
+		if err != nil {
+			return err
+		}
+
+		return fmt.Errorf("storage configuration is missing")
 	}
 
 	return nil
