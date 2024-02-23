@@ -657,7 +657,7 @@ func serviceMonitorForVault(v *vaultv1alpha1.Vault) *monitorv1.ServiceMonitor {
 			Labels:    ls,
 		},
 		Spec: monitorv1.ServiceMonitorSpec{
-			JobLabel: v.Name,
+			JobLabel: "vault_cr",
 			Selector: metav1.LabelSelector{
 				MatchLabels: ls,
 				MatchExpressions: []metav1.LabelSelectorRequirement{
