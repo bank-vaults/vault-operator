@@ -8,7 +8,7 @@ It also contains an example for writing policies targeting the accessor (identit
 Run the following command to open a shell in the `default` namespace:
 
 ```shell
-kubectl run vault-shell --rm -i --tty --env "VAULT_ADDR=http://vault:8200" --image hashicorp/vault:1.14.1 -- sh
+kubectl run vault-shell --rm -i --tty --env "VAULT_ADDR=http://vault:8200" --image hashicorp/vault:1.14.8 -- sh
 ```
 
 Exchange the Service Account token for a Vault token:
