@@ -1885,8 +1885,39 @@ func withVaultVolumeMounts(v *vaultv1alpha1.Vault, volumeMounts []corev1.VolumeM
 	return volumeMounts
 }
 
+func withSecretInit(v *vaultv1alpha1.Vault, envs []corev1.EnvVar) []corev1.EnvVar {
+	return append(envs, v.Spec.SecretInitsConfig...)
+}
+
 func withVaultEnv(v *vaultv1alpha1.Vault, envs []corev1.EnvVar) []corev1.EnvVar {
-	return append(envs, v.Spec.VaultEnvsConfig...)
+	// Left in to support backwards compatibility
+	if v.Spec.VaultEnvsConfig != nil {
+		handleDeprecatedEnvs(v)
+	}
+
+	return withSecretInit(v, envs)
+}
+
+// handleDeprecatedEnvs replaces deprecated envs with new ones
+func handleDeprecatedEnvs(v *vaultv1alpha1.Vault) {
+	for _, env := range v.Spec.VaultEnvsConfig {
+		switch env.Name {
+		case "VAULT_JSON_LOG":
+			env.Name = "SECRET_INIT_JSON_LOG"
+		case "VAULT_ENV_LOG_SERVER":
+			env.Name = "SECRET_INIT_LOG_SERVER"
+		case "VAULT_ENV_DAEMON":
+			env.Name = "SECRET_INIT_DAEMON"
+		case "VAULT_ENV_DELAY":
+			env.Name = "SECRET_INIT_DELAY"
+		case "VAULT_ENV_FROM_PATH":
+			env.Name = "VAULT_FROM_PATH"
+		case "VAULT_ENV_PASSTHROUGH":
+			env.Name = "VAULT_PASSTHROUGH"
+		}
+
+		v.Spec.SecretInitsConfig = append(v.Spec.SecretInitsConfig, env)
+	}
 }
 
 func withCommonEnv(v *vaultv1alpha1.Vault, envs []corev1.EnvVar) []corev1.EnvVar {
