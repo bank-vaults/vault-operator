@@ -1,16 +1,16 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: vault-env-gcp-auth
+  name: secret-init-gcp-auth
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app.kubernetes.io/name: vault-env-gcp-auth
+      app.kubernetes.io/name: secret-init-gcp-auth
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: vault-env-gcp-auth
+        app.kubernetes.io/name: secret-init-gcp-auth
       annotations:
         # These annotations enable Vault GCP GCE auth, see:
         # https://www.vaultproject.io/docs/auth/gcp#gce-login
