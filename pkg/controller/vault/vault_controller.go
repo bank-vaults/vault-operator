@@ -2100,6 +2100,10 @@ func (r *ReconcileVault) distributeCACertificate(ctx context.Context, v *vaultv1
 		}
 
 		for _, namespace := range namespaceList.Items {
+			// Skip the namespace if it's being deleted
+			if namespace.DeletionTimestamp != nil {
+				continue
+			}
 			namespaces = append(namespaces, namespace.Name)
 		}
 	} else {
