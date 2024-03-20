@@ -17,7 +17,7 @@ spec:
       annotations:
         vault.security.banzaicloud.io/vault-addr: "https://vault:8200"
         vault.security.banzaicloud.io/vault-tls-secret: vault-tls
-        vault.security.banzaicloud.io/vault-env-daemon: "true"
+        vault.security.banzaicloud.io/secret-init-daemon: "true"
     spec:
       initContainers:
       containers:

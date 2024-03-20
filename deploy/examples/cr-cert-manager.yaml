@@ -109,7 +109,7 @@ spec:
             allowed_uri_sans: ["spiffe://*"]
             ttl: 144h
 
-  vaultEnvsConfig:
+  secretInitsConfig:
     - name: VAULT_LOG_LEVEL
       value: debug
 

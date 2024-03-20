@@ -72,7 +72,7 @@ spec:
                }
 
     # Instead of creating a token by hand we allow the tenant Vault to request
-    # one with the Kubernetes auth method, via vault-env and vault-secrets-webhook
+    # one with the Kubernetes auth method, via secret-init and secrets-webhook
     auth:
       - type: kubernetes
         path: tenant/kubernetes
@@ -230,12 +230,12 @@ spec:
   # The VAULT_TOKEN environment variable will be read by Vault to login
   # for unsealing, the "vault:" special prefix instructs the webhook to
   # mutate the Pod and pass in  variable directly to the process with
-  # vault-env.
-  vaultEnvsConfig:
+  # secret-init.
+  secretInitsConfig:
     - name: VAULT_TOKEN
       value: "vault:login"
 
-  # vault-env from the above block needs some information to know how
+  # secret-init from the above block needs some information to know how
   # to login into Vault with the Kubernetes auth method, and where to
   # find the TLS CA certificate for it. Since the operator was asked
   # to distribute the CA of central-vault instance to other namespaces

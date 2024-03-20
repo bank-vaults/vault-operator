@@ -128,7 +128,7 @@ spec:
             AWS_ACCESS_KEY_ID: secretId
             AWS_SECRET_ACCESS_KEY: s3cr3t
 
-  vaultEnvsConfig:
+  secretInitsConfig:
     - name: VAULT_LOG_LEVEL
       value: debug
 ---

@@ -21,11 +21,23 @@ import (
 
 	vaultv1alpha1 "github.com/bank-vaults/vault-operator/pkg/apis/vault/v1alpha1"
 	"github.com/stretchr/testify/assert"
+	corev1 "k8s.io/api/core/v1"
 	extv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
+
+var envs = []corev1.EnvVar{
+	{
+		Name:  "VAULT_NAMESPACE",
+		Value: "default",
+	},
+	{
+		Name:  "VAULT_IGNORE_MISSING_SECRETS",
+		Value: "true",
+	},
+}
 
 func TestFluentDConfFile(t *testing.T) {
 	testFilename := "test.conf"
@@ -96,4 +108,187 @@ func TestHandleStorageConfiguration_MissingStorage(t *testing.T) {
 
 	err = reconciler.handleStorageConfiguration(context.Background(), vault)
 	assert.Error(t, err, "Expected an error")
+}
+
+func TestWithVaultEnv(t *testing.T) {
+	tests := []struct {
+		name     string
+		vault    *vaultv1alpha1.Vault
+		envs     []corev1.EnvVar
+		expected []corev1.EnvVar
+	}{
+		{
+			name: "vaultEnvsConfig specified",
+			vault: &vaultv1alpha1.Vault{
+				Spec: vaultv1alpha1.VaultSpec{
+					VaultEnvsConfig: []corev1.EnvVar{
+						{
+							Name:  "VAULT_TOKEN",
+							Value: "vault:login",
+						},
+						{
+							Name:  "VAULT_ADDR",
+							Value: "http://vault:8200",
+						},
+					},
+				},
+			},
+			envs: envs,
+			expected: []corev1.EnvVar{
+				{
+					Name:  "VAULT_NAMESPACE",
+					Value: "default",
+				},
+				{
+					Name:  "VAULT_IGNORE_MISSING_SECRETS",
+					Value: "true",
+				},
+				{
+					Name:  "VAULT_TOKEN",
+					Value: "vault:login",
+				},
+				{
+					Name:  "VAULT_ADDR",
+					Value: "http://vault:8200",
+				},
+			},
+		},
+		{
+			name: "secretInitEnvsConfig specified",
+			vault: &vaultv1alpha1.Vault{
+				Spec: vaultv1alpha1.VaultSpec{
+					SecretInitsConfig: []corev1.EnvVar{
+
+						{
+							Name:  "SECRET_INIT_LOG_LEVEL",
+							Value: "info",
+						},
+						{
+							Name:  "SECRET_INIT_JSON_LOG",
+							Value: "true",
+						},
+						{
+							Name:  "SECRET_INIT_DAEMON",
+							Value: "true",
+						},
+					},
+				},
+			},
+			envs: envs,
+			expected: []corev1.EnvVar{
+				{
+					Name:  "VAULT_NAMESPACE",
+					Value: "default",
+				},
+				{
+					Name:  "VAULT_IGNORE_MISSING_SECRETS",
+					Value: "true",
+				},
+				{
+					Name:  "SECRET_INIT_LOG_LEVEL",
+					Value: "info",
+				},
+				{
+					Name:  "SECRET_INIT_JSON_LOG",
+					Value: "true",
+				},
+				{
+					Name:  "SECRET_INIT_DAEMON",
+					Value: "true",
+				},
+			},
+		},
+		{
+			name: "VaultEnvsConfig specified with deprecated envs",
+			vault: &vaultv1alpha1.Vault{
+				Spec: vaultv1alpha1.VaultSpec{
+					VaultEnvsConfig: []corev1.EnvVar{
+						{
+							Name:  "VAULT_TOKEN",
+							Value: "vault:login",
+						},
+						{
+							Name:  "VAULT_ADDR",
+							Value: "http://vault:8200",
+						},
+						{
+							Name:  "VAULT_JSON_LOG",
+							Value: "true",
+						},
+						{
+							Name:  "VAULT_ENV_LOG_SERVER",
+							Value: "https://logserver:8200",
+						},
+						{
+							Name:  "VAULT_ENV_DAEMON",
+							Value: "true",
+						},
+						{
+							Name:  "VAULT_ENV_DELAY",
+							Value: "10",
+						},
+						{
+							Name:  "VAULT_ENV_FROM_PATH",
+							Value: "vault:secret/data/test",
+						},
+						{
+							Name:  "VAULT_ENV_PASSTHROUGH",
+							Value: "VAULT_TOKEN",
+						},
+					},
+				},
+			},
+			envs: envs,
+			expected: []corev1.EnvVar{
+				{
+					Name:  "VAULT_NAMESPACE",
+					Value: "default",
+				},
+				{
+					Name:  "VAULT_IGNORE_MISSING_SECRETS",
+					Value: "true",
+				},
+				{
+					Name:  "VAULT_TOKEN",
+					Value: "vault:login",
+				},
+				{
+					Name:  "VAULT_ADDR",
+					Value: "http://vault:8200",
+				},
+				{
+					Name:  "SECRET_INIT_JSON_LOG",
+					Value: "true",
+				},
+				{
+					Name:  "SECRET_INIT_LOG_SERVER",
+					Value: "https://logserver:8200",
+				},
+				{
+					Name:  "SECRET_INIT_DAEMON",
+					Value: "true",
+				},
+				{
+					Name:  "SECRET_INIT_DELAY",
+					Value: "10",
+				},
+				{
+					Name:  "VAULT_FROM_PATH",
+					Value: "vault:secret/data/test",
+				},
+				{
+					Name:  "VAULT_PASSTHROUGH",
+					Value: "VAULT_TOKEN",
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		ttp := tt
+		t.Run(tt.name, func(t *testing.T) {
+			envs := withVaultEnv(ttp.vault, ttp.envs)
+			assert.Equal(t, ttp.expected, envs, "envs did not match")
+		})
+	}
 }

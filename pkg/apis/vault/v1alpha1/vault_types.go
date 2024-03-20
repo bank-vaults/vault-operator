@@ -249,9 +249,14 @@ type VaultSpec struct {
 	// default:
 	VolumeClaimTemplates []EmbeddedPersistentVolumeClaim `json:"volumeClaimTemplates,omitempty"`
 
+	// DEPRECATED: Use SecretInitsConfig instead
 	// VaultEnvsConfig is a list of Kubernetes environment variable definitions that will be passed to the Vault container.
 	// default:
 	VaultEnvsConfig []v1.EnvVar `json:"vaultEnvsConfig,omitempty"`
+
+	// SecretInitsConfig is a list of Kubernetes environment variable definitions that will be passed to the Vault container.
+	// default:
+	SecretInitsConfig []v1.EnvVar `json:"secretInitsConfig,omitempty"`
 
 	// SidecarEnvsConfig is a list of Kubernetes environment variable definitions that will be passed to Vault sidecar containers.
 	// default:
@@ -918,8 +923,8 @@ type HSMUnsealConfig struct {
 	SlotID     uint   `json:"slotId,omitempty"`
 	TokenLabel string `json:"tokenLabel,omitempty"`
 	// +optional
-	Pin        string `json:"pin"`
-	KeyLabel   string `json:"keyLabel"`
+	Pin      string `json:"pin"`
+	KeyLabel string `json:"keyLabel"`
 }
 
 // CredentialsConfig configuration for a credentials file provided as a secret
