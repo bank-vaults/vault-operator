@@ -775,6 +775,8 @@ spec:
                 type: string
               raftLeaderAddress:
                 type: string
+              raftLeaderApiSchemeOverride:
+                type: string
               resources:
                 properties:
                   bankVaults:

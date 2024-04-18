@@ -1163,11 +1163,15 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 
 	if v.Spec.IsRaftStorage() {
 		raftLeaderAddress := v.Name
+		raftApiScheme := v.Spec.GetAPIScheme()
 		if v.Spec.IsRaftBootstrapFollower() {
 			raftLeaderAddress = v.Spec.RaftLeaderAddress
+			if v.Spec.RaftLeaderApiSchemeOverride != "" {
+				raftApiScheme = v.Spec.RaftLeaderApiSchemeOverride
+			}
 		}
 
-		unsealCommand = append(unsealCommand, "--raft", "--raft-leader-address", v.Spec.GetAPIScheme()+"://"+raftLeaderAddress+":8200")
+		unsealCommand = append(unsealCommand, "--raft", "--raft-leader-address", raftApiScheme+"://"+raftLeaderAddress+":8200")
 
 		if v.Spec.IsRaftBootstrapFollower() {
 			unsealCommand = append(unsealCommand, "--raft-secondary")
