@@ -10,7 +10,7 @@ require (
 	github.com/hashicorp/vault/api v1.12.2
 	github.com/imdario/mergo v0.3.12
 	github.com/onsi/ginkgo/v2 v2.17.1
-	github.com/onsi/gomega v1.32.0
+	github.com/onsi/gomega v1.33.0
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.73.1
 	github.com/sagikazarmark/docker-ref v0.1.0
 	github.com/spf13/cast v1.6.0
