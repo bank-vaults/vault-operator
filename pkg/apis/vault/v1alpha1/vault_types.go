@@ -206,6 +206,11 @@ type VaultSpec struct {
 	// default: ""
 	RaftLeaderAddress string `json:"raftLeaderAddress,omitempty"`
 
+	// RaftLeaderApiSchemeOverride will override the value provided from TLS defined values in order
+	// to handle TLS being terminated by an external reverse proxy, load balancer, etc.
+	// default: ""
+	RaftLeaderApiSchemeOverride string `json:"raftLeaderApiSchemeOverride,omitempty"`
+
 	// ServicePorts is an extra map of ports that should be exposed by the Vault Service.
 	// default:
 	ServicePorts map[string]int32 `json:"servicePorts,omitempty"`
