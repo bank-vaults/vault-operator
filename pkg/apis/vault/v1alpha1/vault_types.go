@@ -50,6 +50,7 @@ var (
 		"mysql":      true,
 		"postgresql": true,
 		"raft":       true,
+		"oci":        true,
 		"spanner":    true,
 		"zookeeper":  true,
 	}
@@ -661,6 +662,7 @@ type UnsealConfig struct {
 	Alibaba    *AlibabaUnsealConfig   `json:"alibaba,omitempty"`
 	Azure      *AzureUnsealConfig     `json:"azure,omitempty"`
 	AWS        *AWSUnsealConfig       `json:"aws,omitempty"`
+	OCI        *OCIUnsealConfig       `json:"oci,omitempty"`
 	Vault      *VaultUnsealConfig     `json:"vault,omitempty"`
 	HSM        *HSMUnsealConfig       `json:"hsm,omitempty"`
 }
@@ -709,6 +711,21 @@ func (usc *UnsealConfig) ToArgs(vault *Vault) []string {
 			"azure-key-vault",
 			"--azure-key-vault-name",
 			usc.Azure.KeyVaultName,
+		)
+	} else if usc.OCI != nil {
+		args = append(args,
+			"--mode",
+			"oci",
+			"--oci-key-ocid",
+			usc.OCI.KeyOCID,
+			"--oci-cryptographic-endpoint",
+			usc.OCI.CryptographicEndpoint,
+			"--oci-bucket-namespace",
+			usc.OCI.BucketNamespace,
+			"--oci-bucket-name",
+			usc.OCI.BucketName,
+			"--oci-bucket-prefix",
+			usc.OCI.BucketPrefix,
 		)
 	} else if usc.AWS != nil {
 		args = append(args,
@@ -909,6 +926,15 @@ type AWSUnsealConfig struct {
 	S3Prefix             string `json:"s3Prefix"`
 	S3Region             string `json:"s3Region,omitempty"`
 	S3SSE                string `json:"s3SSE,omitempty"`
+}
+
+// OCIUnsealConfig holds the parameters for Oracle Cloud Infrastructure based unsealing
+type OCIUnsealConfig struct {
+	KeyOCID               string `json:"keyOCID"`
+	CryptographicEndpoint string `json:"cryptographicEndpoint"`
+	BucketName            string `json:"bucketName"`
+	BucketNamespace       string `json:"bucketNamespace,omitempty"`
+	BucketPrefix          string `json:"bucketPrefix,omitempty"`
 }
 
 // VaultUnsealConfig holds the parameters for remote Vault based unsealing
