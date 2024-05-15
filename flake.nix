@@ -23,6 +23,13 @@
               go.package = pkgs.go_1_22;
             };
 
+            services = {
+              vault = {
+                enable = true;
+                package = self'.packages.vault;
+              };
+            };
+
             pre-commit.hooks = {
               nixpkgs-fmt.enable = true;
               yamllint.enable = true;
