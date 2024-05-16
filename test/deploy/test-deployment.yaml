@@ -12,12 +12,12 @@ spec:
       labels:
         app.kubernetes.io/name: hello-secrets
       annotations:
-        vault.security.banzaicloud.io/vault-addr: "https://vault:8200"
-        vault.security.banzaicloud.io/vault-tls-secret: vault-tls
-        # vault.security.banzaicloud.io/vault-skip-verify: "false"
-        # vault.security.banzaicloud.io/vault-role: "default"
-        # vault.security.banzaicloud.io/vault-path: "kubernetes"
-        # vault.security.banzaicloud.io/vault-agent: "true"
+        secrets-webhook.security.bank-vaults.io/vault-addr: "https://vault:8200"
+        secrets-webhook.security.bank-vaults.io/vault-tls-secret: vault-tls
+        # secrets-webhook.security.bank-vaults.io/vault-skip-verify: "false"
+        # secrets-webhook.security.bank-vaults.io/vault-role: "default"
+        # secrets-webhook.security.bank-vaults.io/vault-path: "kubernetes"
+        # secrets-webhook.security.bank-vaults.io/vault-agent: "true"
     spec:
       initContainers:
       - name: init-ubuntu

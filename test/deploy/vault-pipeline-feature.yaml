@@ -12,7 +12,7 @@ spec:
       labels:
         app.kubernetes.io/name: hello-secrets
       # annotations:
-      #   vault.security.banzaicloud.io/vault-skip-verify: "true"
+      #   secrets-webhook.security.bank-vaults.io/vault-skip-verify: "true"
     spec:
       containers:
       - name: alpine

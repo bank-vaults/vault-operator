@@ -12,9 +12,9 @@ spec:
       labels:
         app.kubernetes.io/name: consul-template-pki
       annotations:
-        vault.security.banzaicloud.io/vault-addr: "https://vault:8200"
-        vault.security.banzaicloud.io/vault-tls-secret: vault-tls
-        vault.security.banzaicloud.io/vault-ct-configmap: consul-template-pki
+        secrets-webhook.security.bank-vaults.io/vault-addr: "https://vault:8200"
+        secrets-webhook.security.bank-vaults.io/vault-tls-secret: vault-tls
+        secrets-webhook.security.bank-vaults.io/vault-ct-configmap: consul-template-pki
     spec:
       containers:
       - name: alpine

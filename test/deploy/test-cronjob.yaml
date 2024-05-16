@@ -11,8 +11,8 @@ spec:
             labels:
               app.kubernetes.io/name: hello-secrets
             annotations:
-              vault.security.banzaicloud.io/vault-addr: "https://vault:8200"
-              vault.security.banzaicloud.io/vault-tls-secret: vault-tls
+              secrets-webhook.security.bank-vaults.io/vault-addr: "https://vault:8200"
+              secrets-webhook.security.bank-vaults.io/vault-tls-secret: vault-tls
         spec:
           containers:
           - name: alpine

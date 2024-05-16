@@ -14,11 +14,11 @@ spec:
       annotations:
         # These annotations enable Vault GCP GCE auth, see:
         # https://www.vaultproject.io/docs/auth/gcp#gce-login
-        vault.security.banzaicloud.io/vault-addr: "https://vault:8200"
-        vault.security.banzaicloud.io/vault-tls-secret: vault-tls
-        vault.security.banzaicloud.io/vault-role: "my-role"
-        vault.security.banzaicloud.io/vault-path: "gcp"
-        vault.security.banzaicloud.io/vault-auth-method: "gcp-gce"
+        secrets-webhook.security.bank-vaults.io/vault-addr: "https://vault:8200"
+        secrets-webhook.security.bank-vaults.io/vault-tls-secret: vault-tls
+        secrets-webhook.security.bank-vaults.io/vault-role: "my-role"
+        secrets-webhook.security.bank-vaults.io/vault-path: "gcp"
+        secrets-webhook.security.bank-vaults.io/vault-auth-method: "gcp-gce"
     spec:
       containers:
         - name: alpine

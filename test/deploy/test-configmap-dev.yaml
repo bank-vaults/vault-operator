@@ -14,7 +14,7 @@ kind: ConfigMap
 metadata:
   name: configmap-dev
   annotations:
-    vault.security.banzaicloud.io/vault-addr: "http://localhost:8200"
+    secrets-webhook.security.bank-vaults.io/vault-addr: "http://localhost:8200"
 data:
   plain: vault:secret/data/database/test#username
   template: user=${vault:secret/data/database/test#username}

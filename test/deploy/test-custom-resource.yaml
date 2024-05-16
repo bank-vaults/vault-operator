@@ -3,10 +3,10 @@ kind: ValidatingWebhookConfiguration
 metadata:
   name: "pod-policy.example.com"
   annotations:
-    vault.security.banzaicloud.io/vault-addr: "https://vault.default:8200"
-    vault.security.banzaicloud.io/vault-role: "default"
-    vault.security.banzaicloud.io/vault-skip-verify: "true"
-    vault.security.banzaicloud.io/vault-path: "kubernetes"
+    secrets-webhook.security.bank-vaults.io/vault-addr: "https://vault.default:8200"
+    secrets-webhook.security.bank-vaults.io/vault-role: "default"
+    secrets-webhook.security.bank-vaults.io/vault-skip-verify: "true"
+    secrets-webhook.security.bank-vaults.io/vault-path: "kubernetes"
 webhooks:
 - name: "pod-policy.example.com"
   rules:
@@ -32,10 +32,10 @@ metadata:
   name: test-ingress
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /
-    vault.security.banzaicloud.io/vault-addr: "https://vault.default:8200"
-    vault.security.banzaicloud.io/vault-role: "default"
-    vault.security.banzaicloud.io/vault-skip-verify: "true"
-    vault.security.banzaicloud.io/vault-path: "kubernetes"
+    secrets-webhook.security.bank-vaults.io/vault-addr: "https://vault.default:8200"
+    secrets-webhook.security.bank-vaults.io/vault-role: "default"
+    secrets-webhook.security.bank-vaults.io/vault-skip-verify: "true"
+    secrets-webhook.security.bank-vaults.io/vault-path: "kubernetes"
 spec:
   rules:
   - http:
