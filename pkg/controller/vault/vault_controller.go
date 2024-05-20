@@ -684,7 +684,7 @@ func serviceMonitorForVault(v *vaultv1alpha1.Vault) *monitorv1.ServiceMonitor {
 			Path:     "/v1/sys/metrics",
 			TLSConfig: &monitorv1.TLSConfig{
 				SafeTLSConfig: monitorv1.SafeTLSConfig{
-					InsecureSkipVerify: true,
+					InsecureSkipVerify: ptr.To(true),
 				},
 			},
 		}
