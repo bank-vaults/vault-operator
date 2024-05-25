@@ -393,7 +393,7 @@ func prepareEnv(t *testing.T, testName string, k8sRes []string) *k8s.KubectlOpti
 		vaultAddress := fmt.Sprintf("https://vault.%s.svc.cluster.local:8200", namespaceName)
 		if v.(map[string]interface{})["kind"] == "Secret" || v.(map[string]interface{})["kind"] == "ConfigMap" {
 			if a, ok := v.(map[string]interface{})["metadata"].(map[string]interface{})["annotations"].(map[string]interface{}); ok {
-				a["vault.security.banzaicloud.io/vault-addr"] = vaultAddress
+				a["secrets-webhook.security.bank-vaults.io/vault-addr"] = vaultAddress
 			}
 		}
 

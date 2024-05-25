@@ -242,10 +242,10 @@ spec:
   # with `caNamespaces:` it will find in the "central-vault-tls" Secrets.
   # This will be mounted automatically by the webhook into the Pod.
   vaultAnnotations:
-    vault.security.banzaicloud.io/vault-addr: https://central-vault.default:8200
-    vault.security.banzaicloud.io/vault-role: tenant
-    vault.security.banzaicloud.io/vault-path: tenant/kubernetes
-    vault.security.banzaicloud.io/vault-tls-secret: "central-vault-tls"
+    secrets-webhook.security.bank-vaults.io/vault-addr: https://central-vault.default:8200
+    secrets-webhook.security.bank-vaults.io/vault-role: tenant
+    secrets-webhook.security.bank-vaults.io/vault-path: tenant/kubernetes
+    secrets-webhook.security.bank-vaults.io/vault-tls-secret: "central-vault-tls"
 
   # Persistence done in the same way as for central-vault
   volumes:
