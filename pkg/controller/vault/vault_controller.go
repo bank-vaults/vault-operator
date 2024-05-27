@@ -100,7 +100,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch for changes to primary resource Vault
-	err = c.Watch(source.Kind(mgr.GetCache(), &vaultv1alpha1.Vault{}), &handler.EnqueueRequestForObject{})
+	err = c.Watch(source.Kind(mgr.GetCache(), &vaultv1alpha1.Vault{}, &handler.TypedEnqueueRequestForObject[*vaultv1alpha1.Vault]{}))
 	if err != nil {
 		return err
 	}
@@ -684,7 +684,7 @@ func serviceMonitorForVault(v *vaultv1alpha1.Vault) *monitorv1.ServiceMonitor {
 			Path:     "/v1/sys/metrics",
 			TLSConfig: &monitorv1.TLSConfig{
 				SafeTLSConfig: monitorv1.SafeTLSConfig{
-					InsecureSkipVerify: true,
+					InsecureSkipVerify: ptr.To(true),
 				},
 			},
 		}
@@ -1437,7 +1437,7 @@ func withVaultConfigurerAnnotations(v *vaultv1alpha1.Vault, annotations map[stri
 	return annotations
 }
 
-func withVaultWatchedExternalSecrets(v *vaultv1alpha1.Vault, secrets []corev1.Secret, annotations map[string]string) map[string]string {
+func withVaultWatchedExternalSecrets(_ *vaultv1alpha1.Vault, secrets []corev1.Secret, annotations map[string]string) map[string]string {
 	if len(secrets) == 0 {
 		// No Labels Selector was defined in the spec , return the annotations without changes
 		return annotations

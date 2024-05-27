@@ -1,5 +1,7 @@
 # A Self-Documenting Makefile: http://marmelab.com/blog/2016/02/29/auto-documented-makefile.html
 
+export PATH := $(abspath bin/):${PATH}
+
 # Target image name
 IMG ?= ghcr.io/bank-vaults/vault-operator:dev
 
@@ -168,7 +170,7 @@ uninstall: gen-manifests ## Uninstall CRDs from the K8s cluster
 
 .PHONY: deploy
 deploy: gen-manifests ## Deploy resources to the K8s cluster
-	cd deploy/manager && $(KUSTOMIZE_BIN) edit set image controller=${IMG}
+	cd deploy/manager && $(PWD)/$(KUSTOMIZE_BIN) edit set image controller=${IMG}
 	$(KUSTOMIZE_BIN) build deploy/default | kubectl apply -f -
 
 .PHONY: undeploy
