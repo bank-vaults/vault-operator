@@ -9,7 +9,7 @@ contact_links:
     about: Ask and discuss questions with other Bank-Vaults community members
 
   - name: 📚 Documentation
-    url: https://bank-vaults.dev/docs/operator/
+    url: https://bank-vaults.dev/docs/operator
     about: Check the documentation for help
 
   - name: 💬 Slack channel
