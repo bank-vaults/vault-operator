@@ -1,6 +1,6 @@
 module github.com/bank-vaults/vault-operator/cmd/examples
 
-go 1.22.0
+go 1.22.3
 
 require (
 	github.com/bank-vaults/vault-sdk v0.9.4
