@@ -288,4 +288,6 @@ jobs:
       - name: Operator Multi-DC Raft test
         run: nix develop --impure .#ci -c ./deploy/dev/multi-dc/test/multi-dc-raft.sh install
         env:
+          VAULT_VERSION: 1.14.8
+          BANK_VAULTS_VERSION: v1.31.1
           OPERATOR_VERSION: ${{ needs.artifacts.outputs.container-image-tag }}
