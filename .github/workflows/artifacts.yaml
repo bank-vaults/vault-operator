@@ -144,7 +144,7 @@ jobs:
           path: docker.tar
 
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@595be6a0f6560a0a8fc419ddf630567fc623531d # 0.22.0
+        uses: aquasecurity/trivy-action@7c2007bcb556501da015201bcba5aa14069b74e2 # 0.23.0
         with:
           input: image
           format: sarif
@@ -248,7 +248,7 @@ jobs:
           path: ${{ steps.build.outputs.package }}
 
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@595be6a0f6560a0a8fc419ddf630567fc623531d # 0.22.0
+        uses: aquasecurity/trivy-action@7c2007bcb556501da015201bcba5aa14069b74e2 # 0.23.0
         with:
           scan-type: config
           scan-ref: deploy/charts/${{ steps.chart-name.outputs.value }}
