@@ -1,4 +1,24 @@
 {{/* vim: set filetype=mustache: */}}
+
+{{/*
+Return the target Kubernetes version
+*/}}
+{{- define "common.capabilities.kubeVersion" -}}
+{{- default (default .Capabilities.KubeVersion.Version .Values.kubeVersion) ((.Values.global).kubeVersion) -}}
+{{- end -}}
+
+{{/*
+Return the appropriate apiVersion for poddisruptionbudget.
+*/}}
+{{- define "common.capabilities.policy.apiVersion" -}}
+{{- $kubeVersion := include "common.capabilities.kubeVersion" . -}}
+{{- if and (not (empty $kubeVersion)) (semverCompare "<1.21-0" $kubeVersion) -}}
+{{- print "policy/v1beta1" -}}
+{{- else -}}
+{{- print "policy/v1" -}}
+{{- end -}}
+{{- end -}}
+
 {{/*
 Expand the name of the chart.
 */}}
