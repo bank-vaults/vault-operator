@@ -66,6 +66,9 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@988b5a0280414f521da01fcc63a27aeeb4b104db # v3.6.1
 
+      - name: Set up Cosign
+        uses: sigstore/cosign-installer@59acb6260d9c0ba8f4a2f9d9b48431a222b68e20 # v3.5.0
+
       - name: Set image name
         id: image-name
         run: echo "value=ghcr.io/${{ github.repository }}" >> "$GITHUB_OUTPUT"
@@ -113,6 +116,19 @@ jobs:
           cache-to: type=gha,mode=max
           outputs: ${{ steps.build-output.outputs.value }}
           # push: ${{ inputs.publish }}
+
+      - name: Sign image with GitHub OIDC Token
+        if: ${{ inputs.publish && github.repository_owner == 'bank-vaults' }} # Check if the workflow is called by the same GitHub organization
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+          TAGS: ${{ steps.meta.outputs.tags }}
+        run: |
+          images=""
+          for tag in ${TAGS}; do
+            images+="${tag}@${DIGEST} "
+          done
+          
+          cosign sign --yes ${images}
 
       - name: Set image ref
         id: image-ref
@@ -186,6 +202,9 @@ jobs:
         with:
           version: v3.12.0
 
+      - name: Set up Cosign
+        uses: sigstore/cosign-installer@59acb6260d9c0ba8f4a2f9d9b48431a222b68e20 # v3.5.0
+
       - name: Set chart name
         id: chart-name
         run: echo "value=${{ github.event.repository.name }}" >> "$GITHUB_OUTPUT"
@@ -220,6 +239,13 @@ jobs:
         run: |
           helm package deploy/charts/${{ steps.chart-name.outputs.value }} --version ${{ steps.version.outputs.value }} --app-version ${{ steps.raw-version.outputs.value }}
           echo "package=${{ steps.chart-name.outputs.value }}-${{ steps.version.outputs.value }}.tgz" >> "$GITHUB_OUTPUT"
+
+      - name: Sign chart with GitHub OIDC Token
+        if: ${{ inputs.publish && github.repository_owner == 'bank-vaults' }} # Check if the workflow is called by the same GitHub organization
+        env:
+          PACKAGE: ${{ steps.build.outputs.package }}
+        run: |
+          cosign sign-blob --yes $PACKAGE
 
       - name: Upload chart as artifact
         uses: actions/upload-artifact@89ef406dd8d7e03cfd12d9e0a4a378f454709029 # v4.3.5
