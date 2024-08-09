@@ -13,7 +13,6 @@
 // limitations under the License.
 
 //go:build kubeall || helm
-// +build kubeall helm
 
 // Fire up a local Kubernetes cluster (`kind create cluster --config test/kind.yaml`)
 // and run the acceptance tests against it (`go test -v -tags kubeall ./test`)
