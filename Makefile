@@ -3,14 +3,14 @@
 export PATH := $(abspath bin/):${PATH}
 
 # Target image name
-IMG ?= ghcr.io/bank-vaults/vault-operator:dev
+CONTAINER_IMAGE_REF ?= ghcr.io/bank-vaults/vault-operator:dev
 
 # Default test data
 TEST_K8S_VERSION ?= 1.27.1
 TEST_VAULT_VERSION ?= 1.14.8
 TEST_BANK_VAULTS_VERSION ?= v1.31.1-softhsm
 TEST_BANK_VAULTS_IMAGE ?= ghcr.io/bank-vaults/bank-vaults:$(TEST_BANK_VAULTS_VERSION)
-TEST_OPERATOR_VERSION ?= $(lastword $(subst :, ,$(IMG)))
+TEST_OPERATOR_VERSION ?= $(lastword $(subst :, ,$(CONTAINER_IMAGE_REF)))
 TEST_KIND_CLUSTER ?= vault-operator
 
 # Setting SHELL to bash allows bash commands to be executed by recipes.
@@ -31,7 +31,7 @@ help: ## Display this help
 ##@ Checks
 
 .PHONY: check
-check: lint test ## Run lint checks and tests
+check: test lint## Run tests and lint checks
 
 .PHONY: test
 test: ## Run tests
@@ -49,7 +49,7 @@ lint: ## Run lint checks
 
 .PHONY: lint-go
 lint-go:
-	$(GOLANGCI_LINT_BIN) run $(if ${CI},--out-format github-actions,)
+	$(GOLANGCI_LINT_BIN) run $(if ${CI},--out-format colored-line-number,)
 
 .PHONY: lint-helm
 lint-helm:
@@ -63,14 +63,14 @@ lint-docker:
 lint-yaml:
 	$(YAMLLINT_BIN) $(if ${CI},-f github,) --no-warnings .
 
+.PHONY: fmt
+fmt: ## Format code
+	$(GOLANGCI_LINT_BIN) run --fix
+
 .PHONY: license-check
 license-check: ## Run license check
 	$(LICENSEI_BIN) check
 	$(LICENSEI_BIN) header
-
-.PHONY: fmt
-fmt: ## Format code
-	$(GOLANGCI_LINT_BIN) run --fix
 
 ##@ Development
 
@@ -91,7 +91,7 @@ prepare-kind: ## Prepare kind cluster for development/testing
 	docker pull ghcr.io/bank-vaults/bank-vaults:$(TEST_BANK_VAULTS_VERSION)
 	docker pull hashicorp/vault:$(TEST_VAULT_VERSION)
 
-	$(KIND_BIN) load docker-image ${IMG} --name $(TEST_KIND_CLUSTER)
+	$(KIND_BIN) load docker-image ${CONTAINER_IMAGE_REF} --name $(TEST_KIND_CLUSTER)
 	$(KIND_BIN) load docker-image ghcr.io/bank-vaults/bank-vaults:$(TEST_BANK_VAULTS_VERSION) --name $(TEST_KIND_CLUSTER)
 	$(KIND_BIN) load docker-image hashicorp/vault:$(TEST_VAULT_VERSION) --name $(TEST_KIND_CLUSTER)
 
@@ -102,18 +102,22 @@ build: ## Build binary
 	@mkdir -p build
 	go build -race -o build/manager ./cmd
 
+.PHONY: artifacts
+artifacts: docker-build helm-chart
+artifacts: ## Build docker image and helm chart
+
 # If you wish built the manager image targeting other platforms you can use the --platform flag.
 # (i.e. docker build --platform linux/arm64 ). However, you must enable docker buildKit for it.
 # More info: https://docs.docker.com/develop/develop-images/build_enhancements/
 .PHONY: docker-build
 docker-build: ## Build docker image
-	docker build -t ${IMG} .
+	docker build -t ${CONTAINER_IMAGE_REF} .
 
 # PLATFORMS defines the target platforms for  the manager image be build to provide support to multiple
-# architectures. (i.e. make docker-buildx IMG=myregistry/mypoperator:0.0.1). To use this option you need to:
+# architectures. (i.e. make docker-buildx CONTAINER_IMAGE_REF=myregistry/mypoperator:0.0.1). To use this option you need to:
 # - able to use docker buildx . More info: https://docs.docker.com/build/buildx/
 # - have enable BuildKit, More info: https://docs.docker.com/develop/develop-images/build_enhancements/
-# - be able to push the image for your registry (i.e. if you do not inform a valid value via IMG=<myregistry/image:<tag>> then the export will fail)
+# - be able to push the image for your registry (i.e. if you do not inform a valid value via CONTAINER_IMAGE_REF=<myregistry/image:<tag>> then the export will fail)
 # To properly provided solutions that supports more than one platform you should use this option.
 PLATFORMS ?= linux/arm64,linux/amd64,linux/s390x,linux/ppc64le
 .PHONY: docker-buildx
@@ -122,7 +126,7 @@ docker-buildx: ## Build docker image for cross-platform support
 	sed -e '1 s/\(^FROM\)/FROM --platform=\$$\{BUILDPLATFORM\}/; t' -e ' 1,// s//FROM --platform=\$$\{BUILDPLATFORM\}/' Dockerfile > Dockerfile.cross
 	- docker buildx create --name project-v3-builder
 	docker buildx use project-v3-builder
-	- docker buildx build --push --platform=$(PLATFORMS) --tag ${IMG} -f Dockerfile.cross .
+	- docker buildx build --push --platform=$(PLATFORMS) --tag ${CONTAINER_IMAGE_REF} -f Dockerfile.cross .
 	- docker buildx rm project-v3-builder
 	rm Dockerfile.cross
 
@@ -131,11 +135,11 @@ helm-chart: ## Build helm chart
 	@mkdir -p build
 	$(HELM_BIN) package -d build/ deploy/charts/vault-operator
 
-.PHONY: artifacts
-artifacts: docker-build helm-chart
-artifacts: ## Build docker image and helm chart
-
 ##@ Autogeneration
+
+.PHONY: generate
+generate: gen-manifests gen-code gen-helm-docs
+generate: ## Generate manifests, code, and docs resources
 
 .PHONY: gen-manifests
 gen-manifests: ## Generate webhook, RBAC, and CRD resources
@@ -154,10 +158,6 @@ gen-code: ## Generate deepcopy, client, lister, and informer objects
 gen-helm-docs: ## Generate Helm chart documentation
 	$(HELM_DOCS_BIN) -s file -c deploy/charts/ -t README.md.gotmpl
 
-.PHONY: generate
-generate: gen-manifests gen-code gen-helm-docs
-generate: ## Generate manifests, code, and docs resources
-
 ##@ Deployment
 
 .PHONY: install
@@ -170,7 +170,7 @@ uninstall: gen-manifests ## Uninstall CRDs from the K8s cluster
 
 .PHONY: deploy
 deploy: gen-manifests ## Deploy resources to the K8s cluster
-	cd deploy/manager && $(PWD)/$(KUSTOMIZE_BIN) edit set image controller=${IMG}
+	cd deploy/manager && $(PWD)/$(KUSTOMIZE_BIN) edit set image controller=${CONTAINER_IMAGE_REF}
 	$(KUSTOMIZE_BIN) build deploy/default | kubectl apply -f -
 
 .PHONY: undeploy
@@ -185,14 +185,15 @@ deps: bin/kurun bin/kustomize bin/licensei bin/setup-envtest
 deps: ## Install dependencies
 
 # Dependency versions
-GOLANGCI_VERSION = 1.53.3
-LICENSEI_VERSION = 0.8.0
-KIND_VERSION = 0.20.0
+GOLANGCI_LINT_VERSION = 1.61.0
+LICENSEI_VERSION = 0.9.0
+KIND_VERSION = 0.24.0
+HELM_VERSION = 3.16.1
 KURUN_VERSION = 0.7.0
 CODE_GENERATOR_VERSION = 0.27.1
-HELM_DOCS_VERSION = 1.11.0
-KUSTOMIZE_VERSION = 5.1.0
-CONTROLLER_TOOLS_VERSION = 0.15.0
+HELM_DOCS_VERSION = 1.14.2
+KUSTOMIZE_VERSION = 5.4.3
+CONTROLLER_TOOLS_VERSION = 0.16.3
 
 # Dependency binaries
 GOLANGCI_LINT_BIN := golangci-lint
@@ -237,7 +238,7 @@ bin/setup-envtest:
 
 bin/golangci-lint:
 	@mkdir -p bin
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | bash -s -- v${GOLANGCI_VERSION}
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | bash -s -- v${GOLANGCI_LINT_VERSION}
 
 bin/licensei:
 	@mkdir -p bin
@@ -250,7 +251,7 @@ bin/kind:
 
 bin/helm:
 	@mkdir -p bin
-	curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | USE_SUDO=false HELM_INSTALL_DIR=bin bash
+	curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | USE_SUDO=false HELM_INSTALL_DIR=bin DESIRED_VERSION=v${HELM_VERSION} bash
 	@chmod +x bin/helm
 
 bin/helm-docs:

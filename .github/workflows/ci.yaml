@@ -110,7 +110,7 @@ jobs:
         run: nix develop --impure .#ci
 
       - name: Lint
-        run: nix develop --impure .#ci -c make lint
+        run: nix develop --impure .#ci -c make lint -j
 
   license-check:
     name: License check
