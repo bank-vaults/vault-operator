@@ -3,7 +3,7 @@ module github.com/bank-vaults/vault-operator
 go 1.23.1
 
 require (
-	github.com/Masterminds/semver/v3 v3.3.0
+	github.com/Masterminds/semver/v3 v3.3.1
 	github.com/bank-vaults/vault-sdk v0.10.1
 	github.com/cisco-open/k8s-objectmatcher v1.10.0
 	github.com/gruntwork-io/terratest v0.47.2
