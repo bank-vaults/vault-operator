@@ -56,7 +56,6 @@
               self'.packages.licensei
               self'.packages.kurun
               self'.packages.envtpl
-              self'.packages.cidr
               self'.packages.vault
             ];
 
@@ -171,22 +170,6 @@
             vendorHash = null;
 
             subPackages = [ "cmd/envtpl" ];
-          };
-
-          cidr = pkgs.buildGoPackage rec {
-            pname = "cidr";
-            version = "9c69a7cbc86a584f29cb8492b245e17b0267237d";
-
-            goPackagePath = "github.com/hankjacobs/cidr";
-
-            src = pkgs.fetchFromGitHub {
-              owner = "hankjacobs";
-              repo = "cidr";
-              rev = "9c69a7cbc86a584f29cb8492b245e17b0267237d";
-              sha256 = "sha256-kdPTGjXcna/Khdcvn+IWjoqCeWoQnYvXdEAy0bqKb24=";
-            };
-
-            subPackages = [ "." ];
           };
         };
       };
