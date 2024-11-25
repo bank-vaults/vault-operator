@@ -7,7 +7,7 @@ set -xeo pipefail
 # - kubectl
 # - helm3
 # - https://github.com/subfuzion/envtpl
-# - https://github.com/hankjacobs/cidr
+# - go
 # - jq
 # - kind
 # - vault
@@ -50,6 +50,9 @@ function metallb_setup {
 }
 
 function cidr_range {
+    go get github.com/hankjacobs/cidr
+    go install github.com/hankjacobs/cidr
+
     local cidr=$1
     cidr "${cidr}" | tr -d ' '
 }
