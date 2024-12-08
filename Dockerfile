@@ -27,7 +27,7 @@ RUN go build -o /usr/local/bin/vault-operator ./cmd/
 RUN xx-verify /usr/local/bin/vault-operator
 
 
-FROM alpine:3.20.3@sha256:1e42bbe2508154c9126d48c2b8a75420c3544343bf86fd041fb7527e017a4b4a
+FROM alpine:3.21.0@sha256:21dc6063fd678b478f57c0e13f47560d0ea4eeba26dfc947b2a4f81f686b9f45
 
 RUN apk add --update --no-cache ca-certificates tzdata
 
