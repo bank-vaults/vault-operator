@@ -19,6 +19,7 @@ spec:
   maxUnavailable: {{ .Values.pdb.maxUnavailable }}
   {{- end }}
   selector:
-    matchLabels: 
+    matchLabels:
       app.kubernetes.io/name: {{ include "vault-operator.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
