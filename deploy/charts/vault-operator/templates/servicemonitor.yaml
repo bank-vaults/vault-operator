@@ -15,7 +15,6 @@ spec:
   selector:
     matchLabels:
       app.kubernetes.io/name: {{ include "vault-operator.name" . }}
-      app.kubernetes.io/instance: {{ .Release.Name }}
   endpoints:
   - port: http-metrics
     path: /metrics
