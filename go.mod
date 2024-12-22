@@ -9,7 +9,7 @@ require (
 	github.com/gruntwork-io/terratest v0.48.0
 	github.com/hashicorp/vault/api v1.15.0
 	github.com/imdario/mergo v1.0.1
-	github.com/onsi/ginkgo/v2 v2.22.0
+	github.com/onsi/ginkgo/v2 v2.22.1
 	github.com/onsi/gomega v1.36.1
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.79.0
 	github.com/sagikazarmark/docker-ref v0.2.0
@@ -105,7 +105,7 @@ require (
 	github.com/google/gnostic-models v0.6.9 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
-	github.com/google/pprof v0.0.0-20241029153458-d1b30febd7db // indirect
+	github.com/google/pprof v0.0.0-20241210010833-40e02aabc2ad // indirect
 	github.com/google/s2a-go v0.1.8 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.4 // indirect
