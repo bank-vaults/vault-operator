@@ -22,6 +22,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"github.com/blang/semver/v4"
 	"net/http"
 	"path/filepath"
 	"reflect"
@@ -29,7 +30,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	vaultv1alpha1 "github.com/bank-vaults/vault-operator/pkg/apis/vault/v1alpha1"
 	bvtls "github.com/bank-vaults/vault-sdk/tls"
 	"github.com/bank-vaults/vault-sdk/vault"
@@ -1214,13 +1214,13 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 				FailureThreshold: 18,
 			},
 			// This probe makes sure Vault is responsive in a HTTPS manner
-			// See: https://www.vaultproject.io/api/system/init.html
+			// See: https://www.vaultproject.io/api/system/health.html
 			LivenessProbe: &corev1.Probe{
 				ProbeHandler: corev1.ProbeHandler{
 					HTTPGet: &corev1.HTTPGetAction{
 						Scheme: getVaultURIScheme(v),
 						Port:   intstr.FromString(v.Spec.GetAPIPortName()),
-						Path:   "/v1/sys/init",
+						Path:   "/v1/sys/health?standbyok=true",
 					},
 				},
 			},
