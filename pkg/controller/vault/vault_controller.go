@@ -22,7 +22,6 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"github.com/blang/semver/v4"
 	"net/http"
 	"path/filepath"
 	"reflect"
@@ -30,6 +29,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	vaultv1alpha1 "github.com/bank-vaults/vault-operator/pkg/apis/vault/v1alpha1"
 	bvtls "github.com/bank-vaults/vault-sdk/tls"
 	"github.com/bank-vaults/vault-sdk/vault"
