@@ -152,7 +152,7 @@ jobs:
         if: inputs.publish
 
       - name: Upload image as artifact
-        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: "[${{ github.job }}] OCI tarball"
           path: image.tar
@@ -167,7 +167,7 @@ jobs:
         run: skopeo --override-os linux --override-arch amd64 --insecure-policy copy --additional-tag ${{ steps.image-name.outputs.value }}:${{ steps.meta.outputs.version }} oci:image docker-archive:docker.tar
 
       - name: Upload image as artifact
-        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: "[${{ github.job }}] Docker tarball"
           path: docker.tar
@@ -180,7 +180,7 @@ jobs:
           output: trivy-results.sarif
 
       - name: Upload Trivy scan results as artifact
-        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: "[${{ github.job }}] Trivy scan results"
           path: trivy-results.sarif
@@ -254,7 +254,7 @@ jobs:
           echo "package=${{ steps.chart-name.outputs.value }}-${{ steps.version.outputs.value }}.tgz" >> "$GITHUB_OUTPUT"
 
       - name: Upload chart as artifact
-        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: "[${{ github.job }}] Helm chart"
           path: ${{ steps.build.outputs.package }}
@@ -293,7 +293,7 @@ jobs:
             --certificate-oidc-issuer "https://token.actions.githubusercontent.com" | jq
 
       - name: Upload package as artifact
-        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: "[${{ github.job }}] package"
           path: ${{ steps.build.outputs.package }}
@@ -307,7 +307,7 @@ jobs:
           output: trivy-results.sarif
 
       - name: Upload Trivy scan results as artifact
-        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: "[${{ github.job }}] Trivy scan results"
           path: trivy-results.sarif
