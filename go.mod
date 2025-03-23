@@ -9,7 +9,7 @@ require (
 	github.com/gruntwork-io/terratest v0.48.2
 	github.com/hashicorp/vault/api v1.16.0
 	github.com/imdario/mergo v1.0.1
-	github.com/onsi/ginkgo/v2 v2.23.0
+	github.com/onsi/ginkgo/v2 v2.23.3
 	github.com/onsi/gomega v1.36.2
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.80.1
 	github.com/sagikazarmark/docker-ref v0.2.0
