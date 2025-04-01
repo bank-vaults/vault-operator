@@ -1,7 +1,6 @@
 module github.com/bank-vaults/vault-operator
 
-go 1.23.1
-toolchain go1.24.1
+go 1.24.1
 
 require (
 	github.com/Masterminds/semver/v3 v3.3.1
