@@ -1,6 +1,6 @@
 module github.com/bank-vaults/vault-operator
 
-go 1.23.1
+go 1.24.1
 
 require (
 	github.com/Masterminds/semver/v3 v3.3.1
@@ -21,7 +21,7 @@ require (
 	k8s.io/apimachinery v0.32.3
 	k8s.io/client-go v0.32.3
 	k8s.io/utils v0.0.0-20241210054802-24370beab758
-	sigs.k8s.io/controller-runtime v0.20.3
+	sigs.k8s.io/controller-runtime v0.20.4
 )
 
 require (

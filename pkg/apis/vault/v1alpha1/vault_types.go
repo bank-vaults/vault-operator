@@ -78,11 +78,11 @@ type VaultSpec struct {
 	// default: false
 	StatsDDisabled bool `json:"statsdDisabled,omitempty"`
 
-	// StatsDImage specifices the StatsD image to use for Vault metrics exportation
+	// StatsDImage specifies the StatsD image to use for Vault metrics exportation
 	// default: prom/statsd-exporter:latest
 	StatsDImage string `json:"statsdImage,omitempty"`
 
-	// StatsdConfig specifices the StatsD mapping configuration
+	// StatsdConfig specifies the StatsD mapping configuration
 	// default:
 	StatsdConfig string `json:"statsdConfig,omitempty"`
 
@@ -90,7 +90,7 @@ type VaultSpec struct {
 	// default: false
 	FluentDEnabled bool `json:"fluentdEnabled,omitempty"`
 
-	// FluentDImage specifices the FluentD image to use for Vault log exportation
+	// FluentDImage specifies the FluentD image to use for Vault log exportation
 	// default: fluent/fluentd:edge
 	FluentDImage string `json:"fluentdImage,omitempty"`
 
@@ -98,21 +98,21 @@ type VaultSpec struct {
 	// default: "/fluentd/etc"
 	FluentDConfLocation string `json:"fluentdConfLocation,omitempty"`
 
-	// FluentDConfFile specifices the FluentD configuration file name to use for Vault log exportation
+	// FluentDConfFile specifies the FluentD configuration file name to use for Vault log exportation
 	// default:
 	FluentDConfFile string `json:"fluentdConfFile,omitempty"`
 
-	// FluentDConfig specifices the FluentD configuration to use for Vault log exportation
+	// FluentDConfig specifies the FluentD configuration to use for Vault log exportation
 	// default:
 	FluentDConfig string `json:"fluentdConfig,omitempty"`
 
-	// WatchedSecretsLabels specifices a set of Kubernetes label selectors which select Secrets to watch.
+	// WatchedSecretsLabels specifies a set of Kubernetes label selectors which select Secrets to watch.
 	// If these Secrets change the Vault cluster gets restarted. For example a Secret that Cert-Manager is
 	// managing a public Certificate for Vault using let's Encrypt.
 	// default:
 	WatchedSecretsLabels []map[string]string `json:"watchedSecretsLabels,omitempty"`
 
-	// WatchedSecretsAnnotations specifices a set of Kubernetes annotations selectors which select Secrets to watch.
+	// WatchedSecretsAnnotations specifies a set of Kubernetes annotations selectors which select Secrets to watch.
 	// If these Secrets change the Vault cluster gets restarted. For example a Secret that Cert-Manager is
 	// managing a public Certificate for Vault using let's Encrypt.
 	// default:
@@ -310,7 +310,7 @@ type VaultSpec struct {
 	// default: false
 	VeleroEnabled bool `json:"veleroEnabled,omitempty"`
 
-	// VeleroFsfreezeImage specifices the Velero Fsrfeeze image to use in Velero backup hooks
+	// VeleroFsfreezeImage specifies the Velero Fsrfeeze image to use in Velero backup hooks
 	// default: velero/fsfreeze-pause:latest
 	VeleroFsfreezeImage string `json:"veleroFsfreezeImage,omitempty"`
 
@@ -767,7 +767,6 @@ func (usc *UnsealConfig) ToArgs(vault *Vault) []string {
 			usc.Alibaba.OSSPrefix,
 		)
 	} else if usc.Vault != nil {
-
 		args = append(args,
 			"--mode",
 			"vault",
@@ -795,9 +794,7 @@ func (usc *UnsealConfig) ToArgs(vault *Vault) []string {
 				usc.Vault.AuthPath,
 			)
 		}
-
 	} else if usc.HSM != nil {
-
 		mode := "hsm"
 		if usc.Kubernetes.SecretNamespace != "" && usc.Kubernetes.SecretName != "" {
 			mode = "hsm-k8s"
@@ -845,9 +842,7 @@ func (usc *UnsealConfig) ToArgs(vault *Vault) []string {
 				strings.Join(secretLabels, ","),
 			)
 		}
-
 	} else {
-
 		secretNamespace := vault.Namespace
 		if usc.Kubernetes.SecretNamespace != "" {
 			secretNamespace = usc.Kubernetes.SecretNamespace
@@ -875,13 +870,12 @@ func (usc *UnsealConfig) ToArgs(vault *Vault) []string {
 			"--k8s-secret-labels",
 			strings.Join(secretLabels, ","),
 		)
-
 	}
 
 	return args
 }
 
-// HSMDaemonNeeded returns if the unsealing mechanims needs a HSM Daemon present
+// HSMDaemonNeeded returns if the unsealing mechanism needs a HSM Daemon present
 func (usc *UnsealConfig) HSMDaemonNeeded() bool {
 	return usc.HSM != nil && usc.HSM.Daemon
 }
