@@ -689,7 +689,7 @@ func serviceMonitorForVault(v *vaultv1alpha1.Vault) *monitorv1.ServiceMonitor {
 			},
 		}
 		if !v.Spec.IsTelemetryUnauthenticated() {
-			endpoint.BearerTokenFile = fmt.Sprintf("/etc/prometheus/config_out/.%s-token", v.Name)
+			endpoint.BearerTokenFile = fmt.Sprintf("/etc/prometheus/config_out/.%s-token", v.Name) //nolint:staticcheck
 		}
 		serviceMonitor.Spec.Endpoints = []monitorv1.Endpoint{endpoint}
 	} else {

@@ -49,7 +49,7 @@ lint: ## Run lint checks
 
 .PHONY: lint-go
 lint-go:
-	$(GOLANGCI_LINT_BIN) run $(if ${CI},--out-format colored-line-number,)
+	$(GOLANGCI_LINT_BIN) run
 
 .PHONY: lint-helm
 lint-helm:

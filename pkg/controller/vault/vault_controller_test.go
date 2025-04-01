@@ -49,9 +49,8 @@ func TestFluentDConfFile(t *testing.T) {
 	}
 
 	configMap := configMapForFluentD(v)
-
-	if configMap == nil {
-		t.Errorf("no configmap returned")
+	if configMap == nil || configMap.Data == nil {
+		t.Errorf("configmap is nil or configmap data is nil")
 	}
 
 	if _, ok := configMap.Data[testFilename]; !ok {
@@ -69,8 +68,8 @@ func TestFluentDConfFileDefault(t *testing.T) {
 
 	configMap := configMapForFluentD(v)
 
-	if configMap == nil {
-		t.Errorf("no configmap returned")
+	if configMap == nil || configMap.Data == nil {
+		t.Errorf("configmap is nil or configmap data is nil")
 	}
 
 	if _, ok := configMap.Data[defaultFilename]; !ok {

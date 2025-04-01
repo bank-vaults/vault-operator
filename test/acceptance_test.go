@@ -475,5 +475,5 @@ func waitUntilPodSucceeded(t *testing.T, options *k8s.KubectlOptions, podName st
 		logger.Logf(t, "Timedout waiting for Pod to succeed: %s", err)
 		require.NoError(t, err)
 	}
-	logger.Logf(t, message)
+	logger.Logf(t, "%s", message)
 }
