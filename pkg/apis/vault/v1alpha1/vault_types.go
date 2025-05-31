@@ -155,7 +155,7 @@ type VaultSpec struct {
 
 	// ConfigPath describes where to store configuration file
 	// default: "/vault/config"
-	ConfigPath string `json:"configPath"`
+	ConfigPath string `json:"configPath,omitempty"`
 
 	// Config is the Vault Server configuration. See https://www.vaultproject.io/docs/configuration/ for more details.
 	// default:
