@@ -499,6 +499,8 @@ spec:
                 type: array
               config:
                 x-kubernetes-preserve-unknown-fields: true
+              configPath:
+                type: string
               credentialsConfig:
                 properties:
                   env:

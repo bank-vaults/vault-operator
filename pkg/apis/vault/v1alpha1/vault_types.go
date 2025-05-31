@@ -153,6 +153,10 @@ type VaultSpec struct {
 	// default:
 	VaultConfigurerPodSpec *EmbeddedPodSpec `json:"vaultConfigurerPodSpec,omitempty"`
 
+	// ConfigPath describes where to store configuration file
+	// default: "/vault/config"
+	ConfigPath string `json:"configPath,omitempty"`
+
 	// Config is the Vault Server configuration. See https://www.vaultproject.io/docs/configuration/ for more details.
 	// default:
 	Config extv1beta1.JSON `json:"config"`
@@ -599,6 +603,13 @@ func (spec *VaultSpec) GetFluentDConfMountPath() string {
 		return "/fluentd/etc"
 	}
 	return spec.FluentDConfLocation
+}
+
+func (spec *VaultSpec) GetConfigPath() string {
+	if spec.ConfigPath == "" {
+		return "/vault/config"
+	}
+	return spec.ConfigPath
 }
 
 // IsFluentDEnabled returns true if fluentd sidecar is to be deployed
