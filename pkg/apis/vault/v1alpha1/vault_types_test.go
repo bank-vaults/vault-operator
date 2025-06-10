@@ -68,3 +68,18 @@ func TestGetVersion(t *testing.T) {
 		}
 	})
 }
+
+func TestGetConfigPath(t *testing.T) {
+	t.Run("No config path specified", func(t *testing.T) {
+		vault := &VaultSpec{}
+		path := vault.GetConfigPath()
+		require.Equal(t, "/vault/config", path)
+	})
+	t.Run("Config path specified", func(t *testing.T) {
+		vault := &VaultSpec{
+			ConfigPath: "/openbao/config",
+		}
+		path := vault.GetConfigPath()
+		require.Equal(t, "/openbao/config", path)
+	})
+}

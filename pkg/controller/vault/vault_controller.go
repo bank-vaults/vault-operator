@@ -1149,7 +1149,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 	volumeMounts := withTLSVolumeMount(v, withCredentialsVolumeMount(v, []corev1.VolumeMount{
 		{
 			Name:      "vault-config",
-			MountPath: "/vault/config",
+			MountPath: v.Spec.GetConfigPath(),
 		},
 	}))
 
@@ -1301,7 +1301,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 				Image:           v.Spec.GetBankVaultsImage(),
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Name:            "config-templating",
-				Command:         []string{"template", "-template", "/tmp/vault-config.json:/vault/config/vault.json"},
+				Command:         []string{"template", "-template", fmt.Sprintf("/tmp/vault-config.json:%s/vault.json", v.Spec.GetConfigPath())},
 				Env: withCredentialsEnv(v, withVaultEnv(v, []corev1.EnvVar{
 					{
 						Name: "POD_NAME",
