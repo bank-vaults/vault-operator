@@ -26,7 +26,7 @@ The following table lists the configurable parameters of the Helm chart.
 | `image.bankVaultsRepository` | string | `""` | Bank-Vaults image repository **Deprecated:** use `bankVaults.image.repository` instead. |
 | `image.bankVaultsTag` | string | `""` | Bank-Vaults image tag **Deprecated:** use `bankVaults.image.tag` instead. |
 | `bankVaults.image.repository` | string | `"ghcr.io/bank-vaults/bank-vaults"` | Bank-Vaults image repository. |
-| `bankVaults.image.tag` | string | `"v1.31.3"` | Bank-Vaults image tag (pinned to supported Bank-Vaults version). |
+| `bankVaults.image.tag` | string | `"v1.31.4"` | Bank-Vaults image tag (pinned to supported Bank-Vaults version). |
 | `nameOverride` | string | `""` | A name in place of the chart name for `app:` labels. |
 | `fullnameOverride` | string | `""` | A name to substitute for the full names of resources. |
 | `watchNamespace` | string | `""` | The namespace where the operator watches for vault CR objects. If not defined all namespaces are watched. |
