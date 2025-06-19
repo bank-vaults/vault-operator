@@ -99,6 +99,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: psp:{{ include "vault-operator.fullname" . }}
+  namespace: {{ .Release.Namespace }}
 rules:
 - apiGroups:
   - policy
@@ -113,6 +114,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: psp:{{ .Values.psp.vaultSA }}
+  namespace: {{ .Release.Namespace }}
 rules:
 - apiGroups:
   - policy

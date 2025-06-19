@@ -3,6 +3,7 @@ apiVersion: {{ include "common.capabilities.policy.apiVersion" . }}
 kind: PodDisruptionBudget
 metadata:
   name: {{ include "vault-operator.fullname" . }}
+  namespace: {{ .Release.Namespace }}
   labels:
     helm.sh/chart: {{ include "vault-operator.chart" . }}
     app.kubernetes.io/name: {{ include "vault-operator.name" . }}

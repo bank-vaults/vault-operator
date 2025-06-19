@@ -20,6 +20,7 @@ kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: psp:{{ include "vault-operator.fullname" . }}
+  namespace: {{ .Release.Namespace }}
   labels:
     helm.sh/chart: {{ include "vault-operator.chart" . }}
 subjects:
@@ -34,6 +35,7 @@ kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: psp:{{ .Values.psp.vaultSA }}
+  namespace: {{ .Release.Namespace }}
   labels:
     helm.sh/chart: {{ include "vault-operator.chart" . }}
 subjects:
