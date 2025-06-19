@@ -3,6 +3,7 @@ apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   name: {{ include "vault-operator.fullname" . }}
+  namespace: {{ .Release.Namespace }}
   labels:
     helm.sh/chart: {{ include "vault-operator.chart" . }}
     app.kubernetes.io/name: {{ include "vault-operator.name" . }}
