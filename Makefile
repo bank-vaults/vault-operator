@@ -8,7 +8,7 @@ CONTAINER_IMAGE_REF ?= ghcr.io/bank-vaults/vault-operator:dev
 # Default test data
 TEST_K8S_VERSION ?= 1.32.0
 TEST_VAULT_VERSION ?= 1.14.8
-TEST_BANK_VAULTS_VERSION ?= v1.31.4-softhsm
+TEST_BANK_VAULTS_VERSION ?= v1.32.0-softhsm
 TEST_BANK_VAULTS_IMAGE ?= ghcr.io/bank-vaults/bank-vaults:$(TEST_BANK_VAULTS_VERSION)
 TEST_OPERATOR_VERSION ?= $(lastword $(subst :, ,$(CONTAINER_IMAGE_REF)))
 TEST_KIND_CLUSTER ?= vault-operator
