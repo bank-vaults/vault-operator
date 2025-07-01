@@ -68,6 +68,7 @@ jobs:
 
       - name: Set up Cosign
         uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3.9.1
+        if: ${{ inputs.publish }}
 
       - name: Set image name
         id: image-name
@@ -217,6 +218,7 @@ jobs:
 
       - name: Set up Cosign
         uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3.9.1
+        if: ${{ inputs.publish }}
 
       - name: Set chart name
         id: chart-name
