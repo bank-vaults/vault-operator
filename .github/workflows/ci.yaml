@@ -268,5 +268,5 @@ jobs:
         run: nix develop --impure .#ci -c ./deploy/dev/multi-dc/test/multi-dc-raft.sh install
         env:
           VAULT_VERSION: 1.14.8
-          BANK_VAULTS_VERSION: v1.31.4
+          BANK_VAULTS_VERSION: v1.32.0
           OPERATOR_VERSION: ${{ needs.artifacts.outputs.container-image-tag }}
