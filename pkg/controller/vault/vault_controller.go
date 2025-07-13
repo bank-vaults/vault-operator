@@ -932,10 +932,11 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 					ContainerPort: 9091,
 					Protocol:      "TCP",
 				}},
-				Env:          withNamespaceEnv(v, withCommonEnv(v, withTLSEnv(v, false, withCredentialsEnv(v, []corev1.EnvVar{})))),
-				VolumeMounts: withHSMVolumeMount(v, withTLSVolumeMount(v, withCredentialsVolumeMount(v, volumeMounts))),
-				WorkingDir:   "/config",
-				Resources:    getBankVaultsResource(v),
+				Env:             withNamespaceEnv(v, withCommonEnv(v, withTLSEnv(v, false, withCredentialsEnv(v, []corev1.EnvVar{})))),
+				VolumeMounts:    withHSMVolumeMount(v, withTLSVolumeMount(v, withCredentialsVolumeMount(v, volumeMounts))),
+				WorkingDir:      "/config",
+				Resources:       getBankVaultsResource(v),
+				SecurityContext: withStandardSecurityContext(v),
 			},
 		},
 		Volumes:         withHSMVolume(v, withTLSVolume(v, withCredentialsVolume(v, volumes))),
@@ -1261,12 +1262,14 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 				ContainerPort: 9091,
 				Protocol:      "TCP",
 			}},
-			VolumeMounts: withHSMVolumeMount(v, withBanksVaultsVolumeMounts(v, withTLSVolumeMount(v, withCredentialsVolumeMount(v, []corev1.VolumeMount{})))),
-			Resources:    getBankVaultsResource(v),
+			VolumeMounts:    withHSMVolumeMount(v, withBanksVaultsVolumeMounts(v, withTLSVolumeMount(v, withCredentialsVolumeMount(v, []corev1.VolumeMount{})))),
+			Resources:       getBankVaultsResource(v),
+			SecurityContext: withStandardSecurityContext(v),
 		},
 	})))
 
-	if v.Spec.UnsealConfig.HSMDaemonNeeded() {
+	if v.Spec.UnsealConfig.HSMDaemonNeeded() && !v.Spec.IsPodSecurityRestricted() {
+		// HSM daemon requires privileged access, skip in Pod Security restricted mode
 		containers = append(containers, corev1.Container{
 			Image:           v.Spec.GetBankVaultsImage(),
 			ImagePullPolicy: corev1.PullIfNotPresent,
@@ -1312,11 +1315,12 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 						},
 					},
 				})),
-				VolumeMounts: withVaultVolumeMounts(v, append(volumeMounts, corev1.VolumeMount{
+				VolumeMounts:    withVaultVolumeMounts(v, append(volumeMounts, corev1.VolumeMount{
 					Name:      "vault-raw-config",
 					MountPath: "/tmp",
 				})),
-				Resources: getVaultResource(v),
+				Resources:       getVaultResource(v),
+				SecurityContext: withStandardSecurityContext(v),
 			},
 		}),
 
@@ -1673,11 +1677,43 @@ func withVaultInitContainers(v *vaultv1alpha1.Vault, containers []corev1.Contain
 }
 
 func withVaultContainers(v *vaultv1alpha1.Vault, containers []corev1.Container) []corev1.Container {
-	return append(containers, v.Spec.VaultContainers...)
+	vaultContainers := make([]corev1.Container, len(v.Spec.VaultContainers))
+	copy(vaultContainers, v.Spec.VaultContainers)
+	
+	// Apply Pod Security Standards compliant security context to vault containers when enabled
+	if v.Spec.IsPodSecurityRestricted() {
+		for i := range vaultContainers {
+			// Apply standard security context to vault containers for Pod Security compliance
+			if vaultContainers[i].SecurityContext == nil {
+				vaultContainers[i].SecurityContext = withStandardSecurityContext(v)
+			} else {
+				// Merge with existing security context, prioritizing Pod Security requirements
+				existingSecCtx := vaultContainers[i].SecurityContext
+				standardSecCtx := withStandardSecurityContext(v)
+				
+				// Override critical Pod Security fields
+				existingSecCtx.AllowPrivilegeEscalation = standardSecCtx.AllowPrivilegeEscalation
+				existingSecCtx.RunAsNonRoot = standardSecCtx.RunAsNonRoot
+				existingSecCtx.Capabilities = standardSecCtx.Capabilities
+				existingSecCtx.SeccompProfile = standardSecCtx.SeccompProfile
+				
+				// Set user/group if not already specified
+				if existingSecCtx.RunAsUser == nil {
+					existingSecCtx.RunAsUser = standardSecCtx.RunAsUser
+				}
+				if existingSecCtx.RunAsGroup == nil {
+					existingSecCtx.RunAsGroup = standardSecCtx.RunAsGroup
+				}
+			}
+		}
+	}
+	
+	return append(containers, vaultContainers...)
 }
 
 func withVeleroContainer(v *vaultv1alpha1.Vault, containers []corev1.Container) []corev1.Container {
-	if v.Spec.VeleroEnabled {
+	if v.Spec.VeleroEnabled && !v.Spec.IsPodSecurityRestricted() {
+		// Velero fsfreeze requires privileged access, skip in Pod Security restricted mode
 		containers = append(containers, corev1.Container{
 			Image:           v.Spec.GetVeleroFsfreezeImage(),
 			ImagePullPolicy: corev1.PullIfNotPresent,
@@ -1718,12 +1754,13 @@ func withStatsDContainer(v *vaultv1alpha1.Vault, containers []corev1.Container) 
 				ContainerPort: 9102,
 				Protocol:      "TCP",
 			}},
-			VolumeMounts: []corev1.VolumeMount{{
+			VolumeMounts:    []corev1.VolumeMount{{
 				Name:      "statsd-mapping",
 				MountPath: "/tmp/",
 			}},
-			Resources: getPrometheusExporterResource(v),
-			Env:       withSidecarEnv(v, []corev1.EnvVar{}),
+			Resources:       getPrometheusExporterResource(v),
+			Env:             withSidecarEnv(v, []corev1.EnvVar{}),
+			SecurityContext: withStandardSecurityContext(v),
 		})
 	}
 	return containers
@@ -1779,8 +1816,9 @@ func withAuditLogContainer(v *vaultv1alpha1.Vault, containers []corev1.Container
 					MountPath: v.Spec.GetFluentDConfMountPath(),
 				},
 			}),
-			Resources: getFluentDResource(v),
-			Env:       withSidecarEnv(v, []corev1.EnvVar{}),
+			Resources:       getFluentDResource(v),
+			Env:             withSidecarEnv(v, []corev1.EnvVar{}),
+			SecurityContext: withStandardSecurityContext(v),
 		})
 	}
 	return containers
@@ -1899,6 +1937,14 @@ func withVaultEnv(v *vaultv1alpha1.Vault, envs []corev1.EnvVar) []corev1.EnvVar 
 		handleDeprecatedEnvs(v)
 	}
 
+	// Add VAULT_DISABLE_MLOCK when in Pod Security restricted mode
+	if v.Spec.IsPodSecurityRestricted() {
+		envs = append(envs, corev1.EnvVar{
+			Name:  "VAULT_DISABLE_MLOCK",
+			Value: "true",
+		})
+	}
+
 	return withSecretInit(v, envs)
 }
 
@@ -1942,25 +1988,62 @@ func withNamespaceEnv(v *vaultv1alpha1.Vault, envs []corev1.EnvVar) []corev1.Env
 }
 
 func withContainerSecurityContext(v *vaultv1alpha1.Vault) *corev1.SecurityContext {
+	// Apply Pod Security Standards compliant security context when enabled
+	if v.Spec.IsPodSecurityRestricted() {
+		return withStandardSecurityContext(v)
+	}
+	
+	// Legacy behavior for non-Pod Security mode
 	config := v.Spec.GetVaultConfig()
-	if cast.ToBool(config["disable_mlock"]) {
-		return &corev1.SecurityContext{}
+	securityContext := &corev1.SecurityContext{
+		Capabilities: &corev1.Capabilities{},
 	}
-	return &corev1.SecurityContext{
-		Capabilities: &corev1.Capabilities{
-			Add: []corev1.Capability{"IPC_LOCK", "SETFCAP"},
-		},
+	
+	// Only add capabilities if mlock is NOT disabled and not in Pod Security mode
+	if !cast.ToBool(config["disable_mlock"]) {
+		securityContext.Capabilities.Add = []corev1.Capability{"IPC_LOCK", "SETFCAP"}
 	}
+	
+	return securityContext
 }
 
 func withPodSecurityContext(v *vaultv1alpha1.Vault) *corev1.PodSecurityContext {
 	if v.Spec.SecurityContext.Size() == 0 {
+		vaultUID := int64(1000)
 		vaultGID := int64(1000)
+
+		// Pod Security Standards compliant pod security context
 		return &corev1.PodSecurityContext{
-			FSGroup: &vaultGID,
+			RunAsNonRoot: ptr.To(true),
+			RunAsUser:    &vaultUID,
+			RunAsGroup:   &vaultGID,
+			FSGroup:      &vaultGID,
+			SeccompProfile: &corev1.SeccompProfile{
+				Type: corev1.SeccompProfileTypeRuntimeDefault,
+			},
 		}
 	}
 	return &v.Spec.SecurityContext
+}
+
+// withStandardSecurityContext returns a Pod Security Standards compliant security context for non-vault containers
+func withStandardSecurityContext(v *vaultv1alpha1.Vault) *corev1.SecurityContext {
+	// Always apply Pod Security compliant context when podSecurityRestricted is true
+	if v.Spec.PodSecurityRestricted {
+		return &corev1.SecurityContext{
+			AllowPrivilegeEscalation: ptr.To(false),
+			RunAsNonRoot:            ptr.To(true),
+			RunAsUser:               ptr.To(int64(1000)),
+			RunAsGroup:              ptr.To(int64(1000)),
+			Capabilities: &corev1.Capabilities{
+				Drop: []corev1.Capability{"ALL"},
+			},
+			SeccompProfile: &corev1.SeccompProfile{
+				Type: corev1.SeccompProfileTypeRuntimeDefault,
+			},
+		}
+	}
+	return nil
 }
 
 // Extend Labels with Vault User defined ones

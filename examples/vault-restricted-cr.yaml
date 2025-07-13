@@ -1,0 +1,91 @@
+apiVersion: "vault.banzaicloud.com/v1alpha1"
+kind: "Vault"
+metadata:
+  name: "vault"
+  namespace: vault-restricted
+spec:
+  size: 1
+  image: hashicorp/vault:1.15.6
+  
+  # Service account with minimal permissions
+  serviceAccount: vault-restricted
+  
+  # Service type
+  serviceType: ClusterIP
+
+  # Annotations to ensure security compliance - these will be applied to Vault pods
+  vaultAnnotations:
+    vault.security.banzaicloud.io/run-as-non-root: "true"
+    vault.security.banzaicloud.io/readonly-root-fs: "true"
+    vault.security.banzaicloud.io/run-as-user: "1000"
+    vault.security.banzaicloud.io/run-as-group: "1000"
+    
+  # Configurer annotations for security compliance
+  vaultConfigurerAnnotations:
+    vault.security.banzaicloud.io/run-as-non-root: "true"
+    vault.security.banzaicloud.io/readonly-root-fs: "true"
+    vault.security.banzaicloud.io/run-as-user: "1000"
+    vault.security.banzaicloud.io/run-as-group: "1000"
+
+  # Vault configuration
+  config:
+    listener:
+      tcp:
+        address: 0.0.0.0:8200
+        tls_cert_file: /vault/tls/server.crt
+        tls_key_file: /vault/tls/server.key
+    storage:
+      file:
+        path: "/vault/data"
+    api_addr: https://vault.vault-restricted:8200
+    cluster_addr: https://vault.vault-restricted:8201
+    ui: true
+
+  # Use persistent volume for data
+  volumeClaimTemplates:
+    - metadata:
+        name: vault-data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        volumeMode: Filesystem
+        resources:
+          requests:
+            storage: 1Gi
+
+  volumeMounts:
+    - name: vault-data
+      mountPath: /vault/data
+
+  # Unsealing configuration using Kubernetes secrets
+  unsealConfig:
+    options:
+      preFlightChecks: true
+      storeRootToken: true
+      secretShares: 5
+      secretThreshold: 3
+    kubernetes:
+      secretNamespace: vault-restricted
+
+  # External configuration
+  externalConfig:
+    policies:
+      - name: allow_secrets
+        rules: |
+          path "secret/*" {
+            capabilities = ["create", "read", "update", "delete", "list"]
+          }
+    auth:
+      - type: kubernetes
+        roles:
+          - name: default
+            bound_service_account_names: ["vault-restricted"]
+            bound_service_account_namespaces: ["vault-restricted"]
+            policies: ["allow_secrets"]
+            ttl: 1h
+    secrets:
+      - path: secret
+        type: kv
+        description: General secrets.
+        options:
+          version: 2
