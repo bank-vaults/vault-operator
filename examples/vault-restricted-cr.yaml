@@ -9,9 +9,30 @@ spec:
   
   # Service account with minimal permissions
   serviceAccount: vault-restricted
+
+  # Environment variables for Pod Security compliance
+  vaultEnvsConfig:
+    - name: SKIP_CHOWN
+      value: "true"
+    - name: SKIP_SETCAP
+      value: "true"
+    - name: VAULT_DISABLE_MLOCK
+      value: "true"
   
   # Service type
   serviceType: ClusterIP
+
+  # Enable Pod Security Standards compliance
+  podSecurityRestricted: true
+
+  # Pod-level security context for Pod Security Standards compliance
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+    seccompProfile:
+      type: RuntimeDefault
 
   # Annotations to ensure security compliance - these will be applied to Vault pods
   vaultAnnotations:
@@ -40,6 +61,7 @@ spec:
     api_addr: https://vault.vault-restricted:8200
     cluster_addr: https://vault.vault-restricted:8201
     ui: true
+    disable_mlock: true
 
   # Use persistent volume for data
   volumeClaimTemplates:

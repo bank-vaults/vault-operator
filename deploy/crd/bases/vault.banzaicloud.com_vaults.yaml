@@ -825,6 +825,8 @@ spec:
                 type: object
               podAntiAffinity:
                 type: string
+              podSecurityRestricted:
+                type: boolean
               raftLeaderAddress:
                 type: string
               raftLeaderApiSchemeOverride:

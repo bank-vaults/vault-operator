@@ -33,9 +33,7 @@ spec:
       containers:
       - command:
         - /usr/local/bin/vault-operator
-        args:
-        - -verbose
-        image: controller:latest
+        image: ttl.sh/vault-operator-public@sha256:ca0f2907e89533b9fdb965ed74ee73e0eacc511bbcedee33f62849a4b1dac8b0
         name: manager
         # Container security context for Pod Security Standards compliance
         securityContext:
@@ -57,13 +55,13 @@ spec:
           mountPath: /.cache
         livenessProbe:
           httpGet:
-            path: /healthz
+            path: /
             port: 8080
           initialDelaySeconds: 15
           periodSeconds: 20
         readinessProbe:
           httpGet:
-            path: /readyz
+            path: /ready
             port: 8080
           initialDelaySeconds: 5
           periodSeconds: 10
