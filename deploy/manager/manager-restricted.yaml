@@ -33,7 +33,7 @@ spec:
       containers:
       - command:
         - /usr/local/bin/vault-operator
-        image: ttl.sh/vault-operator-public@sha256:ca0f2907e89533b9fdb965ed74ee73e0eacc511bbcedee33f62849a4b1dac8b0
+        image: controller:latest
         name: manager
         # Container security context for Pod Security Standards compliance
         securityContext:
