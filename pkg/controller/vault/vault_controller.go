@@ -936,7 +936,18 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 				VolumeMounts:    withHSMVolumeMount(v, withTLSVolumeMount(v, withCredentialsVolumeMount(v, volumeMounts))),
 				WorkingDir:      "/config",
 				Resources:       getBankVaultsResource(v),
-				SecurityContext: withStandardSecurityContext(v),
+				SecurityContext: &corev1.SecurityContext{
+					AllowPrivilegeEscalation: ptr.To(false),
+					RunAsNonRoot:            ptr.To(true),
+					RunAsUser:               ptr.To(int64(65532)),
+					RunAsGroup:              ptr.To(int64(65532)),
+					Capabilities: &corev1.Capabilities{
+						Drop: []corev1.Capability{"ALL"},
+					},
+					SeccompProfile: &corev1.SeccompProfile{
+						Type: corev1.SeccompProfileTypeRuntimeDefault,
+					},
+				},
 			},
 		},
 		Volumes:         withHSMVolume(v, withTLSVolume(v, withCredentialsVolume(v, volumes))),
@@ -1264,12 +1275,22 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 			}},
 			VolumeMounts:    withHSMVolumeMount(v, withBanksVaultsVolumeMounts(v, withTLSVolumeMount(v, withCredentialsVolumeMount(v, []corev1.VolumeMount{})))),
 			Resources:       getBankVaultsResource(v),
-			SecurityContext: withStandardSecurityContext(v),
+			SecurityContext: &corev1.SecurityContext{
+				AllowPrivilegeEscalation: ptr.To(false),
+				RunAsNonRoot:            ptr.To(true),
+				RunAsUser:               ptr.To(int64(65532)),
+				RunAsGroup:              ptr.To(int64(65532)),
+				Capabilities: &corev1.Capabilities{
+					Drop: []corev1.Capability{"ALL"},
+				},
+				SeccompProfile: &corev1.SeccompProfile{
+					Type: corev1.SeccompProfileTypeRuntimeDefault,
+				},
+			},
 		},
 	})))
 
-	if v.Spec.UnsealConfig.HSMDaemonNeeded() && !v.Spec.IsPodSecurityRestricted() {
-		// HSM daemon requires privileged access, skip in Pod Security restricted mode
+	if v.Spec.UnsealConfig.HSMDaemonNeeded() {
 		containers = append(containers, corev1.Container{
 			Image:           v.Spec.GetBankVaultsImage(),
 			ImagePullPolicy: corev1.PullIfNotPresent,
@@ -1320,7 +1341,18 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 					MountPath: "/tmp",
 				})),
 				Resources:       getVaultResource(v),
-				SecurityContext: withStandardSecurityContext(v),
+				SecurityContext: &corev1.SecurityContext{
+					AllowPrivilegeEscalation: ptr.To(false),
+					RunAsNonRoot:            ptr.To(true),
+					RunAsUser:               ptr.To(int64(65532)),
+					RunAsGroup:              ptr.To(int64(65532)),
+					Capabilities: &corev1.Capabilities{
+						Drop: []corev1.Capability{"ALL"},
+					},
+					SeccompProfile: &corev1.SeccompProfile{
+						Type: corev1.SeccompProfileTypeRuntimeDefault,
+					},
+				},
 			},
 		}),
 
@@ -1680,40 +1712,11 @@ func withVaultContainers(v *vaultv1alpha1.Vault, containers []corev1.Container) 
 	vaultContainers := make([]corev1.Container, len(v.Spec.VaultContainers))
 	copy(vaultContainers, v.Spec.VaultContainers)
 	
-	// Apply Pod Security Standards compliant security context to vault containers when enabled
-	if v.Spec.IsPodSecurityRestricted() {
-		for i := range vaultContainers {
-			// Apply standard security context to vault containers for Pod Security compliance
-			if vaultContainers[i].SecurityContext == nil {
-				vaultContainers[i].SecurityContext = withStandardSecurityContext(v)
-			} else {
-				// Merge with existing security context, prioritizing Pod Security requirements
-				existingSecCtx := vaultContainers[i].SecurityContext
-				standardSecCtx := withStandardSecurityContext(v)
-				
-				// Override critical Pod Security fields
-				existingSecCtx.AllowPrivilegeEscalation = standardSecCtx.AllowPrivilegeEscalation
-				existingSecCtx.RunAsNonRoot = standardSecCtx.RunAsNonRoot
-				existingSecCtx.Capabilities = standardSecCtx.Capabilities
-				existingSecCtx.SeccompProfile = standardSecCtx.SeccompProfile
-				
-				// Set user/group if not already specified
-				if existingSecCtx.RunAsUser == nil {
-					existingSecCtx.RunAsUser = standardSecCtx.RunAsUser
-				}
-				if existingSecCtx.RunAsGroup == nil {
-					existingSecCtx.RunAsGroup = standardSecCtx.RunAsGroup
-				}
-			}
-		}
-	}
-	
 	return append(containers, vaultContainers...)
 }
 
 func withVeleroContainer(v *vaultv1alpha1.Vault, containers []corev1.Container) []corev1.Container {
-	if v.Spec.VeleroEnabled && !v.Spec.IsPodSecurityRestricted() {
-		// Velero fsfreeze requires privileged access, skip in Pod Security restricted mode
+	if v.Spec.VeleroEnabled {
 		containers = append(containers, corev1.Container{
 			Image:           v.Spec.GetVeleroFsfreezeImage(),
 			ImagePullPolicy: corev1.PullIfNotPresent,
@@ -1760,7 +1763,18 @@ func withStatsDContainer(v *vaultv1alpha1.Vault, containers []corev1.Container) 
 			}},
 			Resources:       getPrometheusExporterResource(v),
 			Env:             withSidecarEnv(v, []corev1.EnvVar{}),
-			SecurityContext: withStandardSecurityContext(v),
+			SecurityContext: &corev1.SecurityContext{
+				AllowPrivilegeEscalation: ptr.To(false),
+				RunAsNonRoot:            ptr.To(true),
+				RunAsUser:               ptr.To(int64(65532)),
+				RunAsGroup:              ptr.To(int64(65532)),
+				Capabilities: &corev1.Capabilities{
+					Drop: []corev1.Capability{"ALL"},
+				},
+				SeccompProfile: &corev1.SeccompProfile{
+					Type: corev1.SeccompProfileTypeRuntimeDefault,
+				},
+			},
 		})
 	}
 	return containers
@@ -1818,7 +1832,18 @@ func withAuditLogContainer(v *vaultv1alpha1.Vault, containers []corev1.Container
 			}),
 			Resources:       getFluentDResource(v),
 			Env:             withSidecarEnv(v, []corev1.EnvVar{}),
-			SecurityContext: withStandardSecurityContext(v),
+			SecurityContext: &corev1.SecurityContext{
+				AllowPrivilegeEscalation: ptr.To(false),
+				RunAsNonRoot:            ptr.To(true),
+				RunAsUser:               ptr.To(int64(65532)),
+				RunAsGroup:              ptr.To(int64(65532)),
+				Capabilities: &corev1.Capabilities{
+					Drop: []corev1.Capability{"ALL"},
+				},
+				SeccompProfile: &corev1.SeccompProfile{
+					Type: corev1.SeccompProfileTypeRuntimeDefault,
+				},
+			},
 		})
 	}
 	return containers
@@ -1937,14 +1962,6 @@ func withVaultEnv(v *vaultv1alpha1.Vault, envs []corev1.EnvVar) []corev1.EnvVar 
 		handleDeprecatedEnvs(v)
 	}
 
-	// Add VAULT_DISABLE_MLOCK when in Pod Security restricted mode
-	if v.Spec.IsPodSecurityRestricted() {
-		envs = append(envs, corev1.EnvVar{
-			Name:  "VAULT_DISABLE_MLOCK",
-			Value: "true",
-		})
-	}
-
 	return withSecretInit(v, envs)
 }
 
@@ -1988,18 +2005,21 @@ func withNamespaceEnv(v *vaultv1alpha1.Vault, envs []corev1.EnvVar) []corev1.Env
 }
 
 func withContainerSecurityContext(v *vaultv1alpha1.Vault) *corev1.SecurityContext {
-	// Apply Pod Security Standards compliant security context when enabled
-	if v.Spec.IsPodSecurityRestricted() {
-		return withStandardSecurityContext(v)
-	}
-	
-	// Legacy behavior for non-Pod Security mode
 	config := v.Spec.GetVaultConfig()
 	securityContext := &corev1.SecurityContext{
-		Capabilities: &corev1.Capabilities{},
+		AllowPrivilegeEscalation: ptr.To(false),
+		RunAsNonRoot:            ptr.To(true),
+		RunAsUser:               ptr.To(int64(65532)),
+		RunAsGroup:              ptr.To(int64(65532)),
+		Capabilities: &corev1.Capabilities{
+			Drop: []corev1.Capability{"ALL"},
+		},
+		SeccompProfile: &corev1.SeccompProfile{
+			Type: corev1.SeccompProfileTypeRuntimeDefault,
+		},
 	}
 	
-	// Only add capabilities if mlock is NOT disabled and not in Pod Security mode
+	// Only add capabilities if mlock is NOT disabled
 	if !cast.ToBool(config["disable_mlock"]) {
 		securityContext.Capabilities.Add = []corev1.Capability{"IPC_LOCK", "SETFCAP"}
 	}
@@ -2009,8 +2029,8 @@ func withContainerSecurityContext(v *vaultv1alpha1.Vault) *corev1.SecurityContex
 
 func withPodSecurityContext(v *vaultv1alpha1.Vault) *corev1.PodSecurityContext {
 	if v.Spec.SecurityContext.Size() == 0 {
-		vaultUID := int64(1000)
-		vaultGID := int64(1000)
+		vaultUID := int64(65532)
+		vaultGID := int64(65532)
 
 		// Pod Security Standards compliant pod security context
 		return &corev1.PodSecurityContext{
@@ -2026,25 +2046,6 @@ func withPodSecurityContext(v *vaultv1alpha1.Vault) *corev1.PodSecurityContext {
 	return &v.Spec.SecurityContext
 }
 
-// withStandardSecurityContext returns a Pod Security Standards compliant security context for non-vault containers
-func withStandardSecurityContext(v *vaultv1alpha1.Vault) *corev1.SecurityContext {
-	// Always apply Pod Security compliant context when podSecurityRestricted is true
-	if v.Spec.PodSecurityRestricted {
-		return &corev1.SecurityContext{
-			AllowPrivilegeEscalation: ptr.To(false),
-			RunAsNonRoot:            ptr.To(true),
-			RunAsUser:               ptr.To(int64(1000)),
-			RunAsGroup:              ptr.To(int64(1000)),
-			Capabilities: &corev1.Capabilities{
-				Drop: []corev1.Capability{"ALL"},
-			},
-			SeccompProfile: &corev1.SeccompProfile{
-				Type: corev1.SeccompProfileTypeRuntimeDefault,
-			},
-		}
-	}
-	return nil
-}
 
 // Extend Labels with Vault User defined ones
 // Does not change original labels object but return a new one

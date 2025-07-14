@@ -287,12 +287,6 @@ type VaultSpec struct {
 	// default: false
 	ServiceMonitorEnabled bool `json:"serviceMonitorEnabled,omitempty"`
 
-	// PodSecurityRestricted enables Pod Security Standards restricted mode compliance.
-	// When enabled, all containers will use Pod Security compliant security contexts
-	// with non-root execution, dropped capabilities, and seccomp profiles.
-	// This ensures compatibility with Kubernetes Pod Security Standards at the restricted level.
-	// default: false
-	PodSecurityRestricted bool `json:"podSecurityRestricted,omitempty"`
 
 	// ExistingTLSSecretName is name of the secret that contains a TLS server certificate and key and the corresponding CA certificate.
 	// Required secret format kubernetes.io/tls type secret keys + ca.crt key
@@ -656,10 +650,6 @@ func (spec *VaultSpec) IsRaftBootstrapFollower() bool {
 	return spec.RaftLeaderAddress != "" && spec.RaftLeaderAddress != "self"
 }
 
-// IsPodSecurityRestricted returns if Vault should be deployed with Pod Security Standards restricted mode compliance
-func (spec *VaultSpec) IsPodSecurityRestricted() bool {
-	return spec.PodSecurityRestricted
-}
 
 // VaultStatus defines the observed state of Vault
 type VaultStatus struct {

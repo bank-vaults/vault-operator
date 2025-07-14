@@ -23,7 +23,6 @@ spec:
   serviceType: ClusterIP
 
   # Enable Pod Security Standards compliance
-  podSecurityRestricted: true
 
   # Pod-level security context for Pod Security Standards compliance
   securityContext:
