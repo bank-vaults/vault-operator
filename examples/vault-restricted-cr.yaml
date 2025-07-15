@@ -1,15 +1,19 @@
 apiVersion: "vault.banzaicloud.com/v1alpha1"
 kind: "Vault"
 metadata:
-  name: "vault"
+  name: "vault-cluster"
   namespace: vault-restricted
+  labels:
+    app.kubernetes.io/name: vault-cluster
+    vault_cr: vault-cluster
 spec:
-  size: 1
+  size: 5
   image: hashicorp/vault:1.15.6
   
-  # Service account with minimal permissions
-  serviceAccount: vault-restricted
-
+  # Service configuration
+  serviceType: ClusterIP
+  serviceAccount: vault
+  
   # Environment variables for Pod Security compliance
   vaultEnvsConfig:
     - name: SKIP_CHOWN
@@ -19,53 +23,44 @@ spec:
     - name: VAULT_DISABLE_MLOCK
       value: "true"
   
-  # Service type
-  serviceType: ClusterIP
-
-  # Enable Pod Security Standards compliance
-
-  # Pod-level security context for Pod Security Standards compliance
+  # Global security context (base for all pods)
   securityContext:
     runAsNonRoot: true
-    runAsUser: 1000
-    runAsGroup: 1000
-    fsGroup: 1000
+    runAsUser: 65532
+    runAsGroup: 65532
+    fsGroup: 65532
     seccompProfile:
       type: RuntimeDefault
 
-  # Annotations to ensure security compliance - these will be applied to Vault pods
-  vaultAnnotations:
-    vault.security.banzaicloud.io/run-as-non-root: "true"
-    vault.security.banzaicloud.io/readonly-root-fs: "true"
-    vault.security.banzaicloud.io/run-as-user: "1000"
-    vault.security.banzaicloud.io/run-as-group: "1000"
-    
-  # Configurer annotations for security compliance
-  vaultConfigurerAnnotations:
-    vault.security.banzaicloud.io/run-as-non-root: "true"
-    vault.security.banzaicloud.io/readonly-root-fs: "true"
-    vault.security.banzaicloud.io/run-as-user: "1000"
-    vault.security.banzaicloud.io/run-as-group: "1000"
+  # Vault StatefulSet pods specific security context
+  vaultPodSpec:
+    securityContext:
+      # Override defaults if needed - inherits from global securityContext
+      # Example: different user for vault pods
+      # runAsUser: 1000
+      # runAsGroup: 1000
+      # fsGroup: 1000
 
-  # Vault configuration
-  config:
-    listener:
-      tcp:
-        address: 0.0.0.0:8200
-        tls_cert_file: /vault/tls/server.crt
-        tls_key_file: /vault/tls/server.key
-    storage:
-      file:
-        path: "/vault/data"
-    api_addr: https://vault.vault-restricted:8200
-    cluster_addr: https://vault.vault-restricted:8201
-    ui: true
-    disable_mlock: true
+  # Vault Configurer deployment specific security context
+  vaultConfigurerPodSpec:
+    securityContext:
+      # Override defaults if needed - inherits from global securityContext
+      # Example: different configuration for configurer
+      # runAsUser: 2000
+      # runAsGroup: 2000
 
-  # Use persistent volume for data
+  # Vault container specific security context
+  vaultContainerSpec:
+    name: vault
+    securityContext:
+      # Override defaults if needed - gets Pod Security compliant defaults
+      # Example: add specific capabilities or constraints
+      # readOnlyRootFilesystem: true
+
+  # Persistent storage for each node
   volumeClaimTemplates:
     - metadata:
-        name: vault-data
+        name: vault-raft
       spec:
         accessModes:
           - ReadWriteOnce
@@ -73,12 +68,27 @@ spec:
         resources:
           requests:
             storage: 1Gi
+        storageClassName: longhorn
 
   volumeMounts:
-    - name: vault-data
-      mountPath: /vault/data
+    - name: vault-raft
+      mountPath: /vault/file
 
-  # Unsealing configuration using Kubernetes secrets
+  # Vault configuration for HA with Raft  
+  config:
+    storage:
+      raft:
+        path: "/vault/file"
+    listener:
+      tcp:
+        address: "0.0.0.0:8200"
+        tls_disable: true
+    api_addr: "http://vault-cluster:8200" 
+    cluster_addr: "http://${.Env.POD_NAME}:8201"
+    ui: true
+    disable_mlock: true
+
+  # Unsealing configuration
   unsealConfig:
     options:
       preFlightChecks: true
@@ -88,7 +98,20 @@ spec:
     kubernetes:
       secretNamespace: vault-restricted
 
-  # External configuration
+  # Disable statsd to reduce complexity
+  statsdDisabled: true
+
+  # Resource requirements
+  resources:
+    vault:
+      limits:
+        memory: 512Mi
+        cpu: 500m
+      requests:
+        memory: 256Mi
+        cpu: 250m
+
+  # External configuration for initial setup
   externalConfig:
     policies:
       - name: allow_secrets
@@ -100,13 +123,13 @@ spec:
       - type: kubernetes
         roles:
           - name: default
-            bound_service_account_names: ["vault-restricted"]
+            bound_service_account_names: ["default"]
             bound_service_account_namespaces: ["vault-restricted"]
             policies: ["allow_secrets"]
             ttl: 1h
     secrets:
       - path: secret
         type: kv
-        description: General secrets.
+        description: General secrets storage
         options:
           version: 2

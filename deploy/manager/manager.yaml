@@ -56,14 +56,15 @@ spec:
       #             operator: In
       #             values:
       #               - linux
-      # Pod-level security context for Pod Security Standards compliance
       securityContext:
         runAsNonRoot: true
-        runAsUser: 65532
-        runAsGroup: 65532
-        fsGroup: 65532
-        seccompProfile:
-          type: RuntimeDefault
+        # TODO(user): For common cases that do not require escalating privileges
+        # it is recommended to ensure that all your Pods/Containers are restrictive.
+        # More info: https://kubernetes.io/docs/concepts/security/pod-security-standards/#restricted
+        # Please uncomment the following code if your project does NOT have to work on old Kubernetes
+        # versions < 1.19 or on vendors versions which do NOT support this field by default (i.e. Openshift < 4.11 ).
+        # seccompProfile:
+        #   type: RuntimeDefault
       containers:
       - command:
         - /manager
@@ -71,24 +72,11 @@ spec:
         - --leader-elect
         image: controller:latest
         name: manager
-        # Container security context for Pod Security Standards compliance
         securityContext:
           allowPrivilegeEscalation: false
-          readOnlyRootFilesystem: true
-          runAsNonRoot: true
-          runAsUser: 65532
-          runAsGroup: 65532
           capabilities:
             drop:
               - "ALL"
-          seccompProfile:
-            type: RuntimeDefault
-        # Add volume mounts for read-only root filesystem
-        volumeMounts:
-        - name: tmp
-          mountPath: /tmp
-        - name: cache
-          mountPath: /.cache
         livenessProbe:
           httpGet:
             path: /
@@ -110,11 +98,5 @@ spec:
           requests:
             cpu: 10m
             memory: 64Mi
-      # Add volumes for read-only root filesystem
-      volumes:
-      - name: tmp
-        emptyDir: {}
-      - name: cache
-        emptyDir: {}
       serviceAccountName: controller-manager
       terminationGracePeriodSeconds: 10

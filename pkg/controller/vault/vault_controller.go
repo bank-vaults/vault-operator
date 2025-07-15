@@ -936,22 +936,11 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 				VolumeMounts:    withHSMVolumeMount(v, withTLSVolumeMount(v, withCredentialsVolumeMount(v, volumeMounts))),
 				WorkingDir:      "/config",
 				Resources:       getBankVaultsResource(v),
-				SecurityContext: &corev1.SecurityContext{
-					AllowPrivilegeEscalation: ptr.To(false),
-					RunAsNonRoot:            ptr.To(true),
-					RunAsUser:               ptr.To(int64(65532)),
-					RunAsGroup:              ptr.To(int64(65532)),
-					Capabilities: &corev1.Capabilities{
-						Drop: []corev1.Capability{"ALL"},
-					},
-					SeccompProfile: &corev1.SeccompProfile{
-						Type: corev1.SeccompProfileTypeRuntimeDefault,
-					},
-				},
+				SecurityContext: withStandardContainerSecurityContext(nil),
 			},
 		},
 		Volumes:         withHSMVolume(v, withTLSVolume(v, withCredentialsVolume(v, volumes))),
-		SecurityContext: withPodSecurityContext(v),
+		SecurityContext: withConfigurerPodSecurityContext(v),
 		NodeSelector:    v.Spec.NodeSelector,
 		Tolerations:     v.Spec.Tolerations,
 		Affinity:        affinity,
@@ -1341,24 +1330,13 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 					MountPath: "/tmp",
 				})),
 				Resources:       getVaultResource(v),
-				SecurityContext: &corev1.SecurityContext{
-					AllowPrivilegeEscalation: ptr.To(false),
-					RunAsNonRoot:            ptr.To(true),
-					RunAsUser:               ptr.To(int64(65532)),
-					RunAsGroup:              ptr.To(int64(65532)),
-					Capabilities: &corev1.Capabilities{
-						Drop: []corev1.Capability{"ALL"},
-					},
-					SeccompProfile: &corev1.SeccompProfile{
-						Type: corev1.SeccompProfileTypeRuntimeDefault,
-					},
-				},
+				SecurityContext: withStandardContainerSecurityContext(nil),
 			},
 		}),
 
 		Containers:      containers,
 		Volumes:         withVaultVolumes(v, volumes),
-		SecurityContext: withPodSecurityContext(v),
+		SecurityContext: withVaultPodSecurityContext(v),
 		NodeSelector:    v.Spec.NodeSelector,
 		Tolerations:     v.Spec.Tolerations,
 	}
@@ -2004,9 +1982,9 @@ func withNamespaceEnv(v *vaultv1alpha1.Vault, envs []corev1.EnvVar) []corev1.Env
 	}...)
 }
 
-func withContainerSecurityContext(v *vaultv1alpha1.Vault) *corev1.SecurityContext {
-	config := v.Spec.GetVaultConfig()
-	securityContext := &corev1.SecurityContext{
+// getDefaultContainerSecurityContext returns Pod Security Standards compliant defaults for containers
+func getDefaultContainerSecurityContext() *corev1.SecurityContext {
+	return &corev1.SecurityContext{
 		AllowPrivilegeEscalation: ptr.To(false),
 		RunAsNonRoot:            ptr.To(true),
 		RunAsUser:               ptr.To(int64(65532)),
@@ -2018,32 +1996,200 @@ func withContainerSecurityContext(v *vaultv1alpha1.Vault) *corev1.SecurityContex
 			Type: corev1.SeccompProfileTypeRuntimeDefault,
 		},
 	}
+}
+
+// withContainerSecurityContext creates security context for Vault main container
+func withContainerSecurityContext(v *vaultv1alpha1.Vault) *corev1.SecurityContext {
+	return withVaultContainerSecurityContext(v, nil)
+}
+
+// withVaultContainerSecurityContext applies security context hierarchy for Vault container
+func withVaultContainerSecurityContext(v *vaultv1alpha1.Vault, containerOverride *corev1.SecurityContext) *corev1.SecurityContext {
+	config := v.Spec.GetVaultConfig()
+	
+	// Start with defaults
+	securityContext := getDefaultContainerSecurityContext()
+	
+	// Apply VaultContainerSpec.SecurityContext if defined
+	if v.Spec.VaultContainerSpec.SecurityContext != nil {
+		securityContext = mergeContainerSecurityContexts(securityContext, v.Spec.VaultContainerSpec.SecurityContext)
+	}
+	
+	// Apply container-specific override if provided
+	if containerOverride != nil {
+		securityContext = mergeContainerSecurityContexts(securityContext, containerOverride)
+	}
 	
 	// Only add capabilities if mlock is NOT disabled
 	if !cast.ToBool(config["disable_mlock"]) {
+		if securityContext.Capabilities == nil {
+			securityContext.Capabilities = &corev1.Capabilities{}
+		}
 		securityContext.Capabilities.Add = []corev1.Capability{"IPC_LOCK", "SETFCAP"}
 	}
 	
 	return securityContext
 }
 
-func withPodSecurityContext(v *vaultv1alpha1.Vault) *corev1.PodSecurityContext {
-	if v.Spec.SecurityContext.Size() == 0 {
-		vaultUID := int64(65532)
-		vaultGID := int64(65532)
-
-		// Pod Security Standards compliant pod security context
-		return &corev1.PodSecurityContext{
-			RunAsNonRoot: ptr.To(true),
-			RunAsUser:    &vaultUID,
-			RunAsGroup:   &vaultGID,
-			FSGroup:      &vaultGID,
-			SeccompProfile: &corev1.SeccompProfile{
-				Type: corev1.SeccompProfileTypeRuntimeDefault,
-			},
-		}
+// withStandardContainerSecurityContext creates security context for non-Vault containers
+func withStandardContainerSecurityContext(containerOverride *corev1.SecurityContext) *corev1.SecurityContext {
+	// Start with defaults
+	securityContext := getDefaultContainerSecurityContext()
+	
+	// Apply container-specific override if provided
+	if containerOverride != nil {
+		securityContext = mergeContainerSecurityContexts(securityContext, containerOverride)
 	}
-	return &v.Spec.SecurityContext
+	
+	return securityContext
+}
+
+// mergeContainerSecurityContexts merges two container security contexts, with override taking precedence
+func mergeContainerSecurityContexts(base, override *corev1.SecurityContext) *corev1.SecurityContext {
+	if base == nil {
+		return override
+	}
+	if override == nil {
+		return base
+	}
+	
+	result := *base // Copy base
+	
+	// Apply overrides field by field
+	if override.RunAsUser != nil {
+		result.RunAsUser = override.RunAsUser
+	}
+	if override.RunAsGroup != nil {
+		result.RunAsGroup = override.RunAsGroup
+	}
+	if override.RunAsNonRoot != nil {
+		result.RunAsNonRoot = override.RunAsNonRoot
+	}
+	if override.AllowPrivilegeEscalation != nil {
+		result.AllowPrivilegeEscalation = override.AllowPrivilegeEscalation
+	}
+	if override.Privileged != nil {
+		result.Privileged = override.Privileged
+	}
+	if override.ReadOnlyRootFilesystem != nil {
+		result.ReadOnlyRootFilesystem = override.ReadOnlyRootFilesystem
+	}
+	if override.SeccompProfile != nil {
+		result.SeccompProfile = override.SeccompProfile
+	}
+	if override.SELinuxOptions != nil {
+		result.SELinuxOptions = override.SELinuxOptions
+	}
+	if override.Capabilities != nil {
+		result.Capabilities = override.Capabilities
+	}
+	if override.AppArmorProfile != nil {
+		result.AppArmorProfile = override.AppArmorProfile
+	}
+	
+	return &result
+}
+
+// getDefaultPodSecurityContext returns Pod Security Standards compliant defaults
+func getDefaultPodSecurityContext() *corev1.PodSecurityContext {
+	vaultUID := int64(65532)
+	vaultGID := int64(65532)
+	return &corev1.PodSecurityContext{
+		RunAsNonRoot: ptr.To(true),
+		RunAsUser:    &vaultUID,
+		RunAsGroup:   &vaultGID,
+		FSGroup:      &vaultGID,
+		SeccompProfile: &corev1.SeccompProfile{
+			Type: corev1.SeccompProfileTypeRuntimeDefault,
+		},
+	}
+}
+
+// withPodSecurityContext applies security context hierarchy for regular vault pods
+func withPodSecurityContext(v *vaultv1alpha1.Vault) *corev1.PodSecurityContext {
+	return buildPodSecurityContext(v, nil)
+}
+
+// withConfigurerPodSecurityContext applies security context hierarchy for configurer pods
+func withConfigurerPodSecurityContext(v *vaultv1alpha1.Vault) *corev1.PodSecurityContext {
+	var configurerSecurityContext *corev1.PodSecurityContext
+	if v.Spec.VaultConfigurerPodSpec != nil {
+		configurerSecurityContext = v.Spec.VaultConfigurerPodSpec.SecurityContext
+	}
+	return buildPodSecurityContext(v, configurerSecurityContext)
+}
+
+// withVaultPodSecurityContext applies security context hierarchy for vault statefulset pods
+func withVaultPodSecurityContext(v *vaultv1alpha1.Vault) *corev1.PodSecurityContext {
+	var vaultPodSecurityContext *corev1.PodSecurityContext
+	if v.Spec.VaultPodSpec != nil {
+		vaultPodSecurityContext = v.Spec.VaultPodSpec.SecurityContext
+	}
+	return buildPodSecurityContext(v, vaultPodSecurityContext)
+}
+
+// buildPodSecurityContext creates a security context following the hierarchy:
+// 1. Start with Pod Security Standards defaults
+// 2. Apply global SecurityContext if defined
+// 3. Apply component-specific SecurityContext if provided
+func buildPodSecurityContext(v *vaultv1alpha1.Vault, componentSecurityContext *corev1.PodSecurityContext) *corev1.PodSecurityContext {
+	// Start with defaults
+	result := getDefaultPodSecurityContext()
+	
+	// Apply global SecurityContext if defined
+	if v.Spec.SecurityContext.Size() > 0 {
+		result = mergeePodSecurityContexts(result, &v.Spec.SecurityContext)
+	}
+	
+	// Apply component-specific SecurityContext if provided
+	if componentSecurityContext != nil {
+		result = mergeePodSecurityContexts(result, componentSecurityContext)
+	}
+	
+	return result
+}
+
+// mergeePodSecurityContexts merges two pod security contexts, with override taking precedence
+func mergeePodSecurityContexts(base, override *corev1.PodSecurityContext) *corev1.PodSecurityContext {
+	if base == nil {
+		return override
+	}
+	if override == nil {
+		return base
+	}
+	
+	result := *base // Copy base
+	
+	// Apply overrides field by field
+	if override.RunAsUser != nil {
+		result.RunAsUser = override.RunAsUser
+	}
+	if override.RunAsGroup != nil {
+		result.RunAsGroup = override.RunAsGroup
+	}
+	if override.RunAsNonRoot != nil {
+		result.RunAsNonRoot = override.RunAsNonRoot
+	}
+	if override.FSGroup != nil {
+		result.FSGroup = override.FSGroup
+	}
+	if override.SeccompProfile != nil {
+		result.SeccompProfile = override.SeccompProfile
+	}
+	if override.SELinuxOptions != nil {
+		result.SELinuxOptions = override.SELinuxOptions
+	}
+	if override.SupplementalGroups != nil {
+		result.SupplementalGroups = override.SupplementalGroups
+	}
+	if override.FSGroupChangePolicy != nil {
+		result.FSGroupChangePolicy = override.FSGroupChangePolicy
+	}
+	if override.AppArmorProfile != nil {
+		result.AppArmorProfile = override.AppArmorProfile
+	}
+	
+	return &result
 }
 
 
