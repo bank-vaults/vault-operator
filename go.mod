@@ -11,7 +11,7 @@ require (
 	github.com/imdario/mergo v1.0.1
 	github.com/onsi/ginkgo/v2 v2.23.4
 	github.com/onsi/gomega v1.37.0
-	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.83.0
+	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.84.0
 	github.com/sagikazarmark/docker-ref v0.2.0
 	github.com/spf13/cast v1.9.2
 	github.com/stretchr/testify v1.10.0
@@ -182,12 +182,12 @@ require (
 	golang.org/x/exp v0.0.0-20241215155358-4a5509556b9e // indirect
 	golang.org/x/net v0.41.0 // indirect
 	golang.org/x/oauth2 v0.30.0 // indirect
-	golang.org/x/sync v0.15.0 // indirect
+	golang.org/x/sync v0.16.0 // indirect
 	golang.org/x/sys v0.33.0 // indirect
 	golang.org/x/term v0.32.0 // indirect
-	golang.org/x/text v0.26.0 // indirect
+	golang.org/x/text v0.27.0 // indirect
 	golang.org/x/time v0.12.0 // indirect
-	golang.org/x/tools v0.33.0 // indirect
+	golang.org/x/tools v0.34.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.5.0 // indirect
 	google.golang.org/api v0.239.0 // indirect
 	google.golang.org/genproto v0.0.0-20250603155806-513f23925822 // indirect
