@@ -135,6 +135,7 @@ docker-buildx: ## Build docker image for cross-platform support
 
 .PHONY: helm-chart
 helm-chart: ## Build helm chart
+	./hack/crds-generate.sh $(CRD_DIR) $(HELM_DIR)
 	@mkdir -p build
 	$(HELM_BIN) package -d build/ deploy/charts/vault-operator
 
