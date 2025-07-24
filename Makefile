@@ -134,8 +134,8 @@ docker-buildx: ## Build docker image for cross-platform support
 	rm Dockerfile.cross
 
 .PHONY: helm-chart
+helm-chart: gen-helm-crds
 helm-chart: ## Build helm chart
-	./hack/crds-generate.sh $(CRD_DIR) $(HELM_DIR)
 	@mkdir -p build
 	$(HELM_BIN) package -d build/ deploy/charts/vault-operator
 
@@ -145,13 +145,17 @@ helm-chart: ## Build helm chart
 generate: gen-manifests gen-code gen-helm-docs
 generate: ## Generate manifests, code, and docs resources
 
+.PHONY: gen-helm-crds
+gen-helm-crds: ## Generate CRDs for Helm chart
+	./hack/crds-generate.sh $(CRD_DIR) $(HELM_DIR)
+
 .PHONY: gen-manifests
+gen-manifests: gen-helm-crds
 gen-manifests: ## Generate webhook, RBAC, and CRD resources
 	$(CONTROLLER_GEN_BIN) rbac:roleName=vault crd:maxDescLen=0 webhook paths="./..." \
 		output:rbac:dir=deploy/rbac \
 		output:crd:dir=deploy/crd/bases \
 		output:webhook:dir=deploy/webhook
-	./hack/crds-generate.sh $(CRD_DIR) $(HELM_DIR)
 
 .PHONY: gen-code
 gen-code: ## Generate deepcopy, client, lister, and informer objects
