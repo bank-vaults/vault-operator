@@ -2,6 +2,9 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
+# -- If set, install and upgrade CRDs through helm chart.
+installCRDs: true
+
 # -- Number of replicas (pods) to launch.
 replicaCount: 1
 

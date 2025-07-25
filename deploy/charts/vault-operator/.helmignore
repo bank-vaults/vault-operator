@@ -21,3 +21,6 @@
 *.tmproj
 
 README.md.gotmpl
+
+# CRD README.md
+templates/crds/README.md
