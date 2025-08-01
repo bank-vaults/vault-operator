@@ -252,6 +252,7 @@ jobs:
       - name: Helm package
         id: build
         run: |
+          ./hack/crds-generate.sh deploy/crd/bases deploy/charts/${{ steps.chart-name.outputs.value }}
           helm package deploy/charts/${{ steps.chart-name.outputs.value }} --version ${{ steps.version.outputs.value }} --app-version ${{ steps.raw-version.outputs.value }}
           echo "package=${{ steps.chart-name.outputs.value }}-${{ steps.version.outputs.value }}.tgz" >> "$GITHUB_OUTPUT"
 

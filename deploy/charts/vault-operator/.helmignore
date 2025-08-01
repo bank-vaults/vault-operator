@@ -21,3 +21,4 @@
 *.tmproj
 
 README.md.gotmpl
+.keep

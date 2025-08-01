@@ -5,6 +5,9 @@ export PATH := $(abspath bin/):${PATH}
 # Target image name
 CONTAINER_IMAGE_REF ?= ghcr.io/bank-vaults/vault-operator:dev
 
+CRD_DIR ?= deploy/crd/bases
+HELM_DIR ?= deploy/charts/vault-operator
+
 # Default test data
 TEST_K8S_VERSION ?= 1.32.0
 TEST_VAULT_VERSION ?= 1.14.8
@@ -131,6 +134,7 @@ docker-buildx: ## Build docker image for cross-platform support
 	rm Dockerfile.cross
 
 .PHONY: helm-chart
+helm-chart: gen-helm-crds
 helm-chart: ## Build helm chart
 	@mkdir -p build
 	$(HELM_BIN) package -d build/ deploy/charts/vault-operator
@@ -141,13 +145,17 @@ helm-chart: ## Build helm chart
 generate: gen-manifests gen-code gen-helm-docs
 generate: ## Generate manifests, code, and docs resources
 
+.PHONY: gen-helm-crds
+gen-helm-crds: ## Generate CRDs for Helm chart
+	./hack/crds-generate.sh $(CRD_DIR) $(HELM_DIR)
+
 .PHONY: gen-manifests
+gen-manifests: gen-helm-crds
 gen-manifests: ## Generate webhook, RBAC, and CRD resources
 	$(CONTROLLER_GEN_BIN) rbac:roleName=vault crd:maxDescLen=0 webhook paths="./..." \
 		output:rbac:dir=deploy/rbac \
 		output:crd:dir=deploy/crd/bases \
 		output:webhook:dir=deploy/webhook
-	cp deploy/crd/bases/vault.banzaicloud.com_vaults.yaml deploy/charts/vault-operator/crds/crd.yaml
 
 .PHONY: gen-code
 gen-code: ## Generate deepcopy, client, lister, and informer objects

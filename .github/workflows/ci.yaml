@@ -262,7 +262,9 @@ jobs:
           name: "[container-image] Docker tarball"
 
       - name: Build the Helm charts
-        run: nix develop --impure .#ci -c helm dep build ./deploy/charts/vault-operator
+        run: |
+          nix develop --impure .#ci -c make gen-helm-crds
+          nix develop --impure .#ci -c helm dep build ./deploy/charts/vault-operator
 
       - name: Operator Multi-DC Raft test
         run: nix develop --impure .#ci -c ./deploy/dev/multi-dc/test/multi-dc-raft.sh install
