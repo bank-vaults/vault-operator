@@ -16,7 +16,7 @@ The following table lists the configurable parameters of the Helm chart.
 
 | Parameter | Type | Default | Description |
 | --- | ---- | ------- | ----------- |
-| `installCRDs` | bool | `true` | If set, install and upgrade CRDs through helm chart. |
+| `crds.enabled` | bool | `true` | If set, install CRDs through helm chart. |
 | `replicaCount` | int | `1` | Number of replicas (pods) to launch. |
 | `pdb.create` | bool | `true` | Create pod disruption budget if replicaCount > 1. |
 | `pdb.minAvailable` | int | `1` | Min available for PDB. |
