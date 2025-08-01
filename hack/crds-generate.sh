@@ -6,20 +6,11 @@ CRD_DIR="${1}"
 HELM_DIR="${2}"
 
 cd "${SCRIPT_DIR}"/../
-cp ${CRD_DIR}/*.yaml ${HELM_DIR}/templates/crds/
+cp ${CRD_DIR}/*.yaml ${HELM_DIR}/charts/crds/crds/
 
-# Remove extra header lines in transformed CRDs
-for f in "${HELM_DIR}"/templates/crds/*.yaml; do
-  tail -n +2 < "$f" > "$f.bkp"
-  cp "$f.bkp" "$f"
-  rm "$f.bkp"
-done
-
-# Add helm if statement for controlling the install of CRDs
-for i in "${HELM_DIR}"/templates/crds/*.yaml; do
-  cp "$i" "$i.bkp"
-  echo "{{- if .Values.installCRDs }}" > "$i"
-  cat "$i.bkp" >> "$i"
-  echo "{{- end }}" >> "$i"
-  rm "$i.bkp"
-done
+{
+  for file in "${HELM_DIR}"/charts/crds/crds/*.yaml; do
+    cat "${file}"
+    echo "---"
+  done
+} | bzip2 --best --compress --keep --stdout - >"${HELM_DIR}/charts/crds/files/crds.bz2"

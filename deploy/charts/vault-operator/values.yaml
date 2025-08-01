@@ -2,8 +2,116 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
-# -- If set, install and upgrade CRDs through helm chart.
-installCRDs: true
+# -- If set, install CRDs
+crds:
+  enabled: true
+  # The CRD upgrade job mitigates the limitation of helm not being able to upgrade CRDs.
+  # The job will apply the CRDs to the cluster before the operator is deployed, using helm hooks.
+  # It deploy a corresponding clusterrole, clusterrolebinding and serviceaccount to apply the CRDs.
+  # This feature is in preview, off by default and may change in the future.
+  upgradeJob:
+    enabled: false
+    forceConflicts: false
+    image:
+      busybox:
+        registry: docker.io
+        repository: busybox
+        tag: "latest"
+        sha: ""
+        pullPolicy: IfNotPresent
+      kubectl:
+        registry: registry.k8s.io
+        repository: kubectl
+        tag: ""  # defaults to the Kubernetes version
+        sha: ""
+        pullPolicy: IfNotPresent
+
+    env: {}
+    # Define resources requests and limits for single Pods.
+    # See the [reference](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/) for details.
+    resources: {}
+
+    # Additional volumes
+    extraVolumes: []
+
+    # Additional volume mounts
+    extraVolumeMounts: []
+
+    # Define which Nodes the Pods are scheduled on.
+    # See the [reference](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#nodeselector) for details.
+    nodeSelector: {}
+
+    # Assign custom affinity rules to the upgrade-crd job
+    # See the [reference](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/) for details.
+    affinity: {}
+    # nodeAffinity:
+    #   requiredDuringSchedulingIgnoredDuringExecution:
+    #     nodeSelectorTerms:
+    #     - matchExpressions:
+    #       - key: kubernetes.io/e2e-az-name
+    #         operator: In
+    #         values:
+    #         - e2e-az1
+    #         - e2e-az2
+
+    # If specified, the pod's tolerations.
+    # See the [reference](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) for details.
+    tolerations: []
+    # - key: "key"
+    #   operator: "Equal"
+    #   value: "value"
+    #   effect: "NoSchedule"
+
+    # If specified, the pod's topology spread constraints.
+    # See the [reference](https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints/) for details.
+    topologySpreadConstraints: []
+    # - maxSkew: 1
+    #   topologyKey: topology.kubernetes.io/zone
+    #   whenUnsatisfiable: DoNotSchedule
+    #   labelSelector:
+    #     matchLabels:
+    #       app: alertmanager
+
+    # Labels to add to the upgrade-crd job
+    labels: {}
+
+    # Annotations to add to the upgrade-crd job
+    annotations: {}
+
+    # Labels to add to the upgrade-crd pod
+    podLabels: {}
+
+    # Annotations to add to the upgrade-crd pod
+    podAnnotations: {}
+
+    # Service account for upgrade crd job to use.
+    # See the [reference](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/) for details.
+    serviceAccount:
+      create: true
+      name: ""
+      annotations: {}
+      labels: {}
+      automountServiceAccountToken: true
+
+    # Container-specific security context configuration
+    # See the [reference](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/) for details.
+    containerSecurityContext:
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop:
+          - ALL
+
+    # SecurityContext holds pod-level security attributes and common container settings.
+    # This defaults to non root user with uid 1000 and gid 2000. *v1.PodSecurityContext  false
+    # See the [reference](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/) for details.
+    podSecurityContext:
+      fsGroup: 65534
+      runAsGroup: 65534
+      runAsNonRoot: true
+      runAsUser: 65534
+      seccompProfile:
+        type: RuntimeDefault
 
 # -- Number of replicas (pods) to launch.
 replicaCount: 1
