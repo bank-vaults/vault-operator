@@ -17,3 +17,7 @@ sources:
 maintainers:
   - name: Bank Vaults Maintainers
     email: team@bank-vaults.dev
+dependencies:
+  - name: crds
+    version: 0.0.0
+    condition: crds.install

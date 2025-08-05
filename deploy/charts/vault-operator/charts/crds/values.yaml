@@ -1,0 +1,4 @@
+## Check out vault-operator/values.yaml for more information
+## on this parameter
+upgradeJob:
+  enabled: false
