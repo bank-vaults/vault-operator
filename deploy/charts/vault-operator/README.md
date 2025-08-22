@@ -30,6 +30,7 @@ The following table lists the configurable parameters of the Helm chart.
 | `bankVaults.image.tag` | string | `"v1.32.0"` | Bank-Vaults image tag (pinned to supported Bank-Vaults version). |
 | `nameOverride` | string | `""` | A name in place of the chart name for `app:` labels. |
 | `fullnameOverride` | string | `""` | A name to substitute for the full names of resources. |
+| `logLevel` | string | `info` | The level of logging. |
 | `watchNamespace` | string | `""` | The namespace where the operator watches for vault CR objects. If not defined all namespaces are watched. |
 | `syncPeriod` | string | `"1m"` |  |
 | `crdAnnotations` | object | `{}` | Annotations to be added to CRDs. |
