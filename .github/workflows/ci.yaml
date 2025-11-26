@@ -63,11 +63,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
 
-      - name: Set up Nix
-        uses: cachix/install-nix-action@3715ab1a11cac9e991980d7b4a28d80c7ebdd8f9 # v27
+      - name: Set up Go
+        uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
         with:
-          extra_nix_config: |
-            access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
+          go-version-file: '.go-version'
 
       - name: Set up Go cache
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
@@ -79,11 +78,25 @@ jobs:
           restore-keys: |
             ${{ github.job }}-${{ runner.os }}-go-
 
-      - name: Prepare Nix shell
-        run: nix develop --impure .#ci
+      - name: Make deps
+        run: make deps
 
-      - name: Lint
-        run: nix develop --impure .#ci -c make lint -j
+      - name: Lint Go code
+        run: make lint-go
+
+      - name: Lint Helm charts
+        run: make lint-helm
+
+      - name: Run Hadolint
+        uses: hadolint/hadolint-action@v3.3.0
+        with:
+          dockerfile: Dockerfile
+          config: .hadolint.yaml
+
+      - name: Run Yamllint
+        run: |
+          pip install --user yamllint
+          yamllint .
 
   license-check:
     name: License check
@@ -93,11 +106,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
 
-      - name: Set up Nix
-        uses: cachix/install-nix-action@3715ab1a11cac9e991980d7b4a28d80c7ebdd8f9 # v27
+      - name: Set up Go
+        uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
         with:
-          extra_nix_config: |
-            access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
+          go-version-file: '.go-version'
 
       - name: Set up Go cache
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
@@ -119,38 +131,18 @@ jobs:
             licensei-v1-main
             licensei-v1
 
-      - name: Prepare Nix shell
-        run: nix develop --impure .#ci
+      - name: Make deps
+        run: make deps
 
       - name: Populate license cache
-        run: nix develop --impure .#ci -c licensei cache
+        run: make license-cache
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Check licenses
-        run: nix develop --impure .#ci -c make license-check
+        run: make license-check
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  dev:
-    name: Developer environment
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
-
-      - name: Set up Nix
-        uses: cachix/install-nix-action@3715ab1a11cac9e991980d7b4a28d80c7ebdd8f9 # v27
-        with:
-          extra_nix_config: |
-            access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
-
-      - name: Check
-        run: nix flake check --impure
-
-      - name: Dev shell
-        run: nix develop --impure
 
   artifacts:
     name: Artifacts
@@ -188,14 +180,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
 
-      - name: Set up Nix
-        uses: cachix/install-nix-action@3715ab1a11cac9e991980d7b4a28d80c7ebdd8f9 # v27
+      - name: Set up Go
+        uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
         with:
-          extra_nix_config: |
-            access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
+          go-version-file: '.go-version'
 
-      - name: Prepare Nix shell
-        run: nix develop --impure .#ci
+      - name: Make deps
+        run: make deps
 
       - name: Start kind cluster
         run: kind create cluster --config test/kind.yaml --image kindest/node:${{ matrix.k8s_version }} --wait 1m
@@ -214,7 +205,7 @@ jobs:
           name: "[helm-chart] package"
 
       - name: Acceptance test
-        run: nix develop --impure .#ci -c make test-acceptance
+        run: make test-acceptance
         env:
           TEST_VAULT_VERSION: ${{ matrix.vault_version }}
           TEST_OPERATOR_VERSION: ${{ needs.artifacts.outputs.container-image-tag }}
@@ -229,14 +220,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
 
-      - name: Set up Nix
-        uses: cachix/install-nix-action@3715ab1a11cac9e991980d7b4a28d80c7ebdd8f9 # v27
+      - name: Set up Go
+        uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
         with:
-          extra_nix_config: |
-            access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
+          go-version-file: '.go-version'
 
-      - name: Prepare Nix shell
-        run: nix develop --impure .#ci
+      - name: Make deps
+        run: make deps
 
       - name: Download operator docker image
         uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
@@ -245,11 +235,11 @@ jobs:
 
       - name: Build the Helm charts
         run: |
-          nix develop --impure .#ci -c make gen-helm-crds
-          nix develop --impure .#ci -c helm dep build ./deploy/charts/vault-operator
+          make gen-helm-crds
+          helm dep build ./deploy/charts/vault-operator
 
       - name: Operator Multi-DC Raft test
-        run: nix develop --impure .#ci -c ./deploy/dev/multi-dc/test/multi-dc-raft.sh install
+        run: ./deploy/dev/multi-dc/test/multi-dc-raft.sh install
         env:
           VAULT_VERSION: 1.14.8
           BANK_VAULTS_VERSION: v1.32.0

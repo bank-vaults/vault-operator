@@ -99,6 +99,7 @@ function install_instance {
 COMMAND=$1
 
 if [ "$COMMAND" = "install" ]; then
+    go install github.com/chenrui333/envtpl/v2/cmd/envtpl@latest
 
     infra_setup
 
