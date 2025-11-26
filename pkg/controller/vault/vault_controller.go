@@ -679,7 +679,7 @@ func serviceMonitorForVault(v *vaultv1alpha1.Vault) *monitorv1.ServiceMonitor {
 		endpoint := monitorv1.Endpoint{
 			Interval: "30s",
 			Port:     v.Spec.GetAPIPortName(),
-			Scheme:   strings.ToLower(string(getVaultURIScheme(v))),
+			Scheme:   To(monitorv1.Scheme(strings.ToLower(string(getVaultURIScheme(v))))),
 			Params:   map[string][]string{"format": {"prometheus"}},
 			Path:     "/v1/sys/metrics",
 			TLSConfig: &monitorv1.TLSConfig{
@@ -2268,4 +2268,9 @@ func (r *ReconcileVault) handleStorageConfiguration(ctx context.Context, v *vaul
 	}
 
 	return nil
+}
+
+// To returns a reference to the given value
+func To[T any](v T) *T {
+	return &v
 }
