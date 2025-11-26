@@ -197,7 +197,7 @@ deps: bin/kurun bin/kustomize bin/licensei bin/setup-envtest
 deps: ## Install dependencies
 
 # Dependency versions
-GOLANGCI_LINT_VERSION = 2.0.2
+GOLANGCI_LINT_VERSION = 2.6.2
 LICENSEI_VERSION = 0.9.0
 KIND_VERSION = 0.25.0
 HELM_VERSION = 3.16.3
