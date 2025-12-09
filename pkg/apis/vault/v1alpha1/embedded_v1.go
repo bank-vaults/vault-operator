@@ -403,3 +403,51 @@ type EmbeddedObjectMetadata struct {
 	// +optional
 	Annotations map[string]string `json:"annotations,omitempty" protobuf:"bytes,12,rep,name=annotations"`
 }
+
+func (e *EmbeddedPodSpec) ToPodSpec() *v1.PodSpec {
+	if e == nil {
+		return nil
+	}
+	return &v1.PodSpec{
+		Volumes:                       e.Volumes,
+		InitContainers:                e.InitContainers,
+		Containers:                    e.Containers,
+		EphemeralContainers:           e.EphemeralContainers,
+		RestartPolicy:                 e.RestartPolicy,
+		TerminationGracePeriodSeconds: e.TerminationGracePeriodSeconds,
+		ActiveDeadlineSeconds:         e.ActiveDeadlineSeconds,
+		DNSPolicy:                     e.DNSPolicy,
+		NodeSelector:                  e.NodeSelector,
+		ServiceAccountName:            e.ServiceAccountName,
+		DeprecatedServiceAccount:      e.DeprecatedServiceAccount,
+		AutomountServiceAccountToken:  e.AutomountServiceAccountToken,
+		NodeName:                      e.NodeName,
+		HostNetwork:                   e.HostNetwork,
+		HostPID:                       e.HostPID,
+		HostIPC:                       e.HostIPC,
+		ShareProcessNamespace:         e.ShareProcessNamespace,
+		SecurityContext:               e.SecurityContext,
+		ImagePullSecrets:              e.ImagePullSecrets,
+		Hostname:                      e.Hostname,
+		Subdomain:                     e.Subdomain,
+		Affinity:                      e.Affinity,
+		SchedulerName:                 e.SchedulerName,
+		Tolerations:                   e.Tolerations,
+		HostAliases:                   e.HostAliases,
+		PriorityClassName:             e.PriorityClassName,
+		Priority:                      e.Priority,
+		DNSConfig:                     e.DNSConfig,
+		ReadinessGates:                e.ReadinessGates,
+		RuntimeClassName:              e.RuntimeClassName,
+		EnableServiceLinks:            e.EnableServiceLinks,
+		PreemptionPolicy:              e.PreemptionPolicy,
+		Overhead:                      e.Overhead,
+		TopologySpreadConstraints:     e.TopologySpreadConstraints,
+		SetHostnameAsFQDN:             e.SetHostnameAsFQDN,
+		OS:                            e.OS,
+		HostUsers:                     e.HostUsers,
+		SchedulingGates:               e.SchedulingGates,
+		ResourceClaims:                e.ResourceClaims,
+		Resources:                     e.Resources,
+	}
+}
