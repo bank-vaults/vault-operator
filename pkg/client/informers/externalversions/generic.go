@@ -17,7 +17,7 @@
 package externalversions
 
 import (
-	"fmt"
+	fmt "fmt"
 
 	v1alpha1 "github.com/bank-vaults/vault-operator/pkg/apis/vault/v1alpha1"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
