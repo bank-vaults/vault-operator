@@ -17,13 +17,13 @@
 package v1alpha1
 
 import (
-	"context"
+	context "context"
 	time "time"
 
-	vaultv1alpha1 "github.com/bank-vaults/vault-operator/pkg/apis/vault/v1alpha1"
+	apisvaultv1alpha1 "github.com/bank-vaults/vault-operator/pkg/apis/vault/v1alpha1"
 	versioned "github.com/bank-vaults/vault-operator/pkg/client/clientset/versioned"
 	internalinterfaces "github.com/bank-vaults/vault-operator/pkg/client/informers/externalversions/internalinterfaces"
-	v1alpha1 "github.com/bank-vaults/vault-operator/pkg/client/listers/vault/v1alpha1"
+	vaultv1alpha1 "github.com/bank-vaults/vault-operator/pkg/client/listers/vault/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -34,7 +34,7 @@ import (
 // Vaults.
 type VaultInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1alpha1.VaultLister
+	Lister() vaultv1alpha1.VaultLister
 }
 
 type vaultInformer struct {
@@ -60,16 +60,28 @@ func NewFilteredVaultInformer(client versioned.Interface, namespace string, resy
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.VaultV1alpha1().Vaults(namespace).List(context.TODO(), options)
+				return client.VaultV1alpha1().Vaults(namespace).List(context.Background(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.VaultV1alpha1().Vaults(namespace).Watch(context.TODO(), options)
+				return client.VaultV1alpha1().Vaults(namespace).Watch(context.Background(), options)
+			},
+			ListWithContextFunc: func(ctx context.Context, options v1.ListOptions) (runtime.Object, error) {
+				if tweakListOptions != nil {
+					tweakListOptions(&options)
+				}
+				return client.VaultV1alpha1().Vaults(namespace).List(ctx, options)
+			},
+			WatchFuncWithContext: func(ctx context.Context, options v1.ListOptions) (watch.Interface, error) {
+				if tweakListOptions != nil {
+					tweakListOptions(&options)
+				}
+				return client.VaultV1alpha1().Vaults(namespace).Watch(ctx, options)
 			},
 		},
-		&vaultv1alpha1.Vault{},
+		&apisvaultv1alpha1.Vault{},
 		resyncPeriod,
 		indexers,
 	)
@@ -80,9 +92,9 @@ func (f *vaultInformer) defaultInformer(client versioned.Interface, resyncPeriod
 }
 
 func (f *vaultInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&vaultv1alpha1.Vault{}, f.defaultInformer)
+	return f.factory.InformerFor(&apisvaultv1alpha1.Vault{}, f.defaultInformer)
 }
 
-func (f *vaultInformer) Lister() v1alpha1.VaultLister {
-	return v1alpha1.NewVaultLister(f.Informer().GetIndexer())
+func (f *vaultInformer) Lister() vaultv1alpha1.VaultLister {
+	return vaultv1alpha1.NewVaultLister(f.Informer().GetIndexer())
 }

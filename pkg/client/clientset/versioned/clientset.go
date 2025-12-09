@@ -17,8 +17,8 @@
 package versioned
 
 import (
-	"fmt"
-	"net/http"
+	fmt "fmt"
+	http "net/http"
 
 	vaultv1alpha1 "github.com/bank-vaults/vault-operator/pkg/client/clientset/versioned/typed/vault/v1alpha1"
 	discovery "k8s.io/client-go/discovery"

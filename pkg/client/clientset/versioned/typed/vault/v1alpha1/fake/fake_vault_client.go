@@ -27,7 +27,7 @@ type FakeVaultV1alpha1 struct {
 }
 
 func (c *FakeVaultV1alpha1) Vaults(namespace string) v1alpha1.VaultInterface {
-	return &FakeVaults{c, namespace}
+	return newFakeVaults(c, namespace)
 }
 
 // RESTClient returns a RESTClient that is used to communicate

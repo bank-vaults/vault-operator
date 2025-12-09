@@ -17,111 +17,30 @@
 package fake
 
 import (
-	"context"
-
 	v1alpha1 "github.com/bank-vaults/vault-operator/pkg/apis/vault/v1alpha1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
-	types "k8s.io/apimachinery/pkg/types"
-	watch "k8s.io/apimachinery/pkg/watch"
-	testing "k8s.io/client-go/testing"
+	vaultv1alpha1 "github.com/bank-vaults/vault-operator/pkg/client/clientset/versioned/typed/vault/v1alpha1"
+	gentype "k8s.io/client-go/gentype"
 )
 
-// FakeVaults implements VaultInterface
-type FakeVaults struct {
+// fakeVaults implements VaultInterface
+type fakeVaults struct {
+	*gentype.FakeClientWithList[*v1alpha1.Vault, *v1alpha1.VaultList]
 	Fake *FakeVaultV1alpha1
-	ns   string
 }
 
-var vaultsResource = v1alpha1.SchemeGroupVersion.WithResource("vaults")
-
-var vaultsKind = v1alpha1.SchemeGroupVersion.WithKind("Vault")
-
-// Get takes name of the vault, and returns the corresponding vault object, and an error if there is any.
-func (c *FakeVaults) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.Vault, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewGetAction(vaultsResource, c.ns, name), &v1alpha1.Vault{})
-
-	if obj == nil {
-		return nil, err
+func newFakeVaults(fake *FakeVaultV1alpha1, namespace string) vaultv1alpha1.VaultInterface {
+	return &fakeVaults{
+		gentype.NewFakeClientWithList[*v1alpha1.Vault, *v1alpha1.VaultList](
+			fake.Fake,
+			namespace,
+			v1alpha1.SchemeGroupVersion.WithResource("vaults"),
+			v1alpha1.SchemeGroupVersion.WithKind("Vault"),
+			func() *v1alpha1.Vault { return &v1alpha1.Vault{} },
+			func() *v1alpha1.VaultList { return &v1alpha1.VaultList{} },
+			func(dst, src *v1alpha1.VaultList) { dst.ListMeta = src.ListMeta },
+			func(list *v1alpha1.VaultList) []*v1alpha1.Vault { return gentype.ToPointerSlice(list.Items) },
+			func(list *v1alpha1.VaultList, items []*v1alpha1.Vault) { list.Items = gentype.FromPointerSlice(items) },
+		),
+		fake,
 	}
-	return obj.(*v1alpha1.Vault), err
-}
-
-// List takes label and field selectors, and returns the list of Vaults that match those selectors.
-func (c *FakeVaults) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.VaultList, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewListAction(vaultsResource, vaultsKind, c.ns, opts), &v1alpha1.VaultList{})
-
-	if obj == nil {
-		return nil, err
-	}
-
-	label, _, _ := testing.ExtractFromListOptions(opts)
-	if label == nil {
-		label = labels.Everything()
-	}
-	list := &v1alpha1.VaultList{ListMeta: obj.(*v1alpha1.VaultList).ListMeta}
-	for _, item := range obj.(*v1alpha1.VaultList).Items {
-		if label.Matches(labels.Set(item.Labels)) {
-			list.Items = append(list.Items, item)
-		}
-	}
-	return list, err
-}
-
-// Watch returns a watch.Interface that watches the requested vaults.
-func (c *FakeVaults) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
-	return c.Fake.
-		InvokesWatch(testing.NewWatchAction(vaultsResource, c.ns, opts))
-
-}
-
-// Create takes the representation of a vault and creates it.  Returns the server's representation of the vault, and an error, if there is any.
-func (c *FakeVaults) Create(ctx context.Context, vault *v1alpha1.Vault, opts v1.CreateOptions) (result *v1alpha1.Vault, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewCreateAction(vaultsResource, c.ns, vault), &v1alpha1.Vault{})
-
-	if obj == nil {
-		return nil, err
-	}
-	return obj.(*v1alpha1.Vault), err
-}
-
-// Update takes the representation of a vault and updates it. Returns the server's representation of the vault, and an error, if there is any.
-func (c *FakeVaults) Update(ctx context.Context, vault *v1alpha1.Vault, opts v1.UpdateOptions) (result *v1alpha1.Vault, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateAction(vaultsResource, c.ns, vault), &v1alpha1.Vault{})
-
-	if obj == nil {
-		return nil, err
-	}
-	return obj.(*v1alpha1.Vault), err
-}
-
-// Delete takes name of the vault and deletes it. Returns an error if one occurs.
-func (c *FakeVaults) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
-	_, err := c.Fake.
-		Invokes(testing.NewDeleteActionWithOptions(vaultsResource, c.ns, name, opts), &v1alpha1.Vault{})
-
-	return err
-}
-
-// DeleteCollection deletes a collection of objects.
-func (c *FakeVaults) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(vaultsResource, c.ns, listOpts)
-
-	_, err := c.Fake.Invokes(action, &v1alpha1.VaultList{})
-	return err
-}
-
-// Patch applies the patch and returns the patched vault.
-func (c *FakeVaults) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.Vault, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(vaultsResource, c.ns, name, pt, data, subresources...), &v1alpha1.Vault{})
-
-	if obj == nil {
-		return nil, err
-	}
-	return obj.(*v1alpha1.Vault), err
 }

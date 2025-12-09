@@ -242,5 +242,5 @@ jobs:
         run: ./deploy/dev/multi-dc/test/multi-dc-raft.sh install
         env:
           VAULT_VERSION: 1.14.8
-          BANK_VAULTS_VERSION: v1.32.0
+          BANK_VAULTS_VERSION: v1.32.1
           OPERATOR_VERSION: ${{ needs.artifacts.outputs.container-image-tag }}
