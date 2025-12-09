@@ -946,9 +946,9 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 	}
 
 	// merge provided VaultConfigurerPodSpec into the PodSpec defined above
-	// the values in VaultConfigurerPodSpec will never overwrite fields defined in the PodSpec above
+	// with mergo.WithAppendSlice, slice fields like containers, volumes, etc. can be appended/merged
 	if v.Spec.VaultConfigurerPodSpec != nil {
-		if err := mergo.Merge(&podSpec, *v.Spec.VaultConfigurerPodSpec.ToPodSpec()); err != nil {
+		if err := mergo.Merge(&podSpec, *v.Spec.VaultConfigurerPodSpec.ToPodSpec(), mergo.WithAppendSlice); err != nil {
 			return nil, err
 		}
 	}

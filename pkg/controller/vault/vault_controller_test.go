@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	vaultv1alpha1 "github.com/bank-vaults/vault-operator/pkg/apis/vault/v1alpha1"
+	"github.com/bank-vaults/vault-operator/pkg/utils"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	extv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
@@ -107,6 +108,53 @@ func TestHandleStorageConfiguration_MissingStorage(t *testing.T) {
 
 	err = reconciler.handleStorageConfiguration(context.Background(), vault)
 	assert.Error(t, err, "Expected an error")
+}
+
+func TestVaultConfigurerPodSpecContainerMerge(t *testing.T) {
+	v := &vaultv1alpha1.Vault{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-vault",
+			Namespace: "default",
+		},
+		Spec: vaultv1alpha1.VaultSpec{
+			Config: extv1beta1.JSON{
+				Raw: []byte(`{"listener": {"tcp": {"address": "127.0.0.1:8200", "tls_disable": 1}}, "storage": {"file": {"path": "/vault/file"}}}`),
+			},
+			VaultConfigurerPodSpec: &vaultv1alpha1.EmbeddedPodSpec{
+				Containers: []corev1.Container{
+					{
+						Name: "bank-vaults",
+						SecurityContext: &corev1.SecurityContext{
+							RunAsUser:  utils.To(int64(1000)),
+							Privileged: utils.To(false),
+						},
+					},
+				},
+			},
+		},
+	}
+
+	deployment, err := deploymentForConfigurer(v, corev1.ConfigMapList{}, corev1.SecretList{}, map[string]string{})
+	assert.NoError(t, err, "Failed to create deployment for configurer")
+	assert.NotNil(t, deployment, "Deployment should not be nil")
+
+	containers := deployment.Spec.Template.Spec.Containers
+	assert.Greater(t, len(containers), 0, "Should have at least one container")
+
+	var foundContainer bool
+	for i := range containers {
+		c := &containers[i]
+		if c.Name == "bank-vaults" &&
+			c.SecurityContext != nil &&
+			c.SecurityContext.RunAsUser != nil &&
+			*c.SecurityContext.RunAsUser == *utils.To(int64(1000)) &&
+			c.SecurityContext.Privileged != nil &&
+			*c.SecurityContext.Privileged == *utils.To(false) {
+			foundContainer = true
+			break
+		}
+	}
+	assert.True(t, foundContainer, "Should find bank-vaults container with specified SecurityContext (RunAsUser=1000, Privileged=false)")
 }
 
 func TestWithVaultEnv(t *testing.T) {
