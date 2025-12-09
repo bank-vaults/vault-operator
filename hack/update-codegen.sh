@@ -20,7 +20,6 @@ set -o pipefail
 
 function finish {
   rm -rf ${CODEGEN_DIR}
-  rm -rf github.com
 }
 
 trap finish EXIT
@@ -39,17 +38,12 @@ CODEGEN_DIR=$(mktemp -d)
 git clone https://github.com/kubernetes/code-generator.git ${CODEGEN_DIR}
 cd ${CODEGEN_DIR} && git checkout $CODEGEN_VERSION && cd -
 
-# generate the code with:
-# --output-base    because this script should also be able to run inside the vendor dir of
-#                  k8s.io/kubernetes. The output-base is needed for the generators to output into the vendor dir
-#                  instead of the $GOPATH directly. For normal projects this can be dropped.
+## Generate code using kube_codegen.sh
+source "${CODEGEN_DIR}/kube_codegen.sh"
 
-## Generate code
-${CODEGEN_DIR}/generate-groups.sh "client,lister,informer" \
-  ${MODULE}/${OUTPUT_PKG} ${MODULE}/${APIS_PKG} \
-  ${GROUP_VERSION} \
-  --go-header-file "${SOURCE_DIR}"/hack/custom-boilerplate.go.txt \
-  --output-base "${SOURCE_DIR}"
-
-## Cleanup
-cp -a ${MODULE}/. ${SOURCE_DIR}
+kube::codegen::gen_client \
+  --with-watch \
+  --output-dir "${SOURCE_DIR}/${OUTPUT_PKG}" \
+  --output-pkg "${MODULE}/${OUTPUT_PKG}" \
+  --boilerplate "${SOURCE_DIR}/hack/custom-boilerplate.go.txt" \
+  "${SOURCE_DIR}/${APIS_PKG}"

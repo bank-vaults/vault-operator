@@ -2,7 +2,8 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
-# -- If set, install CRDs
+# crds -- If set, install CRDs through helm chart.
+# @default -- See [values.yaml](values.yaml)
 crds:
   install: true
   # The CRD upgrade job mitigates the limitation of helm not being able to upgrade CRDs.
