@@ -152,7 +152,7 @@ bankVaults:
     repository: ghcr.io/bank-vaults/bank-vaults
 
     # -- Bank-Vaults image tag (pinned to supported Bank-Vaults version).
-    tag: "v1.32.0"
+    tag: "v1.32.1"
 
 # -- A name in place of the chart name for `app:` labels.
 nameOverride: ""

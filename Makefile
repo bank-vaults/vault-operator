@@ -9,9 +9,9 @@ CRD_DIR ?= deploy/crd/bases
 HELM_DIR ?= deploy/charts/vault-operator
 
 # Default test data
-TEST_K8S_VERSION ?= 1.32.0
+TEST_K8S_VERSION ?= 1.34.0
 TEST_VAULT_VERSION ?= 1.14.8
-TEST_BANK_VAULTS_VERSION ?= v1.32.0-softhsm
+TEST_BANK_VAULTS_VERSION ?= v1.32.1-softhsm
 TEST_BANK_VAULTS_IMAGE ?= ghcr.io/bank-vaults/bank-vaults:$(TEST_BANK_VAULTS_VERSION)
 TEST_OPERATOR_VERSION ?= $(lastword $(subst :, ,$(CONTAINER_IMAGE_REF)))
 TEST_KIND_CLUSTER ?= vault-operator
@@ -197,15 +197,15 @@ deps: bin/kurun bin/kustomize bin/licensei bin/setup-envtest
 deps: ## Install dependencies
 
 # Dependency versions
-GOLANGCI_LINT_VERSION = 2.6.2
+GOLANGCI_LINT_VERSION = 2.7.2
 LICENSEI_VERSION = 0.9.0
-KIND_VERSION = 0.25.0
-HELM_VERSION = 3.16.3
+KIND_VERSION = 0.30.0
+HELM_VERSION = 4.0.1
 KURUN_VERSION = 0.7.0
-CODE_GENERATOR_VERSION = 0.27.1
+CODE_GENERATOR_VERSION = 0.34.2
 HELM_DOCS_VERSION = 1.14.2
-KUSTOMIZE_VERSION = 5.5.0
-CONTROLLER_TOOLS_VERSION = 0.16.5
+KUSTOMIZE_VERSION = 5.8.0
+CONTROLLER_TOOLS_VERSION = 0.19.0
 
 # Dependency binaries
 GOLANGCI_LINT_BIN := golangci-lint
