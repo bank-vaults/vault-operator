@@ -34,9 +34,11 @@ import (
 	bvtls "github.com/bank-vaults/vault-sdk/tls"
 	"github.com/bank-vaults/vault-sdk/vault"
 	"github.com/cisco-open/k8s-objectmatcher/patch"
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/api"
 	"github.com/imdario/mergo"
 	monitorv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	"github.com/siliconbrain/go-seqs/seqs"
 	"github.com/spf13/cast"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -946,9 +948,17 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 	}
 
 	// merge provided VaultConfigurerPodSpec into the PodSpec defined above
-	// with mergo.WithAppendSlice, slice fields like containers, volumes, etc. can be appended/merged
+	// containers are merged by name to allow overriding fields of existing containers
 	if v.Spec.VaultConfigurerPodSpec != nil {
-		if err := mergo.Merge(&podSpec, *v.Spec.VaultConfigurerPodSpec.ToPodSpec(), mergo.WithAppendSlice); err != nil {
+		userPodSpec := v.Spec.VaultConfigurerPodSpec.ToPodSpec()
+		mergedContainers, err := mergeContainersByName(userPodSpec.Containers, podSpec.Containers)
+		if err != nil {
+			return nil, err
+		}
+		podSpec.Containers = mergedContainers
+		userPodSpec.Containers = nil
+
+		if err := mergo.Merge(&podSpec, *userPodSpec, mergo.WithAppendSlice); err != nil {
 			return nil, err
 		}
 	}
@@ -2273,4 +2283,26 @@ func (r *ReconcileVault) handleStorageConfiguration(ctx context.Context, v *vaul
 // To returns a reference to the given value
 func To[T any](v T) *T {
 	return &v
+}
+
+// mergeContainersByName merges containers from src into dst by name.
+// If a container with the same name exists in both slices, the fields from src
+// are merged into dst (with override). Containers that only exist in src are appended.
+func mergeContainersByName(src, dst []corev1.Container) ([]corev1.Container, error) {
+	dstNames := seqs.ToSet(seqs.Map(seqs.FromSlice(dst), func(c corev1.Container) string { return c.Name }))
+	newContainers := seqs.ToSlice(seqs.Reject(seqs.FromSlice(src), func(c corev1.Container) bool { return dstNames[c.Name] }))
+
+	var err error
+	result := make([]corev1.Container, 0, len(dst))
+	for _, dstContainer := range dst {
+		srcContainer, found := seqs.First(seqs.Filter(seqs.FromSlice(src), func(c corev1.Container) bool { return c.Name == dstContainer.Name }))
+		if found {
+			if mergeErr := mergo.Merge(&dstContainer, srcContainer, mergo.WithOverride); mergeErr != nil {
+				err = multierror.Append(err, fmt.Errorf("failed to merge container %s: %v", dstContainer.Name, mergeErr))
+			}
+		}
+		result = append(result, dstContainer)
+	}
+
+	return append(result, newContainers...), err
 }

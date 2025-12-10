@@ -391,6 +391,8 @@ github.com/sagikazarmark/docker-ref v0.2.0 h1:ZWIj2BFaUrCJxS9nbiP/Q7D+dagzXN/S6D
 github.com/sagikazarmark/docker-ref v0.2.0/go.mod h1:jrj5Pm4GscNWkonA4ZfcZYfSMc3AkfHKU6X2Uy1uNiU=
 github.com/sergi/go-diff v1.3.2-0.20230802210424-5b0b94c5c0d3 h1:n661drycOFuPLCN3Uc8sB6B/s6Z4t2xvBgU1htSHuq8=
 github.com/sergi/go-diff v1.3.2-0.20230802210424-5b0b94c5c0d3/go.mod h1:A0bzQcvG0E7Rwjx0REVgAGH58e96+X0MeOfepqsbeW4=
+github.com/siliconbrain/go-seqs v0.16.0 h1:WCP/xGgwepcIeMqNlrRvzGMl7iOy32HRixyZRNjItkY=
+github.com/siliconbrain/go-seqs v0.16.0/go.mod h1:i8vyCofM3GYSA2GjB2t+R7SFceXDXCo+jnS83rWBhq0=
 github.com/spf13/cast v1.10.0 h1:h2x0u2shc1QuLHfxi+cTJvs30+ZAHOGRic8uyGTDWxY=
 github.com/spf13/cast v1.10.0/go.mod h1:jNfB8QC9IA6ZuY2ZjDp0KtFO2LZZlg4S/7bzP6qqeHo=
 github.com/spf13/pflag v1.0.10 h1:4EBh2KAYBwaONj6b2Ye1GiHfwjqyROoF4RwYO+vPwFk=
