@@ -443,3 +443,184 @@ func TestWithVaultEnv(t *testing.T) {
 		})
 	}
 }
+
+func TestMergeContainersByName(t *testing.T) {
+	tests := []struct {
+		name     string
+		src      []corev1.Container
+		dst      []corev1.Container
+		validate func(t *testing.T, result []corev1.Container, err error)
+	}{
+		{
+			name: "env vars are appended not replaced",
+			src: []corev1.Container{
+				{
+					Name: "bank-vaults",
+					Env: []corev1.EnvVar{
+						{Name: "AZURE_CLIENT_ID", Value: "azure-client-id"},
+						{Name: "AZURE_TENANT_ID", Value: "azure-tenant-id"},
+					},
+				},
+			},
+			dst: []corev1.Container{
+				{
+					Name:    "bank-vaults",
+					Image:   "ghcr.io/bank-vaults/bank-vaults:latest",
+					Command: []string{"bank-vaults", "configure"},
+					Env: []corev1.EnvVar{
+						{Name: "VAULT_ADDR", Value: "https://vault:8200"},
+						{Name: "VAULT_CACERT", Value: "/vault/tls/ca.crt"},
+						{Name: "NAMESPACE", Value: "vault"},
+					},
+				},
+			},
+			validate: func(t *testing.T, result []corev1.Container, err error) {
+				assert.NoError(t, err)
+				assert.Len(t, result, 1)
+				container := result[0]
+
+				vaultAddr, found := seqs.First(seqs.Filter(seqs.FromSlice(container.Env), func(e corev1.EnvVar) bool { return e.Name == "VAULT_ADDR" }))
+				assert.True(t, found, "VAULT_ADDR should be preserved")
+				assert.Equal(t, "https://vault:8200", vaultAddr.Value)
+
+				vaultCacert, found := seqs.First(seqs.Filter(seqs.FromSlice(container.Env), func(e corev1.EnvVar) bool { return e.Name == "VAULT_CACERT" }))
+				assert.True(t, found, "VAULT_CACERT should be preserved")
+				assert.Equal(t, "/vault/tls/ca.crt", vaultCacert.Value)
+
+				namespace, found := seqs.First(seqs.Filter(seqs.FromSlice(container.Env), func(e corev1.EnvVar) bool { return e.Name == "NAMESPACE" }))
+				assert.True(t, found, "NAMESPACE should be preserved")
+				assert.Equal(t, "vault", namespace.Value)
+
+				azureClientID, found := seqs.First(seqs.Filter(seqs.FromSlice(container.Env), func(e corev1.EnvVar) bool { return e.Name == "AZURE_CLIENT_ID" }))
+				assert.True(t, found, "AZURE_CLIENT_ID should be appended")
+				assert.Equal(t, "azure-client-id", azureClientID.Value)
+
+				azureTenantID, found := seqs.First(seqs.Filter(seqs.FromSlice(container.Env), func(e corev1.EnvVar) bool { return e.Name == "AZURE_TENANT_ID" }))
+				assert.True(t, found, "AZURE_TENANT_ID should be appended")
+				assert.Equal(t, "azure-tenant-id", azureTenantID.Value)
+
+				assert.Len(t, container.Env, 5)
+				assert.Equal(t, "ghcr.io/bank-vaults/bank-vaults:latest", container.Image)
+				assert.Equal(t, []string{"bank-vaults", "configure"}, container.Command)
+			},
+		},
+		{
+			name: "volume mounts are appended not replaced",
+			src: []corev1.Container{
+				{
+					Name: "bank-vaults",
+					VolumeMounts: []corev1.VolumeMount{
+						{Name: "azure-token", MountPath: "/var/run/secrets/azure"},
+					},
+				},
+			},
+			dst: []corev1.Container{
+				{
+					Name:  "bank-vaults",
+					Image: "ghcr.io/bank-vaults/bank-vaults:latest",
+					VolumeMounts: []corev1.VolumeMount{
+						{Name: "vault-tls", MountPath: "/vault/tls"},
+						{Name: "vault-config", MountPath: "/config"},
+					},
+				},
+			},
+			validate: func(t *testing.T, result []corev1.Container, err error) {
+				assert.NoError(t, err)
+				assert.Len(t, result, 1)
+				container := result[0]
+				assert.Len(t, container.VolumeMounts, 3)
+
+				vaultTLS, found := seqs.First(seqs.Filter(seqs.FromSlice(container.VolumeMounts), func(v corev1.VolumeMount) bool { return v.Name == "vault-tls" }))
+				assert.True(t, found, "vault-tls mount should be preserved")
+				assert.Equal(t, "/vault/tls", vaultTLS.MountPath)
+
+				vaultConfig, found := seqs.First(seqs.Filter(seqs.FromSlice(container.VolumeMounts), func(v corev1.VolumeMount) bool { return v.Name == "vault-config" }))
+				assert.True(t, found, "vault-config mount should be preserved")
+				assert.Equal(t, "/config", vaultConfig.MountPath)
+
+				azureToken, found := seqs.First(seqs.Filter(seqs.FromSlice(container.VolumeMounts), func(v corev1.VolumeMount) bool { return v.Name == "azure-token" }))
+				assert.True(t, found, "azure-token mount should be appended")
+				assert.Equal(t, "/var/run/secrets/azure", azureToken.MountPath)
+			},
+		},
+		{
+			name: "non-slice fields are overridden",
+			src: []corev1.Container{
+				{
+					Name:       "bank-vaults",
+					Image:      "custom-image:v1.0.0",
+					WorkingDir: "/custom/workdir",
+				},
+			},
+			dst: []corev1.Container{
+				{
+					Name:       "bank-vaults",
+					Image:      "ghcr.io/bank-vaults/bank-vaults:latest",
+					WorkingDir: "/config",
+					Command:    []string{"bank-vaults", "configure"},
+				},
+			},
+			validate: func(t *testing.T, result []corev1.Container, err error) {
+				assert.NoError(t, err)
+				assert.Len(t, result, 1)
+				container := result[0]
+
+				assert.Equal(t, "custom-image:v1.0.0", container.Image)
+				assert.Equal(t, "/custom/workdir", container.WorkingDir)
+				assert.Equal(t, []string{"bank-vaults", "configure"}, container.Command)
+			},
+		},
+		{
+			name: "new container from src is appended",
+			src: []corev1.Container{
+				{
+					Name:  "sidecar",
+					Image: "busybox:latest",
+				},
+			},
+			dst: []corev1.Container{
+				{
+					Name:  "bank-vaults",
+					Image: "ghcr.io/bank-vaults/bank-vaults:latest",
+				},
+			},
+			validate: func(t *testing.T, result []corev1.Container, err error) {
+				assert.NoError(t, err)
+				assert.Len(t, result, 2)
+
+				bankVaults, found := seqs.First(seqs.Filter(seqs.FromSlice(result), func(c corev1.Container) bool { return c.Name == "bank-vaults" }))
+				assert.True(t, found)
+				assert.Equal(t, "ghcr.io/bank-vaults/bank-vaults:latest", bankVaults.Image)
+
+				sidecar, found := seqs.First(seqs.Filter(seqs.FromSlice(result), func(c corev1.Container) bool { return c.Name == "sidecar" }))
+				assert.True(t, found)
+				assert.Equal(t, "busybox:latest", sidecar.Image)
+			},
+		},
+		{
+			name: "empty src returns dst unchanged",
+			src:  []corev1.Container{},
+			dst: []corev1.Container{
+				{
+					Name:  "bank-vaults",
+					Image: "ghcr.io/bank-vaults/bank-vaults:latest",
+					Env:   []corev1.EnvVar{{Name: "VAULT_ADDR", Value: "https://vault:8200"}},
+				},
+			},
+			validate: func(t *testing.T, result []corev1.Container, err error) {
+				assert.NoError(t, err)
+				assert.Len(t, result, 1)
+				assert.Equal(t, "bank-vaults", result[0].Name)
+				assert.Len(t, result[0].Env, 1)
+				assert.Equal(t, "VAULT_ADDR", result[0].Env[0].Name)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := mergeContainersByName(tt.src, tt.dst)
+			tt.validate(t, result, err)
+		})
+	}
+}
