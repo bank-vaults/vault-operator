@@ -21,7 +21,9 @@ import (
 
 	vaultv1alpha1 "github.com/bank-vaults/vault-operator/pkg/apis/vault/v1alpha1"
 	"github.com/bank-vaults/vault-operator/pkg/utils"
+	"github.com/siliconbrain/go-seqs/seqs"
 	"github.com/stretchr/testify/assert"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	extv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -111,16 +113,32 @@ func TestHandleStorageConfiguration_MissingStorage(t *testing.T) {
 }
 
 func TestVaultConfigurerPodSpecContainerMerge(t *testing.T) {
-	v := &vaultv1alpha1.Vault{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-vault",
-			Namespace: "default",
-		},
-		Spec: vaultv1alpha1.VaultSpec{
-			Config: extv1beta1.JSON{
-				Raw: []byte(`{"listener": {"tcp": {"address": "127.0.0.1:8200", "tls_disable": 1}}, "storage": {"file": {"path": "/vault/file"}}}`),
+	baseVaultConfig := []byte(`{"listener": {"tcp": {"address": "127.0.0.1:8200", "tls_disable": 1}}, "storage": {"file": {"path": "/vault/file"}}}`)
+
+	tests := []struct {
+		name                   string
+		vaultConfigurerPodSpec *vaultv1alpha1.EmbeddedPodSpec
+		expectedContainerCount int
+		validate               func(t *testing.T, deployment *appsv1.Deployment)
+	}{
+		{
+			name:                   "no VaultConfigurerPodSpec - default deployment",
+			vaultConfigurerPodSpec: nil,
+			expectedContainerCount: 1,
+			validate: func(t *testing.T, deployment *appsv1.Deployment) {
+				container := &deployment.Spec.Template.Spec.Containers[0]
+				assert.Equal(t, "bank-vaults", container.Name)
+				assert.NotEmpty(t, container.Image, "Image should be set")
+				assert.Equal(t, []string{"bank-vaults", "configure"}, container.Command)
+				assert.NotEmpty(t, container.Ports, "Ports should be set")
+				assert.Equal(t, int32(9091), container.Ports[0].ContainerPort)
+				assert.NotEmpty(t, container.Env, "Env should be set")
+				assert.Equal(t, "/config", container.WorkingDir)
 			},
-			VaultConfigurerPodSpec: &vaultv1alpha1.EmbeddedPodSpec{
+		},
+		{
+			name: "override existing bank-vaults container fields",
+			vaultConfigurerPodSpec: &vaultv1alpha1.EmbeddedPodSpec{
 				Containers: []corev1.Container{
 					{
 						Name: "bank-vaults",
@@ -128,33 +146,119 @@ func TestVaultConfigurerPodSpecContainerMerge(t *testing.T) {
 							RunAsUser:  utils.To(int64(1000)),
 							Privileged: utils.To(false),
 						},
+						Env: []corev1.EnvVar{
+							{
+								Name:  "AZURE_CLIENT_ID",
+								Value: "test-azure-client-id",
+							},
+						},
 					},
 				},
+			},
+			expectedContainerCount: 1,
+			validate: func(t *testing.T, deployment *appsv1.Deployment) {
+				container := &deployment.Spec.Template.Spec.Containers[0]
+				assert.Equal(t, "bank-vaults", container.Name)
+				assert.NotNil(t, container.SecurityContext)
+				assert.Equal(t, int64(1000), *container.SecurityContext.RunAsUser)
+				assert.Equal(t, false, *container.SecurityContext.Privileged)
+				env, found := seqs.First(seqs.Filter(seqs.FromSlice(container.Env), func(e corev1.EnvVar) bool { return e.Name == "AZURE_CLIENT_ID" }))
+				assert.True(t, found, "AZURE_CLIENT_ID env var should exist")
+				assert.Equal(t, "test-azure-client-id", env.Value)
+				assert.NotEmpty(t, container.Image, "Image should still be set")
+				assert.Equal(t, []string{"bank-vaults", "configure"}, container.Command)
+				assert.Equal(t, "/config", container.WorkingDir)
+			},
+		},
+		{
+			name: "add additional sidecar container",
+			vaultConfigurerPodSpec: &vaultv1alpha1.EmbeddedPodSpec{
+				Containers: []corev1.Container{
+					{
+						Name:    "sidecar",
+						Image:   "busybox:latest",
+						Command: []string{"sleep", "infinity"},
+					},
+				},
+			},
+			expectedContainerCount: 2,
+			validate: func(t *testing.T, deployment *appsv1.Deployment) {
+				containers := deployment.Spec.Template.Spec.Containers
+				bankVaults, found := seqs.First(seqs.Filter(seqs.FromSlice(containers), func(c corev1.Container) bool { return c.Name == "bank-vaults" }))
+				assert.True(t, found, "bank-vaults container should exist")
+				assert.NotEmpty(t, bankVaults.Image)
+				assert.Equal(t, []string{"bank-vaults", "configure"}, bankVaults.Command)
+				sidecar, found := seqs.First(seqs.Filter(seqs.FromSlice(containers), func(c corev1.Container) bool { return c.Name == "sidecar" }))
+				assert.True(t, found, "sidecar container should exist")
+				assert.Equal(t, "busybox:latest", sidecar.Image)
+				assert.Equal(t, []string{"sleep", "infinity"}, sidecar.Command)
+			},
+		},
+		{
+			name: "override bank-vaults and add sidecar",
+			vaultConfigurerPodSpec: &vaultv1alpha1.EmbeddedPodSpec{
+				Containers: []corev1.Container{
+					{
+						Name: "bank-vaults",
+						Env:  []corev1.EnvVar{{Name: "CUSTOM_VAR", Value: "custom-value"}},
+					},
+					{
+						Name:  "logger",
+						Image: "fluentd:latest",
+					},
+				},
+			},
+			expectedContainerCount: 2,
+			validate: func(t *testing.T, deployment *appsv1.Deployment) {
+				containers := deployment.Spec.Template.Spec.Containers
+				bankVaults, found := seqs.First(seqs.Filter(seqs.FromSlice(containers), func(c corev1.Container) bool { return c.Name == "bank-vaults" }))
+				assert.True(t, found)
+				env, found := seqs.First(seqs.Filter(seqs.FromSlice(bankVaults.Env), func(e corev1.EnvVar) bool { return e.Name == "CUSTOM_VAR" }))
+				assert.True(t, found, "CUSTOM_VAR should exist")
+				assert.Equal(t, "custom-value", env.Value)
+				assert.NotEmpty(t, bankVaults.Image)
+				assert.Equal(t, []string{"bank-vaults", "configure"}, bankVaults.Command)
+
+				logger, found := seqs.First(seqs.Filter(seqs.FromSlice(containers), func(c corev1.Container) bool { return c.Name == "logger" }))
+				assert.True(t, found)
+				assert.Equal(t, "fluentd:latest", logger.Image)
+			},
+		},
+		{
+			name: "empty containers slice - no changes",
+			vaultConfigurerPodSpec: &vaultv1alpha1.EmbeddedPodSpec{
+				Containers: []corev1.Container{},
+			},
+			expectedContainerCount: 1,
+			validate: func(t *testing.T, deployment *appsv1.Deployment) {
+				container := &deployment.Spec.Template.Spec.Containers[0]
+				assert.Equal(t, "bank-vaults", container.Name)
+				assert.NotEmpty(t, container.Image)
+				assert.Equal(t, []string{"bank-vaults", "configure"}, container.Command)
 			},
 		},
 	}
 
-	deployment, err := deploymentForConfigurer(v, corev1.ConfigMapList{}, corev1.SecretList{}, map[string]string{})
-	assert.NoError(t, err, "Failed to create deployment for configurer")
-	assert.NotNil(t, deployment, "Deployment should not be nil")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			v := &vaultv1alpha1.Vault{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-vault",
+					Namespace: "default",
+				},
+				Spec: vaultv1alpha1.VaultSpec{
+					Config:                 extv1beta1.JSON{Raw: baseVaultConfig},
+					VaultConfigurerPodSpec: tt.vaultConfigurerPodSpec,
+				},
+			}
 
-	containers := deployment.Spec.Template.Spec.Containers
-	assert.Greater(t, len(containers), 0, "Should have at least one container")
-
-	var foundContainer bool
-	for i := range containers {
-		c := &containers[i]
-		if c.Name == "bank-vaults" &&
-			c.SecurityContext != nil &&
-			c.SecurityContext.RunAsUser != nil &&
-			*c.SecurityContext.RunAsUser == *utils.To(int64(1000)) &&
-			c.SecurityContext.Privileged != nil &&
-			*c.SecurityContext.Privileged == *utils.To(false) {
-			foundContainer = true
-			break
-		}
+			deployment, err := deploymentForConfigurer(v, corev1.ConfigMapList{}, corev1.SecretList{}, map[string]string{})
+			assert.NoError(t, err)
+			assert.NotNil(t, deployment)
+			assert.Len(t, deployment.Spec.Template.Spec.Containers, tt.expectedContainerCount)
+			tt.validate(t, deployment)
+		})
 	}
-	assert.True(t, foundContainer, "Should find bank-vaults container with specified SecurityContext (RunAsUser=1000, Privileged=false)")
 }
 
 func TestWithVaultEnv(t *testing.T) {
