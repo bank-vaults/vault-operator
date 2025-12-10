@@ -2297,7 +2297,7 @@ func mergeContainersByName(src, dst []corev1.Container) ([]corev1.Container, err
 	for _, dstContainer := range dst {
 		srcContainer, found := seqs.First(seqs.Filter(seqs.FromSlice(src), func(c corev1.Container) bool { return c.Name == dstContainer.Name }))
 		if found {
-			if mergeErr := mergo.Merge(&dstContainer, srcContainer, mergo.WithOverride); mergeErr != nil {
+			if mergeErr := mergo.Merge(&dstContainer, srcContainer, mergo.WithOverride, mergo.WithAppendSlice); mergeErr != nil {
 				err = multierror.Append(err, fmt.Errorf("failed to merge container %s: %v", dstContainer.Name, mergeErr))
 			}
 		}
