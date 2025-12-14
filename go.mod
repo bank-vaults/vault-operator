@@ -7,11 +7,12 @@ require (
 	github.com/bank-vaults/vault-sdk v0.11.2
 	github.com/cisco-open/k8s-objectmatcher v1.10.0
 	github.com/gruntwork-io/terratest v0.54.0
+	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/vault/api v1.22.0
 	github.com/imdario/mergo v1.0.1
 	github.com/onsi/ginkgo/v2 v2.27.2
 	github.com/onsi/gomega v1.38.2
-	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.87.0
+	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.87.1
 	github.com/sagikazarmark/docker-ref v0.2.0
 	github.com/siliconbrain/go-seqs v0.16.0
 	github.com/spf13/cast v1.10.0
@@ -126,7 +127,6 @@ require (
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-hclog v1.6.3 // indirect
-	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/go-retryablehttp v0.7.8 // indirect
 	github.com/hashicorp/go-rootcerts v1.0.2 // indirect
 	github.com/hashicorp/go-secure-stdlib/awsutil v0.3.0 // indirect
