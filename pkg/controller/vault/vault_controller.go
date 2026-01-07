@@ -22,9 +22,11 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -38,6 +40,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/imdario/mergo"
 	monitorv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	"github.com/siliconbrain/go-seqs/iter"
 	"github.com/siliconbrain/go-seqs/seqs"
 	"github.com/spf13/cast"
 	appsv1 "k8s.io/api/apps/v1"
@@ -2289,8 +2292,8 @@ func To[T any](v T) *T {
 // If a container with the same name exists in both slices, the fields from src
 // are merged into dst (with override). Containers that only exist in src are appended.
 func mergeContainersByName(src, dst []corev1.Container) ([]corev1.Container, error) {
-	dstNames := seqs.ToSet(seqs.Map(seqs.FromSlice(dst), func(c corev1.Container) string { return c.Name }))
-	newContainers := seqs.ToSlice(seqs.Reject(seqs.FromSlice(src), func(c corev1.Container) bool { return dstNames[c.Name] }))
+	dstNames := maps.Collect(iter.Zip(seqs.ToIter(seqs.Map(seqs.FromSlice(dst), func(c corev1.Container) string { return c.Name })), iter.Repeat(true)))
+	newContainers := slices.Collect(seqs.ToIter(seqs.Filter(seqs.FromSlice(src), func(c corev1.Container) bool { return !dstNames[c.Name] })))
 
 	var err error
 	result := make([]corev1.Container, 0, len(dst))
