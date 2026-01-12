@@ -687,9 +687,13 @@ func serviceMonitorForVault(v *vaultv1alpha1.Vault) *monitorv1.ServiceMonitor {
 			Scheme:   To(monitorv1.Scheme(strings.ToLower(string(getVaultURIScheme(v))))),
 			Params:   map[string][]string{"format": {"prometheus"}},
 			Path:     "/v1/sys/metrics",
-			TLSConfig: &monitorv1.TLSConfig{
-				SafeTLSConfig: monitorv1.SafeTLSConfig{
-					InsecureSkipVerify: ptr.To(true),
+			HTTPConfigWithProxyAndTLSFiles: monitorv1.HTTPConfigWithProxyAndTLSFiles{
+				HTTPConfigWithTLSFiles: monitorv1.HTTPConfigWithTLSFiles{
+					TLSConfig: &monitorv1.TLSConfig{
+						SafeTLSConfig: monitorv1.SafeTLSConfig{
+							InsecureSkipVerify: ptr.To(true),
+						},
+					},
 				},
 			},
 		}
