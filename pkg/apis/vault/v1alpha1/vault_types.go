@@ -191,6 +191,13 @@ type VaultSpec struct {
 	// default:
 	SecurityContext v1.PodSecurityContext `json:"securityContext,omitempty"`
 
+	// PlatformManagedSecurityContext enables platform (e.g., OpenShift) management of the pod security context.
+	// When set to true, the operator will not set any pod security context (fsGroup, etc.),
+	// allowing the platform to assign the appropriate security context.
+	// For example, on OpenShift this allows the SCC to manage the security context in restricted namespaces.
+	// default: false
+	PlatformManagedSecurityContext bool `json:"platformManagedSecurityContext,omitempty"`
+
 	// ServiceType is a Kubernetes Service type of the Vault Service.
 	// default: ClusterIP
 	ServiceType string `json:"serviceType,omitempty"`
