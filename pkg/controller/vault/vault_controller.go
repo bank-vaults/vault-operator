@@ -1971,6 +1971,10 @@ func withContainerSecurityContext(v *vaultv1alpha1.Vault) *corev1.SecurityContex
 }
 
 func withPodSecurityContext(v *vaultv1alpha1.Vault) *corev1.PodSecurityContext {
+	// When platform-managed security context is enabled, return nil to let the platform assign the security context
+	if v.Spec.PlatformManagedSecurityContext {
+		return nil
+	}
 	if v.Spec.SecurityContext.Size() == 0 {
 		vaultGID := int64(1000)
 		return &corev1.PodSecurityContext{
