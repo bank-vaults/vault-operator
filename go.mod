@@ -1,12 +1,12 @@
 module github.com/bank-vaults/vault-operator
 
-go 1.25.4
+go 1.26
 
 require (
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/bank-vaults/vault-sdk v0.11.2
 	github.com/cisco-open/k8s-objectmatcher v1.10.0
-	github.com/gruntwork-io/terratest v0.55.0
+	github.com/gruntwork-io/terratest v0.56.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/vault/api v1.22.0
 	github.com/imdario/mergo v1.0.1
