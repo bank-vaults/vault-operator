@@ -624,3 +624,331 @@ func TestMergeContainersByName(t *testing.T) {
 		})
 	}
 }
+
+func TestVaultPodSpecContainerMerge(t *testing.T) {
+	baseVaultConfig := []byte(`{"listener": {"tcp": {"address": "127.0.0.1:8200", "tls_disable": 1}}, "storage": {"file": {"path": "/vault/file"}}}`)
+	service := &corev1.Service{
+		Spec: corev1.ServiceSpec{
+			Type: corev1.ServiceTypeClusterIP,
+		},
+	}
+
+	tests := []struct {
+		name                       string
+		vaultPodSpec               *vaultv1alpha1.EmbeddedPodSpec
+		expectedContainerCount     int
+		expectedInitContainerCount int
+		validate                   func(t *testing.T, sts *appsv1.StatefulSet)
+	}{
+		{
+			// vault + bank-vaults + prometheus-exporter (statsd enabled by default)
+			name:                       "no VaultPodSpec - default statefulset",
+			vaultPodSpec:               nil,
+			expectedContainerCount:     3,
+			expectedInitContainerCount: 1,
+			validate: func(t *testing.T, sts *appsv1.StatefulSet) {
+				containers := sts.Spec.Template.Spec.Containers
+
+				vault, found := seqs.First(seqs.Filter(seqs.FromSlice(containers), func(c corev1.Container) bool { return c.Name == "vault" }))
+				assert.True(t, found, "vault container should exist")
+				assert.NotEmpty(t, vault.Image, "Image should be set")
+				assert.Equal(t, []string{"server"}, vault.Args)
+				assert.NotEmpty(t, vault.Env, "Env should be set")
+
+				bankVaults, found := seqs.First(seqs.Filter(seqs.FromSlice(containers), func(c corev1.Container) bool { return c.Name == "bank-vaults" }))
+				assert.True(t, found, "bank-vaults container should exist")
+				assert.NotEmpty(t, bankVaults.Image, "Image should be set")
+				assert.NotEmpty(t, bankVaults.Command, "Command should be set")
+				assert.NotEmpty(t, bankVaults.Env, "Env should be set")
+
+				initContainers := sts.Spec.Template.Spec.InitContainers
+				configTemplating, found := seqs.First(seqs.Filter(seqs.FromSlice(initContainers), func(c corev1.Container) bool { return c.Name == "config-templating" }))
+				assert.True(t, found, "config-templating init container should exist")
+				assert.NotEmpty(t, configTemplating.Image, "Image should be set")
+				assert.NotEmpty(t, configTemplating.Command, "Command should be set")
+			},
+		},
+		{
+			name: "override bank-vaults sidecar security context",
+			vaultPodSpec: &vaultv1alpha1.EmbeddedPodSpec{
+				Containers: []corev1.Container{
+					{
+						Name: "bank-vaults",
+						SecurityContext: &corev1.SecurityContext{
+							AllowPrivilegeEscalation: utils.To(false),
+							ReadOnlyRootFilesystem:   utils.To(true),
+							Capabilities: &corev1.Capabilities{
+								Drop: []corev1.Capability{"ALL"},
+							},
+						},
+					},
+				},
+			},
+			expectedContainerCount:     3,
+			expectedInitContainerCount: 1,
+			validate: func(t *testing.T, sts *appsv1.StatefulSet) {
+				containers := sts.Spec.Template.Spec.Containers
+
+				bankVaults, found := seqs.First(seqs.Filter(seqs.FromSlice(containers), func(c corev1.Container) bool { return c.Name == "bank-vaults" }))
+				assert.True(t, found, "bank-vaults container should exist")
+				assert.NotNil(t, bankVaults.SecurityContext, "security context should be set")
+				assert.Equal(t, false, *bankVaults.SecurityContext.AllowPrivilegeEscalation)
+				assert.Equal(t, true, *bankVaults.SecurityContext.ReadOnlyRootFilesystem)
+				assert.Equal(t, []corev1.Capability{"ALL"}, bankVaults.SecurityContext.Capabilities.Drop)
+
+				// vault container should still exist and be unmodified
+				vault, found := seqs.First(seqs.Filter(seqs.FromSlice(containers), func(c corev1.Container) bool { return c.Name == "vault" }))
+				assert.True(t, found, "vault container should exist")
+				assert.NotEmpty(t, vault.Image, "vault image should be set")
+
+				// bank-vaults should preserve operator-set fields
+				assert.NotEmpty(t, bankVaults.Image, "bank-vaults image should be preserved")
+				assert.NotEmpty(t, bankVaults.Command, "bank-vaults command should be preserved")
+			},
+		},
+		{
+			name: "override config-templating init container security context",
+			vaultPodSpec: &vaultv1alpha1.EmbeddedPodSpec{
+				InitContainers: []corev1.Container{
+					{
+						Name: "config-templating",
+						SecurityContext: &corev1.SecurityContext{
+							AllowPrivilegeEscalation: utils.To(false),
+							ReadOnlyRootFilesystem:   utils.To(true),
+							Capabilities: &corev1.Capabilities{
+								Drop: []corev1.Capability{"ALL"},
+							},
+						},
+					},
+				},
+			},
+			expectedContainerCount:     3,
+			expectedInitContainerCount: 1,
+			validate: func(t *testing.T, sts *appsv1.StatefulSet) {
+				initContainers := sts.Spec.Template.Spec.InitContainers
+
+				configTemplating, found := seqs.First(seqs.Filter(seqs.FromSlice(initContainers), func(c corev1.Container) bool { return c.Name == "config-templating" }))
+				assert.True(t, found, "config-templating init container should exist")
+				assert.NotNil(t, configTemplating.SecurityContext, "security context should be set")
+				assert.Equal(t, false, *configTemplating.SecurityContext.AllowPrivilegeEscalation)
+				assert.Equal(t, true, *configTemplating.SecurityContext.ReadOnlyRootFilesystem)
+				assert.Equal(t, []corev1.Capability{"ALL"}, configTemplating.SecurityContext.Capabilities.Drop)
+
+				// config-templating should preserve operator-set fields
+				assert.NotEmpty(t, configTemplating.Image, "image should be preserved")
+				assert.NotEmpty(t, configTemplating.Command, "command should be preserved")
+			},
+		},
+		{
+			name: "override multiple containers and init containers simultaneously",
+			vaultPodSpec: &vaultv1alpha1.EmbeddedPodSpec{
+				Containers: []corev1.Container{
+					{
+						Name: "bank-vaults",
+						SecurityContext: &corev1.SecurityContext{
+							AllowPrivilegeEscalation: utils.To(false),
+						},
+					},
+				},
+				InitContainers: []corev1.Container{
+					{
+						Name: "config-templating",
+						SecurityContext: &corev1.SecurityContext{
+							AllowPrivilegeEscalation: utils.To(false),
+						},
+					},
+				},
+			},
+			expectedContainerCount:     3,
+			expectedInitContainerCount: 1,
+			validate: func(t *testing.T, sts *appsv1.StatefulSet) {
+				containers := sts.Spec.Template.Spec.Containers
+				initContainers := sts.Spec.Template.Spec.InitContainers
+
+				bankVaults, found := seqs.First(seqs.Filter(seqs.FromSlice(containers), func(c corev1.Container) bool { return c.Name == "bank-vaults" }))
+				assert.True(t, found)
+				assert.NotNil(t, bankVaults.SecurityContext)
+				assert.Equal(t, false, *bankVaults.SecurityContext.AllowPrivilegeEscalation)
+
+				configTemplating, found := seqs.First(seqs.Filter(seqs.FromSlice(initContainers), func(c corev1.Container) bool { return c.Name == "config-templating" }))
+				assert.True(t, found)
+				assert.NotNil(t, configTemplating.SecurityContext)
+				assert.Equal(t, false, *configTemplating.SecurityContext.AllowPrivilegeEscalation)
+
+				// All original containers should still be present
+				vault, found := seqs.First(seqs.Filter(seqs.FromSlice(containers), func(c corev1.Container) bool { return c.Name == "vault" }))
+				assert.True(t, found, "vault container should still exist")
+				assert.NotEmpty(t, vault.Image, "vault image should be preserved")
+			},
+		},
+		{
+			name: "env vars for bank-vaults sidecar are appended",
+			vaultPodSpec: &vaultv1alpha1.EmbeddedPodSpec{
+				Containers: []corev1.Container{
+					{
+						Name: "bank-vaults",
+						Env: []corev1.EnvVar{
+							{Name: "CUSTOM_VAR", Value: "custom-value"},
+						},
+					},
+				},
+			},
+			expectedContainerCount:     3,
+			expectedInitContainerCount: 1,
+			validate: func(t *testing.T, sts *appsv1.StatefulSet) {
+				containers := sts.Spec.Template.Spec.Containers
+
+				bankVaults, found := seqs.First(seqs.Filter(seqs.FromSlice(containers), func(c corev1.Container) bool { return c.Name == "bank-vaults" }))
+				assert.True(t, found)
+
+				// Custom var should be appended
+				_, found = seqs.First(seqs.Filter(seqs.FromSlice(bankVaults.Env), func(e corev1.EnvVar) bool { return e.Name == "CUSTOM_VAR" }))
+				assert.True(t, found, "CUSTOM_VAR should be appended")
+
+				// Operator-set env vars should be preserved
+				_, found = seqs.First(seqs.Filter(seqs.FromSlice(bankVaults.Env), func(e corev1.EnvVar) bool { return e.Name == "POD_NAME" }))
+				assert.True(t, found, "operator POD_NAME env var should be preserved")
+
+				assert.NotEmpty(t, bankVaults.Image, "Image should be preserved")
+				assert.NotEmpty(t, bankVaults.Command, "Command should be preserved")
+			},
+		},
+		{
+			name: "add additional sidecar container",
+			vaultPodSpec: &vaultv1alpha1.EmbeddedPodSpec{
+				Containers: []corev1.Container{
+					{
+						Name:    "log-shipper",
+						Image:   "fluentd:latest",
+						Command: []string{"fluentd", "-c", "/etc/fluentd.conf"},
+					},
+				},
+			},
+			expectedContainerCount:     4,
+			expectedInitContainerCount: 1,
+			validate: func(t *testing.T, sts *appsv1.StatefulSet) {
+				containers := sts.Spec.Template.Spec.Containers
+
+				// New container should be appended
+				logShipper, found := seqs.First(seqs.Filter(seqs.FromSlice(containers), func(c corev1.Container) bool { return c.Name == "log-shipper" }))
+				assert.True(t, found, "log-shipper container should be appended")
+				assert.Equal(t, "fluentd:latest", logShipper.Image)
+				assert.Equal(t, []string{"fluentd", "-c", "/etc/fluentd.conf"}, logShipper.Command)
+
+				// Existing containers should be preserved
+				_, found = seqs.First(seqs.Filter(seqs.FromSlice(containers), func(c corev1.Container) bool { return c.Name == "vault" }))
+				assert.True(t, found, "vault container should be preserved")
+
+				_, found = seqs.First(seqs.Filter(seqs.FromSlice(containers), func(c corev1.Container) bool { return c.Name == "bank-vaults" }))
+				assert.True(t, found, "bank-vaults container should be preserved")
+			},
+		},
+		{
+			name: "override bank-vaults and add sidecar",
+			vaultPodSpec: &vaultv1alpha1.EmbeddedPodSpec{
+				Containers: []corev1.Container{
+					{
+						Name: "bank-vaults",
+						SecurityContext: &corev1.SecurityContext{
+							AllowPrivilegeEscalation: utils.To(false),
+						},
+					},
+					{
+						Name:  "log-shipper",
+						Image: "fluentd:latest",
+					},
+				},
+			},
+			expectedContainerCount:     4,
+			expectedInitContainerCount: 1,
+			validate: func(t *testing.T, sts *appsv1.StatefulSet) {
+				containers := sts.Spec.Template.Spec.Containers
+
+				bankVaults, found := seqs.First(seqs.Filter(seqs.FromSlice(containers), func(c corev1.Container) bool { return c.Name == "bank-vaults" }))
+				assert.True(t, found, "bank-vaults container should exist")
+				assert.NotNil(t, bankVaults.SecurityContext, "security context should be set")
+				assert.Equal(t, false, *bankVaults.SecurityContext.AllowPrivilegeEscalation)
+				assert.NotEmpty(t, bankVaults.Image, "bank-vaults image should be preserved")
+				assert.NotEmpty(t, bankVaults.Command, "bank-vaults command should be preserved")
+
+				logShipper, found := seqs.First(seqs.Filter(seqs.FromSlice(containers), func(c corev1.Container) bool { return c.Name == "log-shipper" }))
+				assert.True(t, found, "log-shipper container should be appended")
+				assert.Equal(t, "fluentd:latest", logShipper.Image)
+			},
+		},
+		{
+			name: "empty containers slice - no changes",
+			vaultPodSpec: &vaultv1alpha1.EmbeddedPodSpec{
+				Containers:     []corev1.Container{},
+				InitContainers: []corev1.Container{},
+			},
+			expectedContainerCount:     3,
+			expectedInitContainerCount: 1,
+			validate: func(t *testing.T, sts *appsv1.StatefulSet) {
+				containers := sts.Spec.Template.Spec.Containers
+				initContainers := sts.Spec.Template.Spec.InitContainers
+
+				_, found := seqs.First(seqs.Filter(seqs.FromSlice(containers), func(c corev1.Container) bool { return c.Name == "vault" }))
+				assert.True(t, found, "vault container should exist")
+
+				_, found = seqs.First(seqs.Filter(seqs.FromSlice(containers), func(c corev1.Container) bool { return c.Name == "bank-vaults" }))
+				assert.True(t, found, "bank-vaults container should exist")
+
+				_, found = seqs.First(seqs.Filter(seqs.FromSlice(initContainers), func(c corev1.Container) bool { return c.Name == "config-templating" }))
+				assert.True(t, found, "config-templating init container should exist")
+			},
+		},
+		{
+			name: "extra volumes from vaultPodSpec are appended to operator volumes",
+			vaultPodSpec: &vaultv1alpha1.EmbeddedPodSpec{
+				Volumes: []corev1.Volume{
+					{
+						Name: "custom-volume",
+						VolumeSource: corev1.VolumeSource{
+							EmptyDir: &corev1.EmptyDirVolumeSource{},
+						},
+					},
+				},
+			},
+			expectedContainerCount:     3,
+			expectedInitContainerCount: 1,
+			validate: func(t *testing.T, sts *appsv1.StatefulSet) {
+				volumes := sts.Spec.Template.Spec.Volumes
+
+				// Custom volume should be appended
+				_, found := seqs.First(seqs.Filter(seqs.FromSlice(volumes), func(v corev1.Volume) bool { return v.Name == "custom-volume" }))
+				assert.True(t, found, "custom volume should be appended")
+
+				// Operator-set volumes should be preserved
+				_, found = seqs.First(seqs.Filter(seqs.FromSlice(volumes), func(v corev1.Volume) bool { return v.Name == "vault-config" }))
+				assert.True(t, found, "operator vault-config volume should be preserved")
+
+				_, found = seqs.First(seqs.Filter(seqs.FromSlice(volumes), func(v corev1.Volume) bool { return v.Name == "vault-raw-config" }))
+				assert.True(t, found, "operator vault-raw-config volume should be preserved")
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			v := &vaultv1alpha1.Vault{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-vault",
+					Namespace: "default",
+				},
+				Spec: vaultv1alpha1.VaultSpec{
+					Size:         1,
+					Config:       extv1beta1.JSON{Raw: baseVaultConfig},
+					VaultPodSpec: tt.vaultPodSpec,
+				},
+			}
+
+			sts, err := statefulSetForVault(v, []corev1.Secret{}, map[string]string{}, service)
+			assert.NoError(t, err)
+			assert.NotNil(t, sts)
+			assert.Len(t, sts.Spec.Template.Spec.Containers, tt.expectedContainerCount)
+			assert.Len(t, sts.Spec.Template.Spec.InitContainers, tt.expectedInitContainerCount)
+			tt.validate(t, sts)
+		})
+	}
+}
