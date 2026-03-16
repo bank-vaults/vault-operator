@@ -1368,8 +1368,8 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 	}
 
 	// merge provided VaultContainerSpec into the Vault Container defined above
-	// the values in VaultContainerSpec will never overwrite fields defined in the PodSpec above
-	if err := mergo.Merge(&podSpec.Containers[0], v.Spec.VaultContainerSpec, mergo.WithOverride); err != nil {
+	// scalar fields from VaultContainerSpec override operator defaults, slices are appended
+	if err := mergo.Merge(&podSpec.Containers[0], v.Spec.VaultContainerSpec, mergo.WithOverride, mergo.WithAppendSlice); err != nil {
 		return nil, err
 	}
 
