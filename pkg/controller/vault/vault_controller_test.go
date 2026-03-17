@@ -952,3 +952,96 @@ func TestVaultPodSpecContainerMerge(t *testing.T) {
 		})
 	}
 }
+
+func TestVaultContainerSpecEnvAppend(t *testing.T) {
+	baseVaultConfig := []byte(`{"listener": {"tcp": {"address": "127.0.0.1:8200", "tls_disable": 1}}, "storage": {"file": {"path": "/vault/file"}}}`)
+	service := &corev1.Service{
+		Spec: corev1.ServiceSpec{
+			Type: corev1.ServiceTypeClusterIP,
+		},
+	}
+
+	tests := []struct {
+		name               string
+		vaultContainerSpec corev1.Container
+		validate           func(t *testing.T, sts *appsv1.StatefulSet)
+	}{
+		{
+			name: "env vars are appended not replaced",
+			vaultContainerSpec: corev1.Container{
+				Name: "vault",
+				Env: []corev1.EnvVar{
+					{Name: "CUSTOM_VAR", Value: "custom-value"},
+				},
+			},
+			validate: func(t *testing.T, sts *appsv1.StatefulSet) {
+				vault := sts.Spec.Template.Spec.Containers[0]
+				assert.Equal(t, "vault", vault.Name)
+
+				// Custom var should be appended
+				_, found := seqs.First(seqs.Filter(seqs.FromSlice(vault.Env), func(e corev1.EnvVar) bool { return e.Name == "CUSTOM_VAR" }))
+				assert.True(t, found, "CUSTOM_VAR should be appended")
+
+				// Operator-set env vars should be preserved
+				_, found = seqs.First(seqs.Filter(seqs.FromSlice(vault.Env), func(e corev1.EnvVar) bool { return e.Name == "VAULT_K8S_POD_NAME" }))
+				assert.True(t, found, "operator VAULT_K8S_POD_NAME env var should be preserved")
+			},
+		},
+		{
+			name: "volume mounts are appended not replaced",
+			vaultContainerSpec: corev1.Container{
+				Name: "vault",
+				VolumeMounts: []corev1.VolumeMount{
+					{Name: "custom-mount", MountPath: "/custom"},
+				},
+			},
+			validate: func(t *testing.T, sts *appsv1.StatefulSet) {
+				vault := sts.Spec.Template.Spec.Containers[0]
+
+				// Custom mount should be appended
+				_, found := seqs.First(seqs.Filter(seqs.FromSlice(vault.VolumeMounts), func(v corev1.VolumeMount) bool { return v.Name == "custom-mount" }))
+				assert.True(t, found, "custom-mount should be appended")
+
+				// Operator-set mounts should be preserved
+				_, found = seqs.First(seqs.Filter(seqs.FromSlice(vault.VolumeMounts), func(v corev1.VolumeMount) bool { return v.Name == "vault-config" }))
+				assert.True(t, found, "operator vault-config mount should be preserved")
+			},
+		},
+		{
+			name: "scalar fields still override",
+			vaultContainerSpec: corev1.Container{
+				Name:       "vault",
+				WorkingDir: "/custom/workdir",
+			},
+			validate: func(t *testing.T, sts *appsv1.StatefulSet) {
+				vault := sts.Spec.Template.Spec.Containers[0]
+				assert.Equal(t, "/custom/workdir", vault.WorkingDir)
+
+				// Operator-set fields should be preserved when not overridden
+				assert.NotEmpty(t, vault.Image, "Image should be preserved")
+				assert.Equal(t, []string{"server"}, vault.Args)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			v := &vaultv1alpha1.Vault{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-vault",
+					Namespace: "default",
+				},
+				Spec: vaultv1alpha1.VaultSpec{
+					Size:               1,
+					Config:             extv1beta1.JSON{Raw: baseVaultConfig},
+					VaultContainerSpec: tt.vaultContainerSpec,
+				},
+			}
+
+			sts, err := statefulSetForVault(v, []corev1.Secret{}, map[string]string{}, service)
+			assert.NoError(t, err)
+			assert.NotNil(t, sts)
+			tt.validate(t, sts)
+		})
+	}
+}
