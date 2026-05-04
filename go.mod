@@ -11,7 +11,7 @@ require (
 	github.com/hashicorp/vault/api v1.23.0
 	github.com/imdario/mergo v1.0.1
 	github.com/onsi/ginkgo/v2 v2.28.1
-	github.com/onsi/gomega v1.39.1
+	github.com/onsi/gomega v1.40.0
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.90.1
 	github.com/sagikazarmark/docker-ref v0.2.0
 	github.com/siliconbrain/go-seqs v1.0.0
