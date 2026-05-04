@@ -1108,7 +1108,3 @@ type VaultList struct {
 
 	Items []Vault `json:"items"`
 }
-
-func init() {
-	SchemeBuilder.Register(&Vault{}, &VaultList{})
-}
