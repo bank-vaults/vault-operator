@@ -730,6 +730,9 @@ func (usc *UnsealConfig) ToArgs(vault *Vault) []string {
 			"--azure-key-vault-name",
 			usc.Azure.KeyVaultName,
 		)
+		if usc.Azure.KeyPrefix != "" {
+			args = append(args, "--azure-key-vault-prefix", usc.Azure.KeyPrefix)
+		}
 	} else if usc.OCI != nil {
 		args = append(args,
 			"--mode",
@@ -927,6 +930,7 @@ type AlibabaUnsealConfig struct {
 // AzureUnsealConfig holds the parameters for Azure Key Vault based unsealing
 type AzureUnsealConfig struct {
 	KeyVaultName string `json:"keyVaultName"`
+	KeyPrefix    string `json:"keyPrefix,omitempty"`
 }
 
 // AWSUnsealConfig holds the parameters for AWS KMS based unsealing
