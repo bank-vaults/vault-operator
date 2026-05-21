@@ -212,10 +212,6 @@ spec:
   secretInitsConfig:
     - name: VAULT_LOG_LEVEL
       value: debug
-    - name: SKIP_CHOWN
-      value: "1"
-    - name: SKIP_SETCAP
-      value: "1"
 
   securityContext:
     runAsUser: 100
