@@ -212,3 +212,20 @@ spec:
   secretInitsConfig:
     - name: VAULT_LOG_LEVEL
       value: debug
+    - name: SKIP_CHOWN
+      value: "1"
+    - name: SKIP_SETCAP
+      value: "1"
+
+  securityContext:
+    runAsUser: 100
+    runAsGroup: 1000
+    fsGroup: 1000
+
+  vaultContainerSpec:
+    name: vault
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        add:
+          - IPC_LOCK
