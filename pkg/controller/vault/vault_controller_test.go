@@ -1045,3 +1045,48 @@ func TestVaultContainerSpecEnvAppend(t *testing.T) {
 		})
 	}
 }
+
+func TestDeploymentForConfigurerExternalConfigHash(t *testing.T) {
+	baseVaultConfig := []byte(`{"listener": {"tcp": {"address": "127.0.0.1:8200", "tls_disable": 1}}, "storage": {"file": {"path": "/vault/file"}}}`)
+
+	makeVault := func(externalConfig []byte) *vaultv1alpha1.Vault {
+		return &vaultv1alpha1.Vault{
+			ObjectMeta: metav1.ObjectMeta{Name: "test-vault", Namespace: "default"},
+			Spec: vaultv1alpha1.VaultSpec{
+				Config:         extv1beta1.JSON{Raw: baseVaultConfig},
+				ExternalConfig: extv1beta1.JSON{Raw: externalConfig},
+			},
+		}
+	}
+
+	t.Run("annotation is present on pod template", func(t *testing.T) {
+		v := makeVault([]byte(`{"auth": [{"type": "kubernetes"}]}`))
+		dep, err := deploymentForConfigurer(v, corev1.ConfigMapList{}, corev1.SecretList{}, map[string]string{})
+		assert.NoError(t, err)
+
+		hash, ok := dep.Spec.Template.Annotations["vault.banzaicloud.io/external-config-hash"]
+		assert.True(t, ok, "external-config-hash annotation should be present")
+		assert.NotEmpty(t, hash)
+	})
+
+	t.Run("same config produces same hash", func(t *testing.T) {
+		config := []byte(`{"auth": [{"type": "kubernetes"}]}`)
+		dep1, _ := deploymentForConfigurer(makeVault(config), corev1.ConfigMapList{}, corev1.SecretList{}, map[string]string{})
+		dep2, _ := deploymentForConfigurer(makeVault(config), corev1.ConfigMapList{}, corev1.SecretList{}, map[string]string{})
+
+		assert.Equal(t,
+			dep1.Spec.Template.Annotations["vault.banzaicloud.io/external-config-hash"],
+			dep2.Spec.Template.Annotations["vault.banzaicloud.io/external-config-hash"],
+		)
+	})
+
+	t.Run("different config produces different hash", func(t *testing.T) {
+		dep1, _ := deploymentForConfigurer(makeVault([]byte(`{"auth": [{"type": "kubernetes"}]}`)), corev1.ConfigMapList{}, corev1.SecretList{}, map[string]string{})
+		dep2, _ := deploymentForConfigurer(makeVault([]byte(`{"auth": [{"type": "ldap"}]}`)), corev1.ConfigMapList{}, corev1.SecretList{}, map[string]string{})
+
+		assert.NotEqual(t,
+			dep1.Spec.Template.Annotations["vault.banzaicloud.io/external-config-hash"],
+			dep2.Spec.Template.Annotations["vault.banzaicloud.io/external-config-hash"],
+		)
+	})
+}
