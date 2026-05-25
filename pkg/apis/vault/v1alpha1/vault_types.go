@@ -1062,6 +1062,27 @@ func (vault *Vault) ConfigJSON() ([]byte, error) {
 		}
 	}
 
+	if _, ok := config["disable_mlock"]; !ok {
+		version, err := vault.Spec.GetVersion()
+		// If the image tag can't be parsed (e.g. "latest", "dev"), assume modern Vault
+		// and apply the same default as 2.0.1+.
+		usesRaft := vault.Spec.GetStorageType() == "raft" || vault.Spec.GetHAStorageType() == "raft"
+		needsDefault := false
+		switch {
+		case err != nil:
+			needsDefault = usesRaft
+		case version.Major() < 2:
+			needsDefault = false
+		case version.Equal(semver.MustParse("2.0.0")):
+			needsDefault = true // memlock regression in 2.0.0 affects all storage backends
+		default:
+			needsDefault = usesRaft
+		}
+		if needsDefault {
+			config["disable_mlock"] = true
+		}
+	}
+
 	configJSON, err := json.Marshal(config)
 	if err != nil {
 		return nil, err

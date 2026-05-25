@@ -42,7 +42,6 @@ import (
 	monitorv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/siliconbrain/go-seqs/iter"
 	"github.com/siliconbrain/go-seqs/seqs"
-	"github.com/spf13/cast"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
@@ -1227,7 +1226,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 					Value: fmt.Sprintf("%s://$(VAULT_K8S_POD_NAME).%s.svc:%d", strings.ToLower(string(getVaultURIScheme(v))), v.Namespace, v.Spec.GetAPIPort()),
 				},
 			}))),
-			SecurityContext: withContainerSecurityContext(v),
+			SecurityContext: withContainerSecurityContext(),
 			// This probe allows Vault extra time to be responsive in a HTTPS manner during startup
 			// See: https://www.vaultproject.io/api/system/init.html
 			StartupProbe: &corev1.Probe{
@@ -1984,11 +1983,7 @@ func withNamespaceEnv(v *vaultv1alpha1.Vault, envs []corev1.EnvVar) []corev1.Env
 	}...)
 }
 
-func withContainerSecurityContext(v *vaultv1alpha1.Vault) *corev1.SecurityContext {
-	config := v.Spec.GetVaultConfig()
-	if cast.ToBool(config["disable_mlock"]) {
-		return &corev1.SecurityContext{}
-	}
+func withContainerSecurityContext() *corev1.SecurityContext {
 	return &corev1.SecurityContext{
 		Capabilities: &corev1.Capabilities{
 			Add: []corev1.Capability{"IPC_LOCK", "SETFCAP"},
