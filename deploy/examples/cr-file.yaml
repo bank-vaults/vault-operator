@@ -102,6 +102,7 @@ spec:
               max_ttl: 10m
 
   credentialsConfig:
+    env: ROOT_TOKEN
     path: /db-password/pw
     secretName: db-password
 
