@@ -1222,6 +1222,10 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 						},
 					},
 				},
+				{
+					Name:  "VAULT_API_ADDR",
+					Value: fmt.Sprintf("%s://$(VAULT_K8S_POD_NAME).%s.svc:%d", strings.ToLower(string(getVaultURIScheme(v))), v.Namespace, v.Spec.GetAPIPort()),
+				},
 			}))),
 			SecurityContext: withContainerSecurityContext(v),
 			// This probe allows Vault extra time to be responsive in a HTTPS manner during startup

@@ -18,8 +18,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"reflect"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -558,6 +560,34 @@ func (spec *VaultSpec) GetAPIPortName() string {
 		return "https-" + portName
 	}
 	return portName
+}
+
+// GetAPIPort returns the Vault listener port number parsed from
+// `spec.config.listener.tcp.address` (e.g. "0.0.0.0:8200" → 8200).
+// Falls back to 8200 if the address is missing, malformed, or doesn't include a port.
+//
+// Note: most of the operator currently hardcodes 8200 elsewhere; this helper is the
+// starting point for consolidating those references.
+const defaultVaultAPIPort = 8200
+
+func (spec *VaultSpec) GetAPIPort() int {
+	listener := spec.getListener()
+	tcp := cast.ToStringMap(listener["tcp"])
+	addr, ok := tcp["address"].(string)
+	if !ok || addr == "" {
+		return defaultVaultAPIPort
+	}
+
+	// Address format is "host:port" or "[ipv6]:port".
+	_, portStr, err := net.SplitHostPort(addr)
+	if err != nil {
+		return defaultVaultAPIPort
+	}
+	port, err := strconv.Atoi(portStr)
+	if err != nil || port <= 0 || port > 65535 {
+		return defaultVaultAPIPort
+	}
+	return port
 }
 
 // GetVaultLabels returns the Vault Pod, Secret and ConfigMap Labels

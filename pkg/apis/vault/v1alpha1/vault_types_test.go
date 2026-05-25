@@ -18,6 +18,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	extv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 )
 
 func TestGetVersion(t *testing.T) {
@@ -82,4 +83,37 @@ func TestGetConfigPath(t *testing.T) {
 		path := vault.GetConfigPath()
 		require.Equal(t, "/openbao/config", path)
 	})
+}
+
+func TestGetAPIPort(t *testing.T) {
+	mkSpec := func(addr string) *VaultSpec {
+		cfg := []byte(`{}`)
+		if addr != "" {
+			cfg = []byte(`{"listener":{"tcp":{"address":"` + addr + `"}}}`)
+		}
+		return &VaultSpec{Config: extv1beta1.JSON{Raw: cfg}}
+	}
+
+	tests := []struct {
+		name string
+		addr string
+		want int
+	}{
+		{name: "default when no config", addr: "", want: 8200},
+		{name: "default IPv4 listener", addr: "0.0.0.0:8200", want: 8200},
+		{name: "custom IPv4 port", addr: "0.0.0.0:9200", want: 9200},
+		{name: "loopback custom port", addr: "127.0.0.1:8201", want: 8201},
+		{name: "IPv6 listener", addr: "[::]:8200", want: 8200},
+		{name: "malformed address falls back", addr: "not-a-real-address", want: 8200},
+		{name: "non-numeric port falls back", addr: "0.0.0.0:vault", want: 8200},
+		{name: "out-of-range port falls back", addr: "0.0.0.0:70000", want: 8200},
+		{name: "negative port falls back", addr: "0.0.0.0:-1", want: 8200},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := mkSpec(tc.addr).GetAPIPort()
+			require.Equal(t, tc.want, got)
+		})
+	}
 }
