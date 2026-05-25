@@ -119,6 +119,39 @@ func TestGetAPIPort(t *testing.T) {
 	}
 }
 
+func TestShouldSkipEntrypointSetup(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		image    string
+		explicit *bool
+		want     bool
+	}{
+		// Default: only Vault 2.0.0 has the fatal-chown bug.
+		{name: "1.14.8", image: "hashicorp/vault:1.14.8", want: false},
+		{name: "1.21.5", image: "hashicorp/vault:1.21.5", want: false},
+		{name: "2.0.0", image: "hashicorp/vault:2.0.0", want: true},
+		{name: "2.0.1", image: "hashicorp/vault:2.0.1", want: false},
+		{name: "3.0.0", image: "hashicorp/vault:3.0.0", want: false},
+		{name: "latest", image: "hashicorp/vault:latest", want: false},
+		{name: "no tag", image: "hashicorp/vault", want: false},
+
+		// Explicit overrides the default.
+		{name: "1.14.8 + true", image: "hashicorp/vault:1.14.8", explicit: new(true), want: true},
+		{name: "2.0.1 + true", image: "hashicorp/vault:2.0.1", explicit: new(true), want: true},
+		{name: "2.0.0 + false", image: "hashicorp/vault:2.0.0", explicit: new(false), want: false},
+		{name: "latest + false", image: "hashicorp/vault:latest", explicit: new(false), want: false},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			spec := VaultSpec{Image: tc.image, SkipEntrypointSetup: tc.explicit}
+			require.Equal(t, tc.want, spec.ShouldSkipEntrypointSetup())
+		})
+	}
+}
+
 func TestConfigJSON_DisableMlockDefault(t *testing.T) {
 	t.Parallel()
 

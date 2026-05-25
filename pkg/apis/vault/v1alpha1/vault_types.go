@@ -200,6 +200,12 @@ type VaultSpec struct {
 	// default: false
 	PlatformManagedSecurityContext bool `json:"platformManagedSecurityContext,omitempty"`
 
+	// SkipEntrypointSetup sets SKIP_CHOWN=true and SKIP_SETCAP=true on the vault container,
+	// bypassing entrypoint steps that fail when vault runs as non-root. Tri-state: nil = auto
+	// (enabled only for Vault 2.0.0, which has a fatal-chown bug); true/false explicitly override.
+	// default: nil
+	SkipEntrypointSetup *bool `json:"skipEntrypointSetup,omitempty"`
+
 	// ServiceType is a Kubernetes Service type of the Vault Service.
 	// default: ClusterIP
 	ServiceType string `json:"serviceType,omitempty"`
@@ -560,6 +566,20 @@ func (spec *VaultSpec) GetAPIPortName() string {
 		return "https-" + portName
 	}
 	return portName
+}
+
+// ShouldSkipEntrypointSetup returns true if SKIP_CHOWN/SKIP_SETCAP should be set on
+// the vault container. Explicit user value wins; default targets only Vault 2.0.0
+// (fatal-chown bug). 1.x tolerates the chown failure; 2.0.1+ skips it on non-root.
+func (spec *VaultSpec) ShouldSkipEntrypointSetup() bool {
+	if spec.SkipEntrypointSetup != nil {
+		return *spec.SkipEntrypointSetup
+	}
+	version, err := spec.GetVersion()
+	if err != nil {
+		return false
+	}
+	return version.Equal(semver.MustParse("2.0.0"))
 }
 
 // GetAPIPort returns the Vault listener port number parsed from

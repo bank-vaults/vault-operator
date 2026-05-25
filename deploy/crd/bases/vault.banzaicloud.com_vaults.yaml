@@ -1277,6 +1277,8 @@ spec:
               size:
                 format: int32
                 type: integer
+              skipEntrypointSetup:
+                type: boolean
               statsdConfig:
                 type: string
               statsdDisabled:

@@ -668,6 +668,11 @@ func (in *VaultSpec) DeepCopyInto(out *VaultSpec) {
 		}
 	}
 	in.SecurityContext.DeepCopyInto(&out.SecurityContext)
+	if in.SkipEntrypointSetup != nil {
+		in, out := &in.SkipEntrypointSetup, &out.SkipEntrypointSetup
+		*out = new(bool)
+		**out = **in
+	}
 	if in.ServicePorts != nil {
 		in, out := &in.ServicePorts, &out.ServicePorts
 		*out = make(map[string]int32, len(*in))
