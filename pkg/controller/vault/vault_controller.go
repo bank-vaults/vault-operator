@@ -970,6 +970,13 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 		}
 	}
 
+	podAnnotations := withPrometheusAnnotations("9091", tlsAnnotations)
+
+	// Annotate the pod template with a hash of externalConfig so that
+	// a change in the configuration triggers a rolling restart of the configurer.
+	externalConfigHash := fmt.Sprintf("%x", sha256.Sum256(v.Spec.ExternalConfigJSON()))
+	podAnnotations["vault.banzaicloud.io/external-config-hash"] = externalConfigHash
+
 	dep := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        v.Name + "-configurer",
@@ -985,7 +992,7 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels:      withVaultConfigurerLabels(v, ls),
-					Annotations: withVaultConfigurerAnnotations(v, withPrometheusAnnotations("9091", tlsAnnotations)),
+					Annotations: withVaultConfigurerAnnotations(v, podAnnotations),
 				},
 				Spec: podSpec,
 			},
