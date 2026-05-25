@@ -34,7 +34,7 @@ help: ## Display this help
 ##@ Checks
 
 .PHONY: check
-check: test lint## Run tests and lint checks
+check: test lint ## Run tests and lint checks
 
 .PHONY: test
 test: ## Run tests
@@ -66,8 +66,8 @@ lint-docker:
 lint-yaml:
 	$(YAMLLINT_BIN) $(if ${CI},-f github,) --no-warnings .
 
-.PHONY: fmt
-fmt: ## Format code
+.PHONY: fix
+fix: ## Auto-fix lint issues (runs golangci-lint --fix)
 	$(GOLANGCI_LINT_BIN) run --fix
 
 .PHONY: license-cache
@@ -82,8 +82,8 @@ license-check: ## Run license check
 ##@ Development
 
 .PHONY: run
-run: deploy ## Run manager from your host
-	OPERATOR_NAME=vault-dev BANK_VAULTS_IMAGE=$(TEST_BANK_VAULTS_IMAGE)  go run cmd/main.go -verbose
+run: install ## Run manager from your host
+	OPERATOR_NAME=vault-dev BANK_VAULTS_IMAGE=$(TEST_BANK_VAULTS_IMAGE) go run cmd/main.go -verbose
 
 .PHONY: up
 up: ## Start kind development environment
@@ -120,22 +120,13 @@ artifacts: ## Build docker image and helm chart
 docker-build: ## Build docker image
 	docker build -t ${CONTAINER_IMAGE_REF} .
 
-# PLATFORMS defines the target platforms for  the manager image be build to provide support to multiple
-# architectures. (i.e. make docker-buildx CONTAINER_IMAGE_REF=myregistry/mypoperator:0.0.1). To use this option you need to:
-# - able to use docker buildx . More info: https://docs.docker.com/build/buildx/
-# - have enable BuildKit, More info: https://docs.docker.com/develop/develop-images/build_enhancements/
-# - be able to push the image for your registry (i.e. if you do not inform a valid value via CONTAINER_IMAGE_REF=<myregistry/image:<tag>> then the export will fail)
-# To properly provided solutions that supports more than one platform you should use this option.
-PLATFORMS ?= linux/arm64,linux/amd64,linux/s390x,linux/ppc64le
+# PLATFORMS lists the target platforms for the manager image. Override via:
+#   make docker-buildx PLATFORMS=linux/amd64 CONTAINER_IMAGE_REF=myregistry/myop:0.0.1
+# Requires `docker buildx` with BuildKit enabled and push permissions on the target registry.
+PLATFORMS ?= linux/arm64,linux/amd64
 .PHONY: docker-buildx
 docker-buildx: ## Build docker image for cross-platform support
-	# copy existing Dockerfile and insert --platform=${BUILDPLATFORM} into Dockerfile.cross, and preserve the original Dockerfile
-	sed -e '1 s/\(^FROM\)/FROM --platform=\$$\{BUILDPLATFORM\}/; t' -e ' 1,// s//FROM --platform=\$$\{BUILDPLATFORM\}/' Dockerfile > Dockerfile.cross
-	- docker buildx create --name project-v3-builder
-	docker buildx use project-v3-builder
-	- docker buildx build --push --platform=$(PLATFORMS) --tag ${CONTAINER_IMAGE_REF} -f Dockerfile.cross .
-	- docker buildx rm project-v3-builder
-	rm Dockerfile.cross
+	docker buildx build --push --platform=$(PLATFORMS) --tag ${CONTAINER_IMAGE_REF} .
 
 .PHONY: helm-chart
 helm-chart: gen-helm-crds
@@ -186,14 +177,14 @@ deploy: gen-manifests ## Deploy resources to the K8s cluster
 	$(KUSTOMIZE_BIN) build deploy/default | kubectl apply -f -
 
 .PHONY: undeploy
-clean: ## Clean resources from the K8s cluster
+undeploy: ## Remove operator resources from the K8s cluster (inverse of `deploy`)
 	$(KUSTOMIZE_BIN) build deploy/default | kubectl delete -f -
 
 ##@ Dependencies
 
 .PHONY: deps
 deps: bin/controller-gen bin/golangci-lint bin/helm bin/helm-docs bin/kind
-deps: bin/kurun bin/kustomize bin/licensei bin/setup-envtest
+deps: bin/kustomize bin/licensei bin/setup-envtest
 deps: ## Install dependencies
 
 # Dependency versions
@@ -201,7 +192,6 @@ GOLANGCI_LINT_VERSION = 2.12.2
 LICENSEI_VERSION = 0.9.0
 KIND_VERSION = 0.31.0
 HELM_VERSION = 4.2.0
-KURUN_VERSION = 0.7.0
 CODE_GENERATOR_VERSION = 0.36.1
 HELM_DOCS_VERSION = 1.14.2
 KUSTOMIZE_VERSION = 5.8.1
@@ -236,42 +226,67 @@ endif
 # full path to "bin" required for go install
 DEPS_BIN_PATH ?= $(shell pwd)/bin
 
-bin/kustomize:
+
+.PHONY: deps-clean
+deps-clean: ## Remove all installed dependency binaries (forces fresh install on next `make deps`)
+	rm -rf bin/
+
+bin/kustomize: bin/kustomize-v$(KUSTOMIZE_VERSION)
+	@ln -sf $(notdir $<) $@
+
+bin/kustomize-v$(KUSTOMIZE_VERSION):
 	@mkdir -p bin
 	GOBIN=$(DEPS_BIN_PATH) GO111MODULE=on go install sigs.k8s.io/kustomize/kustomize/v5@v$(KUSTOMIZE_VERSION)
+	@mv bin/kustomize $@
 
-bin/controller-gen:
+bin/controller-gen: bin/controller-gen-v$(CONTROLLER_TOOLS_VERSION)
+	@ln -sf $(notdir $<) $@
+
+bin/controller-gen-v$(CONTROLLER_TOOLS_VERSION):
 	@mkdir -p bin
 	GOBIN=$(DEPS_BIN_PATH) go install sigs.k8s.io/controller-tools/cmd/controller-gen@v$(CONTROLLER_TOOLS_VERSION)
+	@mv bin/controller-gen $@
 
 bin/setup-envtest:
 	@mkdir -p bin
 	GOBIN=$(DEPS_BIN_PATH) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
 
-bin/golangci-lint:
+bin/golangci-lint: bin/golangci-lint-v$(GOLANGCI_LINT_VERSION)
+	@ln -sf $(notdir $<) $@
+
+bin/golangci-lint-v$(GOLANGCI_LINT_VERSION):
 	@mkdir -p bin
 	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/v${GOLANGCI_LINT_VERSION}/install.sh | bash -s -- -b ./bin v${GOLANGCI_LINT_VERSION}
+	@mv bin/golangci-lint $@
 
-bin/licensei:
+bin/licensei: bin/licensei-v$(LICENSEI_VERSION)
+	@ln -sf $(notdir $<) $@
+
+bin/licensei-v$(LICENSEI_VERSION):
 	@mkdir -p bin
 	curl -sfL https://raw.githubusercontent.com/goph/licensei/master/install.sh | bash -s -- v${LICENSEI_VERSION}
+	@mv bin/licensei $@
 
-bin/kind:
-	@mkdir -p bin
-	curl -Lo bin/kind https://kind.sigs.k8s.io/dl/v${KIND_VERSION}/kind-$(shell uname -s | tr '[:upper:]' '[:lower:]')-$(shell uname -m | sed -e "s/aarch64/arm64/; s/x86_64/amd64/")
-	@chmod +x bin/kind
+bin/kind: bin/kind-v$(KIND_VERSION)
+	@ln -sf $(notdir $<) $@
 
-bin/helm:
+bin/kind-v$(KIND_VERSION):
 	@mkdir -p bin
-	curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | USE_SUDO=false HELM_INSTALL_DIR=bin DESIRED_VERSION=v${HELM_VERSION} bash
-	@chmod +x bin/helm
+	curl -fLo $@ https://kind.sigs.k8s.io/dl/v${KIND_VERSION}/kind-$(shell uname -s | tr '[:upper:]' '[:lower:]')-$(shell uname -m | sed -e "s/aarch64/arm64/; s/x86_64/amd64/")
+	@chmod +x $@
 
-bin/helm-docs:
-	@mkdir -p bin
-	curl -L https://github.com/norwoodj/helm-docs/releases/download/v${HELM_DOCS_VERSION}/helm-docs_${HELM_DOCS_VERSION}_$(shell uname)_x86_64.tar.gz | tar -zOxf - helm-docs > ./bin/helm-docs
-	@chmod +x bin/helm-docs
+bin/helm: bin/helm-v$(HELM_VERSION)
+	@ln -sf $(notdir $<) $@
 
-bin/kurun:
+bin/helm-v$(HELM_VERSION):
 	@mkdir -p bin
-	curl -Lo  bin/kurun https://github.com/banzaicloud/kurun/releases/download/${KURUN_VERSION}/kurun-$(shell uname -s | tr '[:upper:]' '[:lower:]')-$(shell uname -m | sed -e "s/aarch64/arm64/; s/x86_64/amd64/")
-	@chmod +x  bin/kurun
+	curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | USE_SUDO=false HELM_INSTALL_DIR=bin DESIRED_VERSION=v${HELM_VERSION} bash
+	@mv bin/helm $@
+
+bin/helm-docs: bin/helm-docs-v$(HELM_DOCS_VERSION)
+	@ln -sf $(notdir $<) $@
+
+bin/helm-docs-v$(HELM_DOCS_VERSION):
+	@mkdir -p bin
+	curl -fsSL https://github.com/norwoodj/helm-docs/releases/download/v${HELM_DOCS_VERSION}/helm-docs_${HELM_DOCS_VERSION}_$(shell uname)_$(shell uname -m | sed -e "s/aarch64/arm64/; s/x86_64/x86_64/").tar.gz | tar -zOxf - helm-docs > $@
+	@chmod +x $@
