@@ -1071,8 +1071,10 @@ func TestDeploymentForConfigurerExternalConfigHash(t *testing.T) {
 
 	t.Run("same config produces same hash", func(t *testing.T) {
 		config := []byte(`{"auth": [{"type": "kubernetes"}]}`)
-		dep1, _ := deploymentForConfigurer(makeVault(config), corev1.ConfigMapList{}, corev1.SecretList{}, map[string]string{})
-		dep2, _ := deploymentForConfigurer(makeVault(config), corev1.ConfigMapList{}, corev1.SecretList{}, map[string]string{})
+		dep1, err := deploymentForConfigurer(makeVault(config), corev1.ConfigMapList{}, corev1.SecretList{}, map[string]string{})
+		assert.NoError(t, err)
+		dep2, err := deploymentForConfigurer(makeVault(config), corev1.ConfigMapList{}, corev1.SecretList{}, map[string]string{})
+		assert.NoError(t, err)
 
 		assert.Equal(t,
 			dep1.Spec.Template.Annotations["vault.banzaicloud.io/external-config-hash"],
@@ -1081,8 +1083,10 @@ func TestDeploymentForConfigurerExternalConfigHash(t *testing.T) {
 	})
 
 	t.Run("different config produces different hash", func(t *testing.T) {
-		dep1, _ := deploymentForConfigurer(makeVault([]byte(`{"auth": [{"type": "kubernetes"}]}`)), corev1.ConfigMapList{}, corev1.SecretList{}, map[string]string{})
-		dep2, _ := deploymentForConfigurer(makeVault([]byte(`{"auth": [{"type": "ldap"}]}`)), corev1.ConfigMapList{}, corev1.SecretList{}, map[string]string{})
+		dep1, err := deploymentForConfigurer(makeVault([]byte(`{"auth": [{"type": "kubernetes"}]}`)), corev1.ConfigMapList{}, corev1.SecretList{}, map[string]string{})
+		assert.NoError(t, err)
+		dep2, err := deploymentForConfigurer(makeVault([]byte(`{"auth": [{"type": "ldap"}]}`)), corev1.ConfigMapList{}, corev1.SecretList{}, map[string]string{})
+		assert.NoError(t, err)
 
 		assert.NotEqual(t,
 			dep1.Spec.Template.Annotations["vault.banzaicloud.io/external-config-hash"],
