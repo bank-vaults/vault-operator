@@ -5,7 +5,7 @@ metadata:
 spec:
   size: 1
 
-  image: hashicorp/vault:1.14.8
+  image: hashicorp/vault:2.0.1
 
   # Specify the ServiceAccount where the Vault Pod and the Bank-Vaults configurer/unsealer is running
   serviceAccount: vault

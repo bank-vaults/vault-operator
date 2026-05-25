@@ -9,9 +9,9 @@ CRD_DIR ?= deploy/crd/bases
 HELM_DIR ?= deploy/charts/vault-operator
 
 # Default test data
-TEST_K8S_VERSION ?= 1.34.0
-TEST_VAULT_VERSION ?= 1.14.8
-TEST_BANK_VAULTS_VERSION ?= v1.32.1-softhsm
+TEST_K8S_VERSION ?= 1.35.0
+TEST_VAULT_VERSION ?= 2.0.1
+TEST_BANK_VAULTS_VERSION ?= v1.33.1-softhsm
 TEST_BANK_VAULTS_IMAGE ?= ghcr.io/bank-vaults/bank-vaults:$(TEST_BANK_VAULTS_VERSION)
 TEST_OPERATOR_VERSION ?= $(lastword $(subst :, ,$(CONTAINER_IMAGE_REF)))
 TEST_KIND_CLUSTER ?= vault-operator
@@ -197,15 +197,15 @@ deps: bin/kurun bin/kustomize bin/licensei bin/setup-envtest
 deps: ## Install dependencies
 
 # Dependency versions
-GOLANGCI_LINT_VERSION = 2.10.1
+GOLANGCI_LINT_VERSION = 2.12.2
 LICENSEI_VERSION = 0.9.0
-KIND_VERSION = 0.30.0
-HELM_VERSION = 4.0.1
+KIND_VERSION = 0.31.0
+HELM_VERSION = 4.2.0
 KURUN_VERSION = 0.7.0
-CODE_GENERATOR_VERSION = 0.34.2
+CODE_GENERATOR_VERSION = 0.36.1
 HELM_DOCS_VERSION = 1.14.2
-KUSTOMIZE_VERSION = 5.8.0
-CONTROLLER_TOOLS_VERSION = 0.19.0
+KUSTOMIZE_VERSION = 5.8.1
+CONTROLLER_TOOLS_VERSION = 0.21.0
 
 # Dependency binaries
 GOLANGCI_LINT_BIN := golangci-lint
@@ -250,7 +250,7 @@ bin/setup-envtest:
 
 bin/golangci-lint:
 	@mkdir -p bin
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | bash -s -- v${GOLANGCI_LINT_VERSION}
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/v${GOLANGCI_LINT_VERSION}/install.sh | bash -s -- -b ./bin v${GOLANGCI_LINT_VERSION}
 
 bin/licensei:
 	@mkdir -p bin
