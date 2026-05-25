@@ -15,9 +15,11 @@
 package v1alpha1
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	extv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 )
 
 func TestGetVersion(t *testing.T) {
@@ -82,4 +84,136 @@ func TestGetConfigPath(t *testing.T) {
 		path := vault.GetConfigPath()
 		require.Equal(t, "/openbao/config", path)
 	})
+}
+
+func TestGetAPIPort(t *testing.T) {
+	mkSpec := func(addr string) *VaultSpec {
+		cfg := []byte(`{}`)
+		if addr != "" {
+			cfg = []byte(`{"listener":{"tcp":{"address":"` + addr + `"}}}`)
+		}
+		return &VaultSpec{Config: extv1beta1.JSON{Raw: cfg}}
+	}
+
+	tests := []struct {
+		name string
+		addr string
+		want int
+	}{
+		{name: "default when no config", addr: "", want: 8200},
+		{name: "default IPv4 listener", addr: "0.0.0.0:8200", want: 8200},
+		{name: "custom IPv4 port", addr: "0.0.0.0:9200", want: 9200},
+		{name: "loopback custom port", addr: "127.0.0.1:8201", want: 8201},
+		{name: "IPv6 listener", addr: "[::]:8200", want: 8200},
+		{name: "malformed address falls back", addr: "not-a-real-address", want: 8200},
+		{name: "non-numeric port falls back", addr: "0.0.0.0:vault", want: 8200},
+		{name: "out-of-range port falls back", addr: "0.0.0.0:70000", want: 8200},
+		{name: "negative port falls back", addr: "0.0.0.0:-1", want: 8200},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := mkSpec(tc.addr).GetAPIPort()
+			require.Equal(t, tc.want, got)
+		})
+	}
+}
+
+func TestShouldSkipEntrypointSetup(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		image    string
+		explicit *bool
+		want     bool
+	}{
+		// Default: only Vault 2.0.0 has the fatal-chown bug.
+		{name: "1.14.8", image: "hashicorp/vault:1.14.8", want: false},
+		{name: "1.21.5", image: "hashicorp/vault:1.21.5", want: false},
+		{name: "2.0.0", image: "hashicorp/vault:2.0.0", want: true},
+		{name: "2.0.1", image: "hashicorp/vault:2.0.1", want: false},
+		{name: "3.0.0", image: "hashicorp/vault:3.0.0", want: false},
+		{name: "latest", image: "hashicorp/vault:latest", want: false},
+		{name: "no tag", image: "hashicorp/vault", want: false},
+
+		// Explicit overrides the default.
+		{name: "1.14.8 + true", image: "hashicorp/vault:1.14.8", explicit: new(true), want: true},
+		{name: "2.0.1 + true", image: "hashicorp/vault:2.0.1", explicit: new(true), want: true},
+		{name: "2.0.0 + false", image: "hashicorp/vault:2.0.0", explicit: new(false), want: false},
+		{name: "latest + false", image: "hashicorp/vault:latest", explicit: new(false), want: false},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			spec := VaultSpec{Image: tc.image, SkipEntrypointSetup: tc.explicit}
+			require.Equal(t, tc.want, spec.ShouldSkipEntrypointSetup())
+		})
+	}
+}
+
+func TestConfigJSON_DisableMlockDefault(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		image    string
+		config   string
+		wantSet  bool
+		wantBool bool
+	}{
+		// Vault 1.x — never inject
+		{name: "1.14.8 raft → no inject", image: "hashicorp/vault:1.14.8",
+			config: `{"storage":{"raft":{"path":"/vault/file"}}}`, wantSet: false},
+		{name: "1.21.5 file → no inject", image: "hashicorp/vault:1.21.5",
+			config: `{"storage":{"file":{"path":"/vault/file"}}}`, wantSet: false},
+
+		// Vault 2.0.0 — inject for all backends (memlock regression)
+		{name: "2.0.0 raft → inject true", image: "hashicorp/vault:2.0.0",
+			config: `{"storage":{"raft":{"path":"/vault/file"}}}`, wantSet: true, wantBool: true},
+		{name: "2.0.0 file → inject true (mlock broken)", image: "hashicorp/vault:2.0.0",
+			config: `{"storage":{"file":{"path":"/vault/file"}}}`, wantSet: true, wantBool: true},
+
+		// Vault 2.0.1+ — raft only
+		{name: "2.0.1 raft → inject true", image: "hashicorp/vault:2.0.1",
+			config: `{"storage":{"raft":{"path":"/vault/file"}}}`, wantSet: true, wantBool: true},
+		{name: "2.0.1 file → no inject", image: "hashicorp/vault:2.0.1",
+			config: `{"storage":{"file":{"path":"/vault/file"}}}`, wantSet: false},
+		{name: "2.0.1 raft as ha_storage → inject true", image: "hashicorp/vault:2.0.1",
+			config: `{"storage":{"consul":{}},"ha_storage":{"raft":{"path":"/vault/file"}}}`, wantSet: true, wantBool: true},
+
+		// User explicit values preserved
+		{name: "2.0.1 raft, user true → preserved", image: "hashicorp/vault:2.0.1",
+			config: `{"disable_mlock":true,"storage":{"raft":{"path":"/vault/file"}}}`, wantSet: true, wantBool: true},
+		{name: "2.0.1 raft, user false → preserved (no override)", image: "hashicorp/vault:2.0.1",
+			config: `{"disable_mlock":false,"storage":{"raft":{"path":"/vault/file"}}}`, wantSet: true, wantBool: false},
+		{name: "1.14.8 file, user true → preserved", image: "hashicorp/vault:1.14.8",
+			config: `{"disable_mlock":true,"storage":{"file":{"path":"/vault/file"}}}`, wantSet: true, wantBool: true},
+
+		// Unparseable tag → modern fallback
+		{name: "latest tag, raft → inject true", image: "hashicorp/vault:latest",
+			config: `{"storage":{"raft":{"path":"/vault/file"}}}`, wantSet: true, wantBool: true},
+		{name: "latest tag, file → no inject", image: "hashicorp/vault:latest",
+			config: `{"storage":{"file":{"path":"/vault/file"}}}`, wantSet: false},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			v := &Vault{Spec: VaultSpec{
+				Image:  tc.image,
+				Config: extv1beta1.JSON{Raw: []byte(tc.config)},
+			}}
+			out, err := v.ConfigJSON()
+			require.NoError(t, err)
+
+			var got map[string]any
+			require.NoError(t, json.Unmarshal(out, &got))
+
+			val, present := got["disable_mlock"]
+			require.Equal(t, tc.wantSet, present, "disable_mlock presence")
+			if tc.wantSet {
+				require.Equal(t, tc.wantBool, val, "disable_mlock value")
+			}
+		})
+	}
 }

@@ -4,7 +4,7 @@ metadata:
   name: "vault"
 spec:
   size: 3
-  image: hashicorp/vault:1.14.8
+  image: hashicorp/vault:2.0.1
   bankVaultsImage: ghcr.io/bank-vaults/bank-vaults:latest
 
   # Schedule the pods on the same node, since we are using hostPath storage
@@ -26,6 +26,9 @@ spec:
   # A YAML representation of a final vault config file.
   # See https://www.vaultproject.io/docs/configuration/ for more information.
   config:
+    # Required by Vault 2.0+ for Integrated Storage (raft).
+    # See: https://developer.hashicorp.com/vault/docs/configuration#disable_mlock
+    disable_mlock: true
     storage:
       file:
         path: /vault/file

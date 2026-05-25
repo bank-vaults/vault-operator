@@ -173,8 +173,8 @@ jobs:
     needs: [artifacts]
     strategy:
       matrix:
-        k8s_version: ["v1.28.9", "v1.29.4", "v1.30.0"]
-        vault_version: ["1.14.8"] # latest versions with MPL 2.0 license
+        k8s_version: ["v1.33.0", "v1.34.0", "v1.35.0"]
+        vault_version: ["1.21.3", "1.21.4", "2.0.0", "2.0.1"]
 
     steps:
       - name: Checkout repository
@@ -241,6 +241,6 @@ jobs:
       - name: Operator Multi-DC Raft test
         run: ./deploy/dev/multi-dc/test/multi-dc-raft.sh install
         env:
-          VAULT_VERSION: 1.14.8
-          BANK_VAULTS_VERSION: v1.32.1
+          VAULT_VERSION: 2.0.1
+          BANK_VAULTS_VERSION: v1.33.1
           OPERATOR_VERSION: ${{ needs.artifacts.outputs.container-image-tag }}

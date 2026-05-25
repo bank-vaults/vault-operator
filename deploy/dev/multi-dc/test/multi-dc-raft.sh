@@ -13,8 +13,8 @@ set -xeo pipefail
 # - vault
 #
 
-METALLB_VERSION=v0.13.10
-VAULT_VERSION="${VAULT_VERSION:-1.14.8}"
+METALLB_VERSION=v0.16.0
+VAULT_VERSION="${VAULT_VERSION:-2.0.1}"
 BANK_VAULTS_VERSION="${BANK_VAULTS_VERSION:-latest}"
 VAULT_TOKEN=$(uuidgen)
 export VAULT_TOKEN
@@ -75,7 +75,7 @@ function infra_setup {
 
     node_setup tertiary 172.18.3.255/25
 
-    docker run -d --rm --network kind -e VAULT_DEV_ROOT_TOKEN_ID="${VAULT_TOKEN}" --name central-vault hashicorp/vault:"${VAULT_VERSION}"
+    docker run -d --rm --cap-add IPC_LOCK --network kind -e VAULT_DEV_ROOT_TOKEN_ID="${VAULT_TOKEN}" --name central-vault hashicorp/vault:"${VAULT_VERSION}"
     CENTRAL_VAULT_ADDRESS=$(docker inspect central-vault --format '{{.NetworkSettings.Networks.kind.IPAddress}}')
     export CENTRAL_VAULT_ADDRESS
 }

@@ -4,7 +4,7 @@ metadata:
   name: vault
 spec:
   size: 1
-  image: hashicorp/vault:1.14.8
+  image: hashicorp/vault:2.0.1
   bankVaultsImage: ghcr.io/bank-vaults/bank-vaults:latest
 
   serviceAccount: vault
@@ -102,6 +102,7 @@ spec:
               max_ttl: 10m
 
   credentialsConfig:
+    env: ROOT_TOKEN
     path: /db-password/pw
     secretName: db-password
 

@@ -18,8 +18,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"reflect"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -197,6 +199,12 @@ type VaultSpec struct {
 	// For example, on OpenShift this allows the SCC to manage the security context in restricted namespaces.
 	// default: false
 	PlatformManagedSecurityContext bool `json:"platformManagedSecurityContext,omitempty"`
+
+	// SkipEntrypointSetup sets SKIP_CHOWN=true and SKIP_SETCAP=true on the vault container,
+	// bypassing entrypoint steps that fail when vault runs as non-root. Tri-state: nil = auto
+	// (enabled only for Vault 2.0.0, which has a fatal-chown bug); true/false explicitly override.
+	// default: nil
+	SkipEntrypointSetup *bool `json:"skipEntrypointSetup,omitempty"`
 
 	// ServiceType is a Kubernetes Service type of the Vault Service.
 	// default: ClusterIP
@@ -558,6 +566,44 @@ func (spec *VaultSpec) GetAPIPortName() string {
 		return "https-" + portName
 	}
 	return portName
+}
+
+// ShouldSkipEntrypointSetup returns true if SKIP_CHOWN/SKIP_SETCAP should be set on
+// the vault container. Explicit user value wins; default targets only Vault 2.0.0
+// (fatal-chown bug). 1.x tolerates the chown failure; 2.0.1+ skips it on non-root.
+func (spec *VaultSpec) ShouldSkipEntrypointSetup() bool {
+	if spec.SkipEntrypointSetup != nil {
+		return *spec.SkipEntrypointSetup
+	}
+	version, err := spec.GetVersion()
+	if err != nil {
+		return false
+	}
+	return version.Equal(semver.MustParse("2.0.0"))
+}
+
+// GetAPIPort returns the listener port parsed from spec.config.listener.tcp.address
+// (e.g. "0.0.0.0:8200" → 8200). Falls back to 8200 if missing or malformed.
+const defaultVaultAPIPort = 8200
+
+func (spec *VaultSpec) GetAPIPort() int {
+	listener := spec.getListener()
+	tcp := cast.ToStringMap(listener["tcp"])
+	addr, ok := tcp["address"].(string)
+	if !ok || addr == "" {
+		return defaultVaultAPIPort
+	}
+
+	// Address format is "host:port" or "[ipv6]:port".
+	_, portStr, err := net.SplitHostPort(addr)
+	if err != nil {
+		return defaultVaultAPIPort
+	}
+	port, err := strconv.Atoi(portStr)
+	if err != nil || port <= 0 || port > 65535 {
+		return defaultVaultAPIPort
+	}
+	return port
 }
 
 // GetVaultLabels returns the Vault Pod, Secret and ConfigMap Labels
@@ -1029,6 +1075,22 @@ func (vault *Vault) ConfigJSON() ([]byte, error) {
 
 		if err := mergo.Merge(&config, serviceRegistration); err != nil {
 			return nil, err
+		}
+	}
+
+	// Default disable_mlock for Vault versions that need it: 2.0.0 (memlock broken on
+	// all backends) and 2.0.1+ with raft (vault refuses to start without it). 1.x left
+	// untouched to preserve mlock-on default. Unparseable tags assume modern (raft-only).
+	if _, ok := config["disable_mlock"]; !ok {
+		usesRaft := vault.Spec.GetStorageType() == "raft" || vault.Spec.GetHAStorageType() == "raft"
+		version, err := vault.Spec.GetVersion()
+		switch {
+		case err == nil && version.Major() < 2:
+			// 1.x: leave unset
+		case err == nil && version.Equal(semver.MustParse("2.0.0")):
+			config["disable_mlock"] = true
+		case usesRaft:
+			config["disable_mlock"] = true
 		}
 	}
 

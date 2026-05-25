@@ -42,7 +42,6 @@ import (
 	monitorv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/siliconbrain/go-seqs/iter"
 	"github.com/siliconbrain/go-seqs/seqs"
-	"github.com/spf13/cast"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
@@ -1213,7 +1212,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 			Name:            "vault",
 			Args:            []string{"server"},
 			Ports:           containerPorts,
-			Env: withClusterAddr(v, service, withCredentialsEnv(v, withVaultEnv(v, []corev1.EnvVar{
+			Env: withClusterAddr(v, service, withCredentialsEnv(v, withVaultEnv(v, withEntrypointSkipEnv(v, []corev1.EnvVar{
 				{
 					Name: "VAULT_K8S_POD_NAME",
 					ValueFrom: &corev1.EnvVarSource{
@@ -1222,8 +1221,12 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 						},
 					},
 				},
-			}))),
-			SecurityContext: withContainerSecurityContext(v),
+				{
+					Name:  "VAULT_API_ADDR",
+					Value: fmt.Sprintf("%s://$(VAULT_K8S_POD_NAME).%s.svc:%d", strings.ToLower(string(getVaultURIScheme(v))), v.Namespace, v.Spec.GetAPIPort()),
+				},
+			})))),
+			SecurityContext: withContainerSecurityContext(),
 			// This probe allows Vault extra time to be responsive in a HTTPS manner during startup
 			// See: https://www.vaultproject.io/api/system/init.html
 			StartupProbe: &corev1.Probe{
@@ -1980,16 +1983,22 @@ func withNamespaceEnv(v *vaultv1alpha1.Vault, envs []corev1.EnvVar) []corev1.Env
 	}...)
 }
 
-func withContainerSecurityContext(v *vaultv1alpha1.Vault) *corev1.SecurityContext {
-	config := v.Spec.GetVaultConfig()
-	if cast.ToBool(config["disable_mlock"]) {
-		return &corev1.SecurityContext{}
-	}
+func withContainerSecurityContext() *corev1.SecurityContext {
 	return &corev1.SecurityContext{
 		Capabilities: &corev1.Capabilities{
 			Add: []corev1.Capability{"IPC_LOCK", "SETFCAP"},
 		},
 	}
+}
+
+func withEntrypointSkipEnv(v *vaultv1alpha1.Vault, envs []corev1.EnvVar) []corev1.EnvVar {
+	if !v.Spec.ShouldSkipEntrypointSetup() {
+		return envs
+	}
+	return append(envs,
+		corev1.EnvVar{Name: "SKIP_CHOWN", Value: "true"},
+		corev1.EnvVar{Name: "SKIP_SETCAP", Value: "true"},
+	)
 }
 
 func withPodSecurityContext(v *vaultv1alpha1.Vault) *corev1.PodSecurityContext {
