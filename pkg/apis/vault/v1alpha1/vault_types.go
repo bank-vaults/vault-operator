@@ -582,12 +582,8 @@ func (spec *VaultSpec) ShouldSkipEntrypointSetup() bool {
 	return version.Equal(semver.MustParse("2.0.0"))
 }
 
-// GetAPIPort returns the Vault listener port number parsed from
-// `spec.config.listener.tcp.address` (e.g. "0.0.0.0:8200" → 8200).
-// Falls back to 8200 if the address is missing, malformed, or doesn't include a port.
-//
-// Note: most of the operator currently hardcodes 8200 elsewhere; this helper is the
-// starting point for consolidating those references.
+// GetAPIPort returns the listener port parsed from spec.config.listener.tcp.address
+// (e.g. "0.0.0.0:8200" → 8200). Falls back to 8200 if missing or malformed.
 const defaultVaultAPIPort = 8200
 
 func (spec *VaultSpec) GetAPIPort() int {
@@ -1082,23 +1078,18 @@ func (vault *Vault) ConfigJSON() ([]byte, error) {
 		}
 	}
 
+	// Default disable_mlock for Vault versions that need it: 2.0.0 (memlock broken on
+	// all backends) and 2.0.1+ with raft (vault refuses to start without it). 1.x left
+	// untouched to preserve mlock-on default. Unparseable tags assume modern (raft-only).
 	if _, ok := config["disable_mlock"]; !ok {
-		version, err := vault.Spec.GetVersion()
-		// If the image tag can't be parsed (e.g. "latest", "dev"), assume modern Vault
-		// and apply the same default as 2.0.1+.
 		usesRaft := vault.Spec.GetStorageType() == "raft" || vault.Spec.GetHAStorageType() == "raft"
-		needsDefault := false
+		version, err := vault.Spec.GetVersion()
 		switch {
-		case err != nil:
-			needsDefault = usesRaft
-		case version.Major() < 2:
-			needsDefault = false
-		case version.Equal(semver.MustParse("2.0.0")):
-			needsDefault = true // memlock regression in 2.0.0 affects all storage backends
-		default:
-			needsDefault = usesRaft
-		}
-		if needsDefault {
+		case err == nil && version.Major() < 2:
+			// 1.x: leave unset
+		case err == nil && version.Equal(semver.MustParse("2.0.0")):
+			config["disable_mlock"] = true
+		case usesRaft:
 			config["disable_mlock"] = true
 		}
 	}
