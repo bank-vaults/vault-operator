@@ -1,10 +1,8 @@
-## Version compatibility matrix
+# Version compatibility matrix
 
-| Operator | Bank-Vaults CLI | Vault[^1]                                       |
-|----------|-----------------|-------------------------------------------------|
-| 1.22.x   | >= 1.33.1       | 1.21.x<br>2.0.x                                 |
-| 1.21.x   | >= 1.20.3       | 1.11.x<br>1.12.x<br>1.13.x<br>1.14.x            |
-| 1.20.x   | >= 1.19.0       | 1.10.x<br>1.11.x<br>1.12.x<br>1.13.x            |
+| Operator  | Bank-Vaults CLI | Vault[^1]                                       |
+|-----------|-----------------|-------------------------------------------------|
+| 1.24.x    | >= 1.33.1       | 1.21.x<br>2.0.x                                 |
 
 We provide patches and security fixes for the last two minor versions.
 
