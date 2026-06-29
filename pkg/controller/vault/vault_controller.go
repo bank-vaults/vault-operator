@@ -1226,7 +1226,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 					Value: fmt.Sprintf("%s://$(VAULT_K8S_POD_NAME).%s.svc:%d", strings.ToLower(string(getVaultURIScheme(v))), v.Namespace, v.Spec.GetAPIPort()),
 				},
 			})))),
-			SecurityContext: withContainerSecurityContext(),
+			SecurityContext: withContainerSecurityContext(v),
 			// This probe allows Vault extra time to be responsive in a HTTPS manner during startup
 			// See: https://www.vaultproject.io/api/system/init.html
 			StartupProbe: &corev1.Probe{
@@ -1983,7 +1983,12 @@ func withNamespaceEnv(v *vaultv1alpha1.Vault, envs []corev1.EnvVar) []corev1.Env
 	}...)
 }
 
-func withContainerSecurityContext() *corev1.SecurityContext {
+func withContainerSecurityContext(v *vaultv1alpha1.Vault) *corev1.SecurityContext {
+	// When platform-managed security context is enabled, let the platform (e.g. OpenShift SCC)
+	// own the container security context instead of injecting capabilities it may forbid.
+	if v.Spec.PlatformManagedSecurityContext {
+		return nil
+	}
 	return &corev1.SecurityContext{
 		Capabilities: &corev1.Capabilities{
 			Add: []corev1.Capability{"IPC_LOCK", "SETFCAP"},
