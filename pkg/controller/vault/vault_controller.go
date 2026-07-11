@@ -1989,6 +1989,13 @@ func withContainerSecurityContext(v *vaultv1alpha1.Vault) *corev1.SecurityContex
 	if v.Spec.PlatformManagedSecurityContext {
 		return nil
 	}
+	// IPC_LOCK and SETFCAP are only needed to support memory locking (mlock). When the operator
+	// is told to skip them, return an empty security context so the vault container can meet the
+	// PodSecurity "restricted" profile — the injected add would otherwise be forbidden and cannot
+	// be removed via vaultContainerSpec, whose capabilities merge appends.
+	if v.Spec.SkipVaultContainerCapabilities {
+		return &corev1.SecurityContext{}
+	}
 	return &corev1.SecurityContext{
 		Capabilities: &corev1.Capabilities{
 			Add: []corev1.Capability{"IPC_LOCK", "SETFCAP"},

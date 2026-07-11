@@ -200,6 +200,15 @@ type VaultSpec struct {
 	// default: false
 	PlatformManagedSecurityContext bool `json:"platformManagedSecurityContext,omitempty"`
 
+	// SkipVaultContainerCapabilities, when set to true, stops the operator from adding the
+	// IPC_LOCK and SETFCAP capabilities to the vault container. These capabilities only enable
+	// memory locking (mlock); when mlock is disabled they are unnecessary and prevent the vault
+	// container from satisfying the Pod Security Standards "restricted" profile (the injected add
+	// cannot be removed via vaultContainerSpec, which appends). Unlike PlatformManagedSecurityContext,
+	// the pod security context is left untouched.
+	// default: false
+	SkipVaultContainerCapabilities bool `json:"skipVaultContainerCapabilities,omitempty"`
+
 	// SkipEntrypointSetup sets SKIP_CHOWN=true and SKIP_SETCAP=true on the vault container,
 	// bypassing entrypoint steps that fail when vault runs as non-root. Tri-state: nil = auto
 	// (enabled only for Vault 2.0.0, which has a fatal-chown bug); true/false explicitly override.

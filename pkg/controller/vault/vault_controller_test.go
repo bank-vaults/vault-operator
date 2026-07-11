@@ -953,6 +953,71 @@ func TestVaultPodSpecContainerMerge(t *testing.T) {
 	}
 }
 
+func TestWithContainerSecurityContextCapabilities(t *testing.T) {
+	baseVaultConfig := []byte(`{"listener": {"tcp": {"address": "127.0.0.1:8200", "tls_disable": 1}}, "storage": {"file": {"path": "/vault/file"}}}`)
+	service := &corev1.Service{
+		Spec: corev1.ServiceSpec{
+			Type: corev1.ServiceTypeClusterIP,
+		},
+	}
+
+	tests := []struct {
+		name                           string
+		skipVaultContainerCapabilities bool
+		platformManagedSecurityContext bool
+		validate                       func(t *testing.T, vault corev1.Container)
+	}{
+		{
+			name: "default - IPC_LOCK and SETFCAP added",
+			validate: func(t *testing.T, vault corev1.Container) {
+				assert.NotNil(t, vault.SecurityContext, "security context should be set")
+				assert.NotNil(t, vault.SecurityContext.Capabilities, "capabilities should be set")
+				assert.Equal(t, []corev1.Capability{"IPC_LOCK", "SETFCAP"}, vault.SecurityContext.Capabilities.Add)
+			},
+		},
+		{
+			name:                           "skipVaultContainerCapabilities - no capabilities injected",
+			skipVaultContainerCapabilities: true,
+			validate: func(t *testing.T, vault corev1.Container) {
+				assert.NotNil(t, vault.SecurityContext, "security context should still be set")
+				assert.Nil(t, vault.SecurityContext.Capabilities, "no capabilities should be injected")
+			},
+		},
+		{
+			name:                           "platformManagedSecurityContext - no container security context",
+			platformManagedSecurityContext: true,
+			validate: func(t *testing.T, vault corev1.Container) {
+				assert.Nil(t, vault.SecurityContext, "container security context should be nil")
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			v := &vaultv1alpha1.Vault{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-vault",
+					Namespace: "default",
+				},
+				Spec: vaultv1alpha1.VaultSpec{
+					Size:                           1,
+					Config:                         extv1beta1.JSON{Raw: baseVaultConfig},
+					SkipVaultContainerCapabilities: tt.skipVaultContainerCapabilities,
+					PlatformManagedSecurityContext: tt.platformManagedSecurityContext,
+				},
+			}
+
+			sts, err := statefulSetForVault(v, []corev1.Secret{}, map[string]string{}, service)
+			assert.NoError(t, err)
+			assert.NotNil(t, sts)
+
+			vault, found := seqs.First(seqs.Filter(seqs.FromSlice(sts.Spec.Template.Spec.Containers), func(c corev1.Container) bool { return c.Name == "vault" }))
+			assert.True(t, found, "vault container should exist")
+			tt.validate(t, vault)
+		})
+	}
+}
+
 func TestVaultContainerSpecEnvAppend(t *testing.T) {
 	baseVaultConfig := []byte(`{"listener": {"tcp": {"address": "127.0.0.1:8200", "tls_disable": 1}}, "storage": {"file": {"path": "/vault/file"}}}`)
 	service := &corev1.Service{
