@@ -52,7 +52,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -683,14 +682,14 @@ func serviceMonitorForVault(v *vaultv1alpha1.Vault) *monitorv1.ServiceMonitor {
 		endpoint := monitorv1.Endpoint{
 			Interval: "30s",
 			Port:     v.Spec.GetAPIPortName(),
-			Scheme:   To(monitorv1.Scheme(strings.ToLower(string(getVaultURIScheme(v))))),
+			Scheme:   new(monitorv1.Scheme(strings.ToLower(string(getVaultURIScheme(v))))),
 			Params:   map[string][]string{"format": {"prometheus"}},
 			Path:     "/v1/sys/metrics",
 			HTTPConfigWithProxyAndTLSFiles: monitorv1.HTTPConfigWithProxyAndTLSFiles{
 				HTTPConfigWithTLSFiles: monitorv1.HTTPConfigWithTLSFiles{
 					TLSConfig: &monitorv1.TLSConfig{
 						SafeTLSConfig: monitorv1.SafeTLSConfig{
-							InsecureSkipVerify: ptr.To(true),
+							InsecureSkipVerify: new(true),
 						},
 					},
 				},
@@ -926,7 +925,7 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 
 	podSpec := corev1.PodSpec{
 		ServiceAccountName:           v.Spec.GetServiceAccount(),
-		AutomountServiceAccountToken: ptr.To(true),
+		AutomountServiceAccountToken: new(true),
 
 		Containers: []corev1.Container{
 			{
@@ -987,7 +986,7 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 			Selector: &metav1.LabelSelector{
 				MatchLabels: ls,
 			},
-			RevisionHistoryLimit: ptr.To(int32(0)),
+			RevisionHistoryLimit: new(int32(0)),
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels:      withVaultConfigurerLabels(v, ls),
@@ -1302,8 +1301,8 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 			VolumeMounts:    withHSMVolumeMount(v, nil),
 			Resources:       getHSMDaemonResource(v),
 			SecurityContext: &corev1.SecurityContext{
-				Privileged: ptr.To(true),
-				RunAsUser:  ptr.To(int64(0)),
+				Privileged: new(true),
+				RunAsUser:  new(int64(0)),
 			},
 		})
 	}
@@ -1321,7 +1320,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 		Affinity: affinity,
 
 		ServiceAccountName:           v.Spec.GetServiceAccount(),
-		AutomountServiceAccountToken: ptr.To(true),
+		AutomountServiceAccountToken: new(true),
 
 		InitContainers: withVaultInitContainers(v, []corev1.Container{
 			{
@@ -1727,7 +1726,7 @@ func withVeleroContainer(v *vaultv1alpha1.Vault, containers []corev1.Container) 
 			Command:         []string{"/bin/bash", "-c", "sleep infinity"},
 			VolumeMounts:    withVaultVolumeMounts(v, nil),
 			SecurityContext: &corev1.SecurityContext{
-				Privileged: ptr.To(true),
+				Privileged: new(true),
 			},
 			Resources: corev1.ResourceRequirements{
 				Requests: corev1.ResourceList{
@@ -2332,11 +2331,6 @@ func (r *ReconcileVault) handleStorageConfiguration(ctx context.Context, v *vaul
 	}
 
 	return nil
-}
-
-// To returns a reference to the given value
-func To[T any](v T) *T {
-	return &v
 }
 
 // mergeContainersByName merges containers from src into dst by name.

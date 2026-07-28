@@ -20,7 +20,6 @@ import (
 	"testing"
 
 	vaultv1alpha1 "github.com/bank-vaults/vault-operator/pkg/apis/vault/v1alpha1"
-	"github.com/bank-vaults/vault-operator/pkg/utils"
 	"github.com/siliconbrain/go-seqs/seqs"
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
@@ -143,8 +142,8 @@ func TestVaultConfigurerPodSpecContainerMerge(t *testing.T) {
 					{
 						Name: "bank-vaults",
 						SecurityContext: &corev1.SecurityContext{
-							RunAsUser:  utils.To(int64(1000)),
-							Privileged: utils.To(false),
+							RunAsUser:  new(int64(1000)),
+							Privileged: new(false),
 						},
 						Env: []corev1.EnvVar{
 							{
@@ -675,8 +674,8 @@ func TestVaultPodSpecContainerMerge(t *testing.T) {
 					{
 						Name: "bank-vaults",
 						SecurityContext: &corev1.SecurityContext{
-							AllowPrivilegeEscalation: utils.To(false),
-							ReadOnlyRootFilesystem:   utils.To(true),
+							AllowPrivilegeEscalation: new(false),
+							ReadOnlyRootFilesystem:   new(true),
 							Capabilities: &corev1.Capabilities{
 								Drop: []corev1.Capability{"ALL"},
 							},
@@ -713,8 +712,8 @@ func TestVaultPodSpecContainerMerge(t *testing.T) {
 					{
 						Name: "config-templating",
 						SecurityContext: &corev1.SecurityContext{
-							AllowPrivilegeEscalation: utils.To(false),
-							ReadOnlyRootFilesystem:   utils.To(true),
+							AllowPrivilegeEscalation: new(false),
+							ReadOnlyRootFilesystem:   new(true),
 							Capabilities: &corev1.Capabilities{
 								Drop: []corev1.Capability{"ALL"},
 							},
@@ -746,7 +745,7 @@ func TestVaultPodSpecContainerMerge(t *testing.T) {
 					{
 						Name: "bank-vaults",
 						SecurityContext: &corev1.SecurityContext{
-							AllowPrivilegeEscalation: utils.To(false),
+							AllowPrivilegeEscalation: new(false),
 						},
 					},
 				},
@@ -754,7 +753,7 @@ func TestVaultPodSpecContainerMerge(t *testing.T) {
 					{
 						Name: "config-templating",
 						SecurityContext: &corev1.SecurityContext{
-							AllowPrivilegeEscalation: utils.To(false),
+							AllowPrivilegeEscalation: new(false),
 						},
 					},
 				},
@@ -850,7 +849,7 @@ func TestVaultPodSpecContainerMerge(t *testing.T) {
 					{
 						Name: "bank-vaults",
 						SecurityContext: &corev1.SecurityContext{
-							AllowPrivilegeEscalation: utils.To(false),
+							AllowPrivilegeEscalation: new(false),
 						},
 					},
 					{
