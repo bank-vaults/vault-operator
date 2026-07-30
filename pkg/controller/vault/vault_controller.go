@@ -1426,9 +1426,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 // Annotations Functions
 
 func getCommonAnnotations(v *vaultv1alpha1.Vault, annotations map[string]string) map[string]string {
-	for key, value := range v.Spec.GetAnnotations() {
-		annotations[key] = value
-	}
+	maps.Copy(annotations, v.Spec.GetAnnotations())
 
 	return annotations
 }
@@ -1446,9 +1444,7 @@ func withPrometheusAnnotations(prometheusPort string, annotations map[string]str
 }
 
 func withVaultAnnotations(v *vaultv1alpha1.Vault, annotations map[string]string) map[string]string {
-	for key, value := range v.Spec.GetVaultAnnotations() {
-		annotations[key] = value
-	}
+	maps.Copy(annotations, v.Spec.GetVaultAnnotations())
 
 	return annotations
 }
@@ -1462,18 +1458,14 @@ func withVeleroAnnotations(v *vaultv1alpha1.Vault, annotations map[string]string
 			"post.hook.backup.velero.io/command":   "[\"/sbin/fsfreeze\", \"--unfreeze\", \"/vault/file/\"]",
 		}
 
-		for key, value := range veleroAnnotations {
-			annotations[key] = value
-		}
+		maps.Copy(annotations, veleroAnnotations)
 	}
 
 	return annotations
 }
 
 func withVaultConfigurerAnnotations(v *vaultv1alpha1.Vault, annotations map[string]string) map[string]string {
-	for key, value := range v.Spec.GetVaultConfigurerAnnotations() {
-		annotations[key] = value
-	}
+	maps.Copy(annotations, v.Spec.GetVaultConfigurerAnnotations())
 
 	return annotations
 }
@@ -1504,9 +1496,7 @@ func withVaultWatchedExternalSecrets(_ *vaultv1alpha1.Vault, secrets []corev1.Se
 }
 
 func withRestartAnnotations(restartAnnotations, annotations map[string]string) map[string]string {
-	for key, value := range restartAnnotations {
-		annotations[key] = value
-	}
+	maps.Copy(annotations, restartAnnotations)
 
 	return annotations
 }
@@ -2030,12 +2020,8 @@ func withPodSecurityContext(v *vaultv1alpha1.Vault) *corev1.PodSecurityContext {
 // Does not change original labels object but return a new one
 func withVaultLabels(v *vaultv1alpha1.Vault, labels map[string]string) map[string]string {
 	l := map[string]string{}
-	for key, value := range labels {
-		l[key] = value
-	}
-	for key, value := range v.Spec.GetVaultLabels() {
-		l[key] = value
-	}
+	maps.Copy(l, labels)
+	maps.Copy(l, v.Spec.GetVaultLabels())
 
 	return l
 }
@@ -2044,12 +2030,8 @@ func withVaultLabels(v *vaultv1alpha1.Vault, labels map[string]string) map[strin
 // Does not change original labels object but return a new one
 func withVaultConfigurerLabels(v *vaultv1alpha1.Vault, labels map[string]string) map[string]string {
 	l := map[string]string{}
-	for key, value := range labels {
-		l[key] = value
-	}
-	for key, value := range v.Spec.GetVaultConfigurerLabels() {
-		l[key] = value
-	}
+	maps.Copy(l, labels)
+	maps.Copy(l, v.Spec.GetVaultConfigurerLabels())
 
 	return l
 }
