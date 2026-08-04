@@ -36,8 +36,6 @@ func TestGetVersion(t *testing.T) {
 		}
 
 		for _, tt := range tests {
-			tt := tt
-
 			t.Run("", func(t *testing.T) {
 				vault := &VaultSpec{
 					Image: tt,
@@ -57,8 +55,6 @@ func TestGetVersion(t *testing.T) {
 		}
 
 		for _, tt := range tests {
-			tt := tt
-
 			t.Run("", func(t *testing.T) {
 				vault := &VaultSpec{
 					Image: tt,

@@ -368,29 +368,29 @@ func (spec *VaultSpec) hasHAStorageStanza() bool {
 }
 
 // GetStorage returns Vault's storage stanza
-func (spec *VaultSpec) GetStorage() map[string]interface{} {
+func (spec *VaultSpec) GetStorage() map[string]any {
 	storage := spec.getStorage()
 	return cast.ToStringMap(storage[spec.GetStorageType()])
 }
 
-func (spec *VaultSpec) getStorage() map[string]interface{} {
+func (spec *VaultSpec) getStorage() map[string]any {
 	config := spec.GetVaultConfig()
 	return cast.ToStringMap(config["storage"])
 }
 
 // GetHAStorage returns Vault's ha_storage stanza
-func (spec *VaultSpec) GetHAStorage() map[string]interface{} {
+func (spec *VaultSpec) GetHAStorage() map[string]any {
 	haStorage := spec.getHAStorage()
 	return cast.ToStringMap(haStorage[spec.GetHAStorageType()])
 }
 
-func (spec *VaultSpec) getHAStorage() map[string]interface{} {
+func (spec *VaultSpec) getHAStorage() map[string]any {
 	config := spec.GetVaultConfig()
 	return cast.ToStringMap(config["ha_storage"])
 }
 
-func (spec *VaultSpec) GetVaultConfig() map[string]interface{} {
-	var config map[string]interface{}
+func (spec *VaultSpec) GetVaultConfig() map[string]any {
+	var config map[string]any
 	// This config JSON is already validated,
 	// so we can skip wiring through the error everywhere.
 	_ = json.Unmarshal(spec.Config.Raw, &config)
@@ -484,7 +484,7 @@ func (spec *VaultSpec) GetTLSExpiryThreshold() time.Duration {
 	return duration
 }
 
-func (spec *VaultSpec) getListener() map[string]interface{} {
+func (spec *VaultSpec) getListener() map[string]any {
 	config := spec.GetVaultConfig()
 	return cast.ToStringMap(config["listener"])
 }
@@ -1065,7 +1065,7 @@ type Vault struct {
 
 // ConfigJSON returns the Config field as a JSON string
 func (vault *Vault) ConfigJSON() ([]byte, error) {
-	config := map[string]interface{}{}
+	config := map[string]any{}
 
 	err := json.Unmarshal(vault.Spec.Config.Raw, &config)
 	if err != nil {
@@ -1073,8 +1073,8 @@ func (vault *Vault) ConfigJSON() ([]byte, error) {
 	}
 
 	if vault.Spec.ServiceRegistrationEnabled && vault.Spec.HasHAStorage() {
-		serviceRegistration := map[string]interface{}{
-			"service_registration": map[string]interface{}{
+		serviceRegistration := map[string]any{
+			"service_registration": map[string]any{
 				"kubernetes": map[string]string{
 					"namespace": vault.Namespace,
 				},

@@ -40,3 +40,4 @@ linters:
     - unparam
     - unused
     - whitespace
+    - modernize
