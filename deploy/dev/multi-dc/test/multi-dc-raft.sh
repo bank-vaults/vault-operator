@@ -40,13 +40,26 @@ function waitfor {
     done
 }
 
+function metallb_config_apply {
+    local attempt=1
+
+    until envtpl deploy/dev/multi-dc/test/metallb-config.yaml | kubectl apply -f -; do
+        if [ "${attempt}" -ge 12 ]; then
+            echo "metallb config apply failed after ${attempt} attempts" >&2
+            return 1
+        fi
+        attempt=$((attempt + 1))
+        sleep 5
+    done
+}
+
 function metallb_setup {
     export METALLB_ADDRESS_RANGE=$1
     # kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/${METALLB_VERSION}/manifests/namespace.yaml
     kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/${METALLB_VERSION}/config/manifests/metallb-native.yaml
     kubectl wait --namespace metallb-system --for condition=Available=true deploy --selector=app=metallb --timeout=90s
     kubectl wait --namespace metallb-system --for=condition=ready pod --selector=app=metallb --timeout=90s
-    envtpl deploy/dev/multi-dc/test/metallb-config.yaml | kubectl apply -f -
+    metallb_config_apply
 }
 
 function cidr_range {
