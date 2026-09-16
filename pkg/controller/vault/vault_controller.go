@@ -596,13 +596,13 @@ func secretForRawVaultConfig(v *vaultv1alpha1.Vault) (*corev1.Secret, string, er
 		return nil, "", err
 	}
 
-	secret := corev1.Secret{}
-	secret.Name = v.Name + "-raw-config"
-	secret.Namespace = v.Namespace
-	secret.Labels = v.LabelsForVault()
-	secret.Data = map[string][]byte{
-		"vault-config.json": configJSON,
-	}
+	secret := corev1.Secret{
+		Name:      v.Name + "-raw-config",
+		Namespace: v.Namespace,
+		Labels:    v.LabelsForVault(),
+		Data: map[string][]byte{
+			"vault-config.json": configJSON,
+		}}
 
 	return &secret, fmt.Sprintf("%x", sha256.Sum256(configJSON)), nil
 }
@@ -630,12 +630,10 @@ func serviceForVault(v *vaultv1alpha1.Vault) *corev1.Service {
 	servicePorts = append(servicePorts, corev1.ServicePort{Name: "metrics", Port: 9091})
 	servicePorts = append(servicePorts, corev1.ServicePort{Name: "statsd", Port: 9102})
 	service := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        v.Name,
-			Namespace:   v.Namespace,
-			Annotations: annotations,
-			Labels:      withVaultLabels(v, ls),
-		},
+		Name:        v.Name,
+		Namespace:   v.Namespace,
+		Annotations: annotations,
+		Labels:      withVaultLabels(v, ls),
 		Spec: corev1.ServiceSpec{
 			Type:     serviceType(v),
 			Selector: selectorLs,
@@ -654,11 +652,9 @@ func serviceForVault(v *vaultv1alpha1.Vault) *corev1.Service {
 func serviceMonitorForVault(v *vaultv1alpha1.Vault) *monitorv1.ServiceMonitor {
 	ls := v.LabelsForVault()
 	serviceMonitor := &monitorv1.ServiceMonitor{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      v.Name,
-			Namespace: v.Namespace,
-			Labels:    ls,
-		},
+		Name:      v.Name,
+		Namespace: v.Namespace,
+		Labels:    ls,
 		Spec: monitorv1.ServiceMonitorSpec{
 			JobLabel: "vault_cr",
 			Selector: metav1.LabelSelector{
@@ -685,14 +681,8 @@ func serviceMonitorForVault(v *vaultv1alpha1.Vault) *monitorv1.ServiceMonitor {
 			Scheme:   new(monitorv1.Scheme(strings.ToLower(string(getVaultURIScheme(v))))),
 			Params:   map[string][]string{"format": {"prometheus"}},
 			Path:     "/v1/sys/metrics",
-			HTTPConfigWithProxyAndTLSFiles: monitorv1.HTTPConfigWithProxyAndTLSFiles{
-				HTTPConfigWithTLSFiles: monitorv1.HTTPConfigWithTLSFiles{
-					TLSConfig: &monitorv1.TLSConfig{
-						SafeTLSConfig: monitorv1.SafeTLSConfig{
-							InsecureSkipVerify: new(true),
-						},
-					},
-				},
+			TLSConfig: &monitorv1.TLSConfig{
+				InsecureSkipVerify: new(true),
 			},
 		}
 		if !v.Spec.IsTelemetryUnauthenticated() {
@@ -771,12 +761,10 @@ func perInstanceServicesForVault(v *vaultv1alpha1.Vault) []*corev1.Service {
 		ls[appsv1.StatefulSetPodNameLabel] = podName
 
 		service := &corev1.Service{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:        podName,
-				Namespace:   v.Namespace,
-				Annotations: withVaultAnnotations(v, getCommonAnnotations(v, map[string]string{})),
-				Labels:      withVaultLabels(v, ls),
-			},
+			Name:        podName,
+			Namespace:   v.Namespace,
+			Annotations: withVaultAnnotations(v, getCommonAnnotations(v, map[string]string{})),
+			Labels:      withVaultLabels(v, ls),
 			Spec: corev1.ServiceSpec{
 				Type:                     corev1.ServiceTypeClusterIP,
 				Selector:                 ls,
@@ -800,12 +788,10 @@ func serviceForVaultConfigurer(v *vaultv1alpha1.Vault) *corev1.Service {
 	serviceName := fmt.Sprintf("%s-configurer", v.Name)
 
 	service := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        serviceName,
-			Namespace:   v.Namespace,
-			Annotations: withVaultConfigurerAnnotations(v, map[string]string{}),
-			Labels:      withVaultConfigurerLabels(v, ls),
-		},
+		Name:        serviceName,
+		Namespace:   v.Namespace,
+		Annotations: withVaultConfigurerAnnotations(v, map[string]string{}),
+		Labels:      withVaultConfigurerLabels(v, ls),
 		Spec: corev1.ServiceSpec{
 			Type:     corev1.ServiceTypeClusterIP,
 			Selector: ls,
@@ -818,13 +804,11 @@ func serviceForVaultConfigurer(v *vaultv1alpha1.Vault) *corev1.Service {
 func ingressForVault(v *vaultv1alpha1.Vault) *netv1.Ingress {
 	if ingress := v.GetIngress(); ingress != nil {
 		return &netv1.Ingress{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:        v.Name,
-				Namespace:   v.Namespace,
-				Annotations: ingress.Annotations,
-				Labels:      v.LabelsForVault(),
-			},
-			Spec: ingress.Spec,
+			Name:        v.Name,
+			Namespace:   v.Namespace,
+			Annotations: ingress.Annotations,
+			Labels:      v.LabelsForVault(),
+			Spec:        ingress.Spec,
 		}
 	}
 	return nil
@@ -860,10 +844,8 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 			if _, ok := cm.Data[fileName]; ok {
 				volumes = append(volumes, corev1.Volume{
 					Name: cm.Name,
-					VolumeSource: corev1.VolumeSource{
-						ConfigMap: &corev1.ConfigMapVolumeSource{
-							LocalObjectReference: corev1.LocalObjectReference{Name: cm.Name},
-						},
+					ConfigMap: &corev1.ConfigMapVolumeSource{
+						Name: cm.Name,
 					},
 				})
 
@@ -886,10 +868,8 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 			if _, ok := secret.Data[fileName]; ok {
 				volumes = append(volumes, corev1.Volume{
 					Name: secret.Name,
-					VolumeSource: corev1.VolumeSource{
-						Secret: &corev1.SecretVolumeSource{
-							SecretName: secret.Name,
-						},
+					Secret: &corev1.SecretVolumeSource{
+						SecretName: secret.Name,
 					},
 				})
 
@@ -976,12 +956,10 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 	podAnnotations["vault.banzaicloud.io/external-config-hash"] = externalConfigHash
 
 	dep := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        v.Name + "-configurer",
-			Namespace:   v.Namespace,
-			Annotations: withVaultConfigurerAnnotations(v, map[string]string{}),
-			Labels:      withVaultConfigurerLabels(v, ls),
-		},
+		Name:        v.Name + "-configurer",
+		Namespace:   v.Namespace,
+		Annotations: withVaultConfigurerAnnotations(v, map[string]string{}),
+		Labels:      withVaultConfigurerLabels(v, ls),
 		Spec: appsv1.DeploymentSpec{
 			Selector: &metav1.LabelSelector{
 				MatchLabels: ls,
@@ -1002,23 +980,19 @@ func deploymentForConfigurer(v *vaultv1alpha1.Vault, configmaps corev1.ConfigMap
 func deprecatedConfigMapForConfigurer(v *vaultv1alpha1.Vault) *corev1.ConfigMap {
 	ls := v.LabelsForVaultConfigurer()
 	return &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      v.Name + "-configurer",
-			Namespace: v.Namespace,
-			Labels:    withVaultConfigurerLabels(v, ls),
-		},
+		Name:      v.Name + "-configurer",
+		Namespace: v.Namespace,
+		Labels:    withVaultConfigurerLabels(v, ls),
 	}
 }
 
 func secretForConfigurer(v *vaultv1alpha1.Vault) *corev1.Secret {
 	ls := v.LabelsForVaultConfigurer()
 	return &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      v.Name + "-configurer",
-			Namespace: v.Namespace,
-			Labels:    withVaultConfigurerLabels(v, ls),
-		},
-		Data: map[string][]byte{defaultConfigFile: v.Spec.ExternalConfigJSON()},
+		Name:      v.Name + "-configurer",
+		Namespace: v.Namespace,
+		Labels:    withVaultConfigurerLabels(v, ls),
+		Data:      map[string][]byte{defaultConfigFile: v.Spec.ExternalConfigJSON()},
 	}
 }
 
@@ -1149,19 +1123,15 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 	volumes := withTLSVolume(v, withCredentialsVolume(v, []corev1.Volume{
 		{
 			Name: "vault-raw-config",
-			VolumeSource: corev1.VolumeSource{
-				Secret: &corev1.SecretVolumeSource{
-					SecretName: v.Name + "-raw-config",
-				},
+			Secret: &corev1.SecretVolumeSource{
+				SecretName: v.Name + "-raw-config",
 			},
 		},
 		{
 			Name: "vault-config",
-			VolumeSource: corev1.VolumeSource{
-				EmptyDir: &corev1.EmptyDirVolumeSource{
-					Medium:    corev1.StorageMediumMemory,
-					SizeLimit: &configSizeLimit,
-				},
+			EmptyDir: &corev1.EmptyDirVolumeSource{
+				Medium:    corev1.StorageMediumMemory,
+				SizeLimit: &configSizeLimit,
 			},
 		},
 	}))
@@ -1229,12 +1199,10 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 			// This probe allows Vault extra time to be responsive in a HTTPS manner during startup
 			// See: https://www.vaultproject.io/api/system/init.html
 			StartupProbe: &corev1.Probe{
-				ProbeHandler: corev1.ProbeHandler{
-					HTTPGet: &corev1.HTTPGetAction{
-						Scheme: getVaultURIScheme(v),
-						Port:   intstr.FromString(v.Spec.GetAPIPortName()),
-						Path:   "/v1/sys/init",
-					},
+				HTTPGet: &corev1.HTTPGetAction{
+					Scheme: getVaultURIScheme(v),
+					Port:   intstr.FromString(v.Spec.GetAPIPortName()),
+					Path:   "/v1/sys/init",
 				},
 				PeriodSeconds:    10,
 				FailureThreshold: 18,
@@ -1242,23 +1210,19 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 			// This probe makes sure Vault is responsive in a HTTPS manner
 			// See: https://www.vaultproject.io/api/system/health.html
 			LivenessProbe: &corev1.Probe{
-				ProbeHandler: corev1.ProbeHandler{
-					HTTPGet: &corev1.HTTPGetAction{
-						Scheme: getVaultURIScheme(v),
-						Port:   intstr.FromString(v.Spec.GetAPIPortName()),
-						Path:   "/v1/sys/health?standbyok=true",
-					},
+				HTTPGet: &corev1.HTTPGetAction{
+					Scheme: getVaultURIScheme(v),
+					Port:   intstr.FromString(v.Spec.GetAPIPortName()),
+					Path:   "/v1/sys/health?standbyok=true",
 				},
 			},
 			// This probe makes sure that only the active Vault instance gets traffic
 			// See: https://www.vaultproject.io/api/system/health.html
 			ReadinessProbe: &corev1.Probe{
-				ProbeHandler: corev1.ProbeHandler{
-					HTTPGet: &corev1.HTTPGetAction{
-						Scheme: getVaultURIScheme(v),
-						Port:   intstr.FromString(v.Spec.GetAPIPortName()),
-						Path:   "/v1/sys/health?standbyok=true&perfstandbyok=true&drsecondarycode=299",
-					},
+				HTTPGet: &corev1.HTTPGetAction{
+					Scheme: getVaultURIScheme(v),
+					Port:   intstr.FromString(v.Spec.GetAPIPortName()),
+					Path:   "/v1/sys/health?standbyok=true&perfstandbyok=true&drsecondarycode=299",
 				},
 				PeriodSeconds:    5,
 				FailureThreshold: 2,
@@ -1388,12 +1352,10 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 	}
 
 	return &appsv1.StatefulSet{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        v.Name,
-			Namespace:   v.Namespace,
-			Annotations: withVaultAnnotations(v, getCommonAnnotations(v, map[string]string{})),
-			Labels:      withVaultLabels(v, ls),
-		},
+		Name:        v.Name,
+		Namespace:   v.Namespace,
+		Annotations: withVaultAnnotations(v, getCommonAnnotations(v, map[string]string{})),
+		Labels:      withVaultLabels(v, ls),
 		Spec: appsv1.StatefulSetSpec{
 			Replicas: &replicas,
 			UpdateStrategy: appsv1.StatefulSetUpdateStrategy{
@@ -1532,22 +1494,20 @@ func withTLSVolume(v *vaultv1alpha1.Vault, volumes []corev1.Volume) []corev1.Vol
 		if v.Spec.ExistingTLSSecretName != "" {
 			volumes = append(volumes, corev1.Volume{
 				Name: "vault-tls",
-				VolumeSource: corev1.VolumeSource{
-					Secret: &corev1.SecretVolumeSource{
-						SecretName: v.Spec.ExistingTLSSecretName,
-						Items: []corev1.KeyToPath{
-							{
-								Key:  "ca.crt",
-								Path: "ca.crt",
-							},
-							{
-								Key:  "tls.crt",
-								Path: "server.crt",
-							},
-							{
-								Key:  "tls.key",
-								Path: "server.key",
-							},
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: v.Spec.ExistingTLSSecretName,
+					Items: []corev1.KeyToPath{
+						{
+							Key:  "ca.crt",
+							Path: "ca.crt",
+						},
+						{
+							Key:  "tls.crt",
+							Path: "server.crt",
+						},
+						{
+							Key:  "tls.key",
+							Path: "server.key",
 						},
 					},
 				},
@@ -1555,10 +1515,8 @@ func withTLSVolume(v *vaultv1alpha1.Vault, volumes []corev1.Volume) []corev1.Vol
 		} else {
 			volumes = append(volumes, corev1.Volume{
 				Name: "vault-tls",
-				VolumeSource: corev1.VolumeSource{
-					Secret: &corev1.SecretVolumeSource{
-						SecretName: v.Name + "-tls",
-					},
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: v.Name + "-tls",
 				},
 			})
 		}
@@ -1588,12 +1546,10 @@ func configMapForStatsD(v *vaultv1alpha1.Vault) *corev1.ConfigMap {
             path: "$2"`
 	}
 	cm := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      v.Name + "-statsd-mapping",
-			Namespace: v.Namespace,
-			Labels:    ls,
-		},
-		Data: map[string]string{"statsd-mapping.conf": statsdConfig},
+		Name:      v.Name + "-statsd-mapping",
+		Namespace: v.Namespace,
+		Labels:    ls,
+		Data:      map[string]string{"statsd-mapping.conf": statsdConfig},
 	}
 	return cm
 }
@@ -1605,12 +1561,10 @@ func configMapForFluentD(v *vaultv1alpha1.Vault) *corev1.ConfigMap {
 		fluentdConfFile = "fluent.conf"
 	}
 	cm := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      v.Name + "-fluentd-config",
-			Namespace: v.Namespace,
-			Labels:    ls,
-		},
-		Data: map[string]string{fluentdConfFile: v.Spec.FluentDConfig},
+		Name:      v.Name + "-fluentd-config",
+		Namespace: v.Namespace,
+		Labels:    ls,
+		Data:      map[string]string{fluentdConfFile: v.Spec.FluentDConfig},
 	}
 	return cm
 }
@@ -1659,10 +1613,8 @@ func withCredentialsVolume(v *vaultv1alpha1.Vault, volumes []corev1.Volume) []co
 	if secretName != "" {
 		volumes = append(volumes, corev1.Volume{
 			Name: secretName,
-			VolumeSource: corev1.VolumeSource{
-				Secret: &corev1.SecretVolumeSource{
-					SecretName: secretName,
-				},
+			Secret: &corev1.SecretVolumeSource{
+				SecretName: secretName,
 			},
 		})
 	}
@@ -1688,10 +1640,8 @@ func withStatsdVolume(v *vaultv1alpha1.Vault, volumes []corev1.Volume) []corev1.
 		volumes = append(volumes, []corev1.Volume{
 			{
 				Name: "statsd-mapping",
-				VolumeSource: corev1.VolumeSource{
-					ConfigMap: &corev1.ConfigMapVolumeSource{
-						LocalObjectReference: corev1.LocalObjectReference{Name: v.Name + "-statsd-mapping"},
-					},
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					Name: v.Name + "-statsd-mapping",
 				},
 			},
 		}...)
@@ -1764,19 +1714,13 @@ func withAuditLogVolume(v *vaultv1alpha1.Vault, volumes []corev1.Volume) []corev
 	if v.Spec.IsFluentDEnabled() {
 		volumes = append(volumes, []corev1.Volume{
 			{
-				Name: "vault-auditlogs",
-				VolumeSource: corev1.VolumeSource{
-					EmptyDir: &corev1.EmptyDirVolumeSource{},
-				},
+				Name:     "vault-auditlogs",
+				EmptyDir: &corev1.EmptyDirVolumeSource{},
 			},
 			{
 				Name: "fluentd-config",
-				VolumeSource: corev1.VolumeSource{
-					ConfigMap: &corev1.ConfigMapVolumeSource{
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: v.Name + "-fluentd-config",
-						},
-					},
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					Name: v.Name + "-fluentd-config",
 				},
 			},
 		}...)
@@ -1823,10 +1767,8 @@ func withHSMVolume(v *vaultv1alpha1.Vault, volumes []corev1.Volume) []corev1.Vol
 	if v.Spec.UnsealConfig.HSMDaemonNeeded() {
 		volumes = append(volumes, corev1.Volume{
 			Name: "hsm-pcscd",
-			VolumeSource: corev1.VolumeSource{
-				HostPath: &corev1.HostPathVolumeSource{
-					Path: "/var/run/pcscd/",
-				},
+			HostPath: &corev1.HostPathVolumeSource{
+				Path: "/var/run/pcscd/",
 			},
 		})
 	}
@@ -2039,10 +1981,8 @@ func withVaultConfigurerLabels(v *vaultv1alpha1.Vault, labels map[string]string)
 // podList returns a corev1.PodList object
 func podList() *corev1.PodList {
 	return &corev1.PodList{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Pod",
-			APIVersion: "v1",
-		},
+		Kind:       "Pod",
+		APIVersion: "v1",
 	}
 }
 

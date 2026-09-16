@@ -526,12 +526,10 @@ func (spec *VaultSpec) GetVolumeClaimTemplates() []v1.PersistentVolumeClaim {
 	var pvcs []v1.PersistentVolumeClaim
 	for _, pvc := range spec.VolumeClaimTemplates {
 		pvcs = append(pvcs, v1.PersistentVolumeClaim{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:        pvc.Name,
-				Labels:      pvc.Labels,
-				Annotations: pvc.Annotations,
-			},
-			Spec: pvc.Spec,
+			Name:        pvc.Name,
+			Labels:      pvc.Labels,
+			Annotations: pvc.Annotations,
+			Spec:        pvc.Spec,
 		})
 	}
 	return pvcs
