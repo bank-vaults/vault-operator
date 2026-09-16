@@ -262,7 +262,7 @@ func (r *ReconcileVault) Reconcile(ctx context.Context, request reconcile.Reques
 
 	err = r.handleStorageConfiguration(ctx, v)
 	if err != nil {
-		return reconcile.Result{Requeue: true, RequeueAfter: 5 * time.Second}, err
+		return reconcile.Result{RequeueAfter: 5 * time.Second}, err
 	}
 
 	// Create the service if it doesn't exist
@@ -288,7 +288,7 @@ func (r *ReconcileVault) Reconcile(ctx context.Context, request reconcile.Reques
 
 		if len(loadBalancerIngressPoints(service)) == 0 {
 			reqLogger.Info("The Vault LB Service has no Ingress points yet, waiting 5 seconds...")
-			return reconcile.Result{Requeue: true, RequeueAfter: 5 * time.Second}, nil
+			return reconcile.Result{RequeueAfter: 5 * time.Second}, nil
 		}
 	}
 
@@ -715,24 +715,24 @@ func getServicePorts(v *vaultv1alpha1.Vault) ([]corev1.ServicePort, []corev1.Con
 
 	if len(v.Spec.ServicePorts) == 0 {
 		return []corev1.ServicePort{
-				{
-					Name: v.Spec.GetAPIPortName(),
-					Port: 8200,
-				},
-				{
-					Name: "cluster-port",
-					Port: 8201,
-				},
-			}, []corev1.ContainerPort{
-				{
-					Name:          v.Spec.GetAPIPortName(),
-					ContainerPort: 8200,
-				},
-				{
-					Name:          "cluster-port",
-					ContainerPort: 8201,
-				},
-			}
+			{
+				Name: v.Spec.GetAPIPortName(),
+				Port: 8200,
+			},
+			{
+				Name: "cluster-port",
+				Port: 8201,
+			},
+		}, []corev1.ContainerPort{
+			{
+				Name:          v.Spec.GetAPIPortName(),
+				ContainerPort: 8200,
+			},
+			{
+				Name:          "cluster-port",
+				ContainerPort: 8201,
+			},
+		}
 	}
 
 	for k, i := range v.Spec.ServicePorts {
