@@ -25,7 +25,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	extv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
@@ -83,10 +82,8 @@ func TestFluentDConfFileDefault(t *testing.T) {
 func TestHandleStorageConfiguration_MissingStorage(t *testing.T) {
 	// Vault object with missing storage configuration
 	vault := &vaultv1alpha1.Vault{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-vault",
-			Namespace: "default",
-		},
+		Name:      "test-vault",
+		Namespace: "default",
 		Spec: vaultv1alpha1.VaultSpec{
 			Config: extv1beta1.JSON{
 				Raw: []byte(`{"listener": {"tcp": {"address": "127.0.0.1:8200", "tls_disable": 1}}, "storage": {}}`),
@@ -241,10 +238,8 @@ func TestVaultConfigurerPodSpecContainerMerge(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			v := &vaultv1alpha1.Vault{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-vault",
-					Namespace: "default",
-				},
+				Name:      "test-vault",
+				Namespace: "default",
 				Spec: vaultv1alpha1.VaultSpec{
 					Config:                 extv1beta1.JSON{Raw: baseVaultConfig},
 					VaultConfigurerPodSpec: tt.vaultConfigurerPodSpec,
@@ -902,10 +897,8 @@ func TestVaultPodSpecContainerMerge(t *testing.T) {
 			vaultPodSpec: &vaultv1alpha1.EmbeddedPodSpec{
 				Volumes: []corev1.Volume{
 					{
-						Name: "custom-volume",
-						VolumeSource: corev1.VolumeSource{
-							EmptyDir: &corev1.EmptyDirVolumeSource{},
-						},
+						Name:     "custom-volume",
+						EmptyDir: &corev1.EmptyDirVolumeSource{},
 					},
 				},
 			},
@@ -931,10 +924,8 @@ func TestVaultPodSpecContainerMerge(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			v := &vaultv1alpha1.Vault{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-vault",
-					Namespace: "default",
-				},
+				Name:      "test-vault",
+				Namespace: "default",
 				Spec: vaultv1alpha1.VaultSpec{
 					Size:         1,
 					Config:       extv1beta1.JSON{Raw: baseVaultConfig},
@@ -994,10 +985,8 @@ func TestWithContainerSecurityContextCapabilities(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			v := &vaultv1alpha1.Vault{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-vault",
-					Namespace: "default",
-				},
+				Name:      "test-vault",
+				Namespace: "default",
 				Spec: vaultv1alpha1.VaultSpec{
 					Size:                           1,
 					Config:                         extv1beta1.JSON{Raw: baseVaultConfig},
@@ -1091,10 +1080,8 @@ func TestVaultContainerSpecEnvAppend(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			v := &vaultv1alpha1.Vault{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-vault",
-					Namespace: "default",
-				},
+				Name:      "test-vault",
+				Namespace: "default",
 				Spec: vaultv1alpha1.VaultSpec{
 					Size:               1,
 					Config:             extv1beta1.JSON{Raw: baseVaultConfig},
@@ -1115,7 +1102,7 @@ func TestDeploymentForConfigurerExternalConfigHash(t *testing.T) {
 
 	makeVault := func(externalConfig []byte) *vaultv1alpha1.Vault {
 		return &vaultv1alpha1.Vault{
-			ObjectMeta: metav1.ObjectMeta{Name: "test-vault", Namespace: "default"},
+			Name: "test-vault", Namespace: "default",
 			Spec: vaultv1alpha1.VaultSpec{
 				Config:         extv1beta1.JSON{Raw: baseVaultConfig},
 				ExternalConfig: extv1beta1.JSON{Raw: externalConfig},

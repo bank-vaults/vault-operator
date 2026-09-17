@@ -27,7 +27,7 @@ func TestToPodSpec(t *testing.T) {
 		Volumes:                       []v1.Volume{{Name: "vol1"}},
 		InitContainers:                []v1.Container{{Name: "init"}},
 		Containers:                    []v1.Container{{Name: "main"}},
-		EphemeralContainers:           []v1.EphemeralContainer{{EphemeralContainerCommon: v1.EphemeralContainerCommon{Name: "eph"}}},
+		EphemeralContainers:           []v1.EphemeralContainer{{Name: "eph"}},
 		RestartPolicy:                 v1.RestartPolicyOnFailure,
 		TerminationGracePeriodSeconds: new(int64(42)),
 		ActiveDeadlineSeconds:         new(int64(100)),
