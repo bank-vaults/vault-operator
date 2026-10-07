@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"net"
 	"reflect"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -34,6 +35,7 @@ import (
 	extv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 var (
@@ -305,6 +307,13 @@ type VaultSpec struct {
 	// See the type for more details.
 	// default:
 	Ingress *Ingress `json:"ingress,omitempty"`
+
+	// HTTPRoute, if specified, creates a Gateway API HTTPRoute for the Vault Service.
+	// The route's parentRefs must refer to an existing Gateway.
+	// When Vault TLS is enabled, the operator creates a BackendTLSPolicy for the Vault API Service using the Vault CA.
+	// The cluster must have the Gateway API BackendTLSPolicy v1 CRD installed.
+	// default:
+	HTTPRoute *HTTPRoute `json:"httpRoute,omitempty"`
 
 	// ServiceMonitorEnabled enables the creation of Prometheus Operator specific ServiceMonitor for Vault.
 	// default: false
@@ -1048,6 +1057,12 @@ type Ingress struct {
 	Spec        netv1.IngressSpec `json:"spec,omitempty"`
 }
 
+// HTTPRoute specification for the Vault cluster
+type HTTPRoute struct {
+	Annotations map[string]string       `json:"annotations,omitempty"`
+	Spec        gatewayv1.HTTPRouteSpec `json:"spec,omitempty"`
+}
+
 // +genclient
 // +genclient:noStatus
 // +kubebuilder:object:root=true
@@ -1146,6 +1161,44 @@ func (vault *Vault) GetIngress() *Ingress {
 	}
 
 	return nil
+}
+
+// GetHTTPRoute returns the HTTPRoute configuration for Vault if any
+func (vault *Vault) GetHTTPRoute() *HTTPRoute {
+	if vault.Spec.HTTPRoute == nil {
+		return nil
+	}
+
+	port := int32(defaultVaultAPIPort)
+	if servicePort, ok := vault.Spec.ServicePorts[vault.Spec.GetAPIPortName()]; ok {
+		port = servicePort
+	}
+	group := gatewayv1.Group("")
+	kind := gatewayv1.Kind("Service")
+	weight := int32(1)
+
+	for i := range vault.Spec.HTTPRoute.Spec.Rules {
+		rule := &vault.Spec.HTTPRoute.Spec.Rules[i]
+		if len(rule.BackendRefs) > 0 {
+			continue
+		}
+
+		if slices.ContainsFunc(rule.Filters, func(filter gatewayv1.HTTPRouteFilter) bool {
+			return filter.Type == gatewayv1.HTTPRouteFilterRequestRedirect
+		}) {
+			continue
+		}
+
+		rule.BackendRefs = []gatewayv1.HTTPBackendRef{{
+			Group:  &group,
+			Kind:   &kind,
+			Name:   gatewayv1.ObjectName(vault.Name),
+			Port:   &port,
+			Weight: &weight,
+		}}
+	}
+
+	return vault.Spec.HTTPRoute
 }
 
 // LabelsForVault returns the labels for selecting the resources
