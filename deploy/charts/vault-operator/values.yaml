@@ -179,7 +179,8 @@ podLabels: {} # team: banzai
 podAnnotations: {} # team: banzai
 
 serviceAccount:
-  # -- Enable service account creation.
+  # -- Create the operator ServiceAccount. When true, the chart binds a cluster-scoped ClusterRole to this account so the operator can reconcile Vaults across namespaces.
+  # When false, set name to an existing account and provision an equivalent ClusterRoleBinding externally; the chart omits RBAC resources.
   create: true
 
   # -- Annotations to be added to the service account.
