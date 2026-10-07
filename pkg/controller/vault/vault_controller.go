@@ -60,6 +60,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 const defaultConfigFile = "vault-config.yml"
@@ -115,6 +116,7 @@ var _ reconcile.Reconciler = &ReconcileVault{}
 
 // +kubebuilder:rbac:groups="",namespace=default,resources=secrets,verbs=*
 // +kubebuilder:rbac:groups="",namespace=default,resources=pods,verbs=get;update;patch
+// +kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=httproutes,verbs=get;list;watch;create;update;patch;delete
 
 // ReconcileVault reconciles a Vault object
 type ReconcileVault struct {
@@ -504,6 +506,17 @@ func (r *ReconcileVault) Reconcile(ctx context.Context, request reconcile.Reques
 		}
 	}
 
+	// Create HTTPRoute if specified
+	if httpRoute := httpRouteForVault(v); httpRoute != nil {
+		if err := controllerutil.SetControllerReference(v, httpRoute, r.scheme); err != nil {
+			return reconcile.Result{}, err
+		}
+
+		if err := r.createOrUpdateObject(ctx, httpRoute); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to create/update HTTPRoute: %v", err)
+		}
+	}
+
 	// Update the Vault status with the pod names
 	podList := podList()
 	labelSelector := labels.SelectorFromSet(v.LabelsForVault())
@@ -809,6 +822,19 @@ func ingressForVault(v *vaultv1alpha1.Vault) *netv1.Ingress {
 			Annotations: ingress.Annotations,
 			Labels:      v.LabelsForVault(),
 			Spec:        ingress.Spec,
+		}
+	}
+	return nil
+}
+
+func httpRouteForVault(v *vaultv1alpha1.Vault) *gatewayv1.HTTPRoute {
+	if httpRoute := v.GetHTTPRoute(); httpRoute != nil {
+		return &gatewayv1.HTTPRoute{
+			Name:        v.Name,
+			Namespace:   v.Namespace,
+			Labels:      v.LabelsForVault(),
+			Annotations: httpRoute.Annotations,
+			Spec:        httpRoute.Spec,
 		}
 	}
 	return nil
