@@ -27,6 +27,7 @@ import (
 	extv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 var envs = []corev1.EnvVar{
@@ -38,6 +39,56 @@ var envs = []corev1.EnvVar{
 		Name:  "VAULT_IGNORE_MISSING_SECRETS",
 		Value: "true",
 	},
+}
+
+func TestHTTPRouteForVault(t *testing.T) {
+	vault := &vaultv1alpha1.Vault{
+		Name:      "vault",
+		Namespace: "default",
+		Spec: vaultv1alpha1.VaultSpec{
+			HTTPRoute: &vaultv1alpha1.HTTPRoute{
+				Spec: gatewayv1.HTTPRouteSpec{
+					CommonRouteSpec: gatewayv1.CommonRouteSpec{
+						ParentRefs: []gatewayv1.ParentReference{{Name: "gateway"}},
+					},
+				},
+			},
+		},
+	}
+
+	route := httpRouteForVault(vault)
+	assert.Equal(t, "vault", route.Name)
+	assert.Equal(t, "default", route.Namespace)
+	assert.Equal(t, "gateway", string(route.Spec.ParentRefs[0].Name))
+	assert.Len(t, route.Spec.Rules, 1)
+	assert.Equal(t, "/", *route.Spec.Rules[0].Matches[0].Path.Value)
+	assert.Equal(t, "vault", string(route.Spec.Rules[0].BackendRefs[0].Name))
+	assert.Equal(t, gatewayv1.PortNumber(8200), *route.Spec.Rules[0].BackendRefs[0].Port)
+}
+
+func TestHTTPRouteForVaultDefaultsBackendForCustomRule(t *testing.T) {
+	pathMatchType := gatewayv1.PathMatchPathPrefix
+	path := "/health"
+	vault := &vaultv1alpha1.Vault{
+		Name:      "vault",
+		Namespace: "default",
+		Spec: vaultv1alpha1.VaultSpec{
+			HTTPRoute: &vaultv1alpha1.HTTPRoute{
+				Spec: gatewayv1.HTTPRouteSpec{
+					Rules: []gatewayv1.HTTPRouteRule{{
+						Matches: []gatewayv1.HTTPRouteMatch{{
+							Path: &gatewayv1.HTTPPathMatch{Type: &pathMatchType, Value: &path},
+						}},
+					}},
+				},
+			},
+		},
+	}
+
+	route := httpRouteForVault(vault)
+	assert.Equal(t, "/health", *route.Spec.Rules[0].Matches[0].Path.Value)
+	assert.Equal(t, "vault", string(route.Spec.Rules[0].BackendRefs[0].Name))
+	assert.Equal(t, gatewayv1.PortNumber(8200), *route.Spec.Rules[0].BackendRefs[0].Port)
 }
 
 func TestFluentDConfFile(t *testing.T) {

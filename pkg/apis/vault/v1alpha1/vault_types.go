@@ -34,6 +34,7 @@ import (
 	extv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 var (
@@ -305,6 +306,11 @@ type VaultSpec struct {
 	// See the type for more details.
 	// default:
 	Ingress *Ingress `json:"ingress,omitempty"`
+
+	// HTTPRoute, if specified, creates a Gateway API HTTPRoute for the Vault Service.
+	// The route's parentRefs must refer to an existing Gateway.
+	// default:
+	HTTPRoute *HTTPRoute `json:"httpRoute,omitempty"`
 
 	// ServiceMonitorEnabled enables the creation of Prometheus Operator specific ServiceMonitor for Vault.
 	// default: false
@@ -1048,6 +1054,12 @@ type Ingress struct {
 	Spec        netv1.IngressSpec `json:"spec,omitempty"`
 }
 
+// HTTPRoute specification for the Vault cluster
+type HTTPRoute struct {
+	Annotations map[string]string       `json:"annotations,omitempty"`
+	Spec        gatewayv1.HTTPRouteSpec `json:"spec,omitempty"`
+}
+
 // +genclient
 // +genclient:noStatus
 // +kubebuilder:object:root=true
@@ -1146,6 +1158,38 @@ func (vault *Vault) GetIngress() *Ingress {
 	}
 
 	return nil
+}
+
+// GetHTTPRoute returns the HTTPRoute configuration for Vault if any
+func (vault *Vault) GetHTTPRoute() *HTTPRoute {
+	if vault.Spec.HTTPRoute == nil {
+		return nil
+	}
+
+	if len(vault.Spec.HTTPRoute.Spec.Rules) == 0 {
+		pathMatchType := gatewayv1.PathMatchPathPrefix
+		path := "/"
+		vault.Spec.HTTPRoute.Spec.Rules = []gatewayv1.HTTPRouteRule{{
+			Matches: []gatewayv1.HTTPRouteMatch{{
+				Path: &gatewayv1.HTTPPathMatch{
+					Type:  &pathMatchType,
+					Value: &path,
+				},
+			}},
+		}}
+	}
+
+	for i := range vault.Spec.HTTPRoute.Spec.Rules {
+		if len(vault.Spec.HTTPRoute.Spec.Rules[i].BackendRefs) == 0 {
+			port := gatewayv1.PortNumber(8200)
+			vault.Spec.HTTPRoute.Spec.Rules[i].BackendRefs = []gatewayv1.HTTPBackendRef{{
+				Name: gatewayv1.ObjectName(vault.Name),
+				Port: &port,
+			}}
+		}
+	}
+
+	return vault.Spec.HTTPRoute
 }
 
 // LabelsForVault returns the labels for selecting the resources

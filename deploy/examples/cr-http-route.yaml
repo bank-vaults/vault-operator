@@ -1,0 +1,26 @@
+apiVersion: vault.banzaicloud.com/v1alpha1
+kind: Vault
+metadata:
+  name: vault
+spec:
+  size: 1
+  config:
+    storage:
+      file:
+        path: /vault/file
+    listener:
+      tcp:
+        address: 0.0.0.0:8200
+        tls_disable: 1
+    ui: true
+  httpRoute:
+    spec:
+      parentRefs:
+        - name: public-gateway
+      hostnames:
+        - vault.example.com
+      rules:
+        - matches:
+            - path:
+                type: PathPrefix
+                value: /
