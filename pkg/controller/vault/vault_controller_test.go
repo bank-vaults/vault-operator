@@ -16,6 +16,7 @@ package vault
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"testing"
 
@@ -25,8 +26,17 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	extv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 var envs = []corev1.EnvVar{
@@ -38,6 +48,449 @@ var envs = []corev1.EnvVar{
 		Name:  "VAULT_IGNORE_MISSING_SECRETS",
 		Value: "true",
 	},
+}
+
+func TestHTTPRouteForVault(t *testing.T) {
+	pathMatchType := gatewayv1.PathMatchPathPrefix
+	rootPath := "/"
+	customPath := "/health"
+	redirectScheme := "https"
+	rootRule := func() []gatewayv1.HTTPRouteRule {
+		return []gatewayv1.HTTPRouteRule{{
+			Matches: []gatewayv1.HTTPRouteMatch{{
+				Path: &gatewayv1.HTTPPathMatch{Type: &pathMatchType, Value: &rootPath},
+			}},
+		}}
+	}
+
+	tests := []struct {
+		name         string
+		httpRoute    *vaultv1alpha1.HTTPRoute
+		servicePorts map[string]int32
+		wantRules    int
+		wantPath     string
+		wantPort     gatewayv1.PortNumber
+		wantBackend  bool
+	}{
+		{
+			name: "leaves empty rules for CRD defaulting",
+			httpRoute: &vaultv1alpha1.HTTPRoute{
+				Spec: gatewayv1.HTTPRouteSpec{
+					CommonRouteSpec: gatewayv1.CommonRouteSpec{
+						ParentRefs: []gatewayv1.ParentReference{{Name: "gateway"}},
+					},
+				},
+			},
+			wantRules: 0,
+		},
+		{
+			name: "CRD-defaulted root path gets Vault backend",
+			httpRoute: &vaultv1alpha1.HTTPRoute{
+				Spec: gatewayv1.HTTPRouteSpec{
+					CommonRouteSpec: gatewayv1.CommonRouteSpec{
+						ParentRefs: []gatewayv1.ParentReference{{Name: "gateway"}},
+					},
+					Rules: rootRule(),
+				},
+			},
+			wantRules:   1,
+			wantPath:    "/",
+			wantPort:    gatewayv1.PortNumber(8200),
+			wantBackend: true,
+		},
+		{
+			name: "custom rule gets Vault backend",
+			httpRoute: &vaultv1alpha1.HTTPRoute{
+				Spec: gatewayv1.HTTPRouteSpec{
+					Rules: []gatewayv1.HTTPRouteRule{{
+						Matches: []gatewayv1.HTTPRouteMatch{{
+							Path: &gatewayv1.HTTPPathMatch{Type: &pathMatchType, Value: &customPath},
+						}},
+					}},
+				},
+			},
+			wantRules:   1,
+			wantPath:    customPath,
+			wantPort:    gatewayv1.PortNumber(8200),
+			wantBackend: true,
+		},
+		{
+			name: "redirect-only rule has no backend",
+			httpRoute: &vaultv1alpha1.HTTPRoute{
+				Spec: gatewayv1.HTTPRouteSpec{
+					Rules: []gatewayv1.HTTPRouteRule{{
+						Filters: []gatewayv1.HTTPRouteFilter{{
+							Type:            gatewayv1.HTTPRouteFilterRequestRedirect,
+							RequestRedirect: &gatewayv1.HTTPRequestRedirectFilter{Scheme: &redirectScheme},
+						}},
+					}},
+				},
+			},
+			wantRules: 1,
+		},
+		{
+			name: "configured API service port",
+			httpRoute: &vaultv1alpha1.HTTPRoute{
+				Spec: gatewayv1.HTTPRouteSpec{
+					CommonRouteSpec: gatewayv1.CommonRouteSpec{
+						ParentRefs: []gatewayv1.ParentReference{{Name: "gateway"}},
+					},
+					Rules: rootRule(),
+				},
+			},
+			servicePorts: map[string]int32{
+				"api-port":     8300,
+				"cluster-port": 8201,
+			},
+			wantRules:   1,
+			wantPath:    rootPath,
+			wantPort:    gatewayv1.PortNumber(8300),
+			wantBackend: true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			vault := &vaultv1alpha1.Vault{
+				Name:      "vault",
+				Namespace: "default",
+				Spec: vaultv1alpha1.VaultSpec{
+					HTTPRoute:    test.httpRoute,
+					ServicePorts: test.servicePorts,
+				},
+			}
+
+			route := httpRouteForVault(vault)
+			if !assert.Len(t, route.Spec.Rules, test.wantRules) || test.wantRules == 0 {
+				return
+			}
+
+			rule := route.Spec.Rules[0]
+			if test.wantPath != "" {
+				assert.Equal(t, test.wantPath, *rule.Matches[0].Path.Value)
+			}
+			if !test.wantBackend {
+				assert.Empty(t, rule.BackendRefs)
+				assert.Equal(t, gatewayv1.HTTPRouteFilterRequestRedirect, rule.Filters[0].Type)
+				return
+			}
+			if !assert.Len(t, rule.BackendRefs, 1) {
+				return
+			}
+
+			backendRef := rule.BackendRefs[0]
+			group := gatewayv1.Group("")
+			kind := gatewayv1.Kind("Service")
+			weight := int32(1)
+			assert.Equal(t, "vault", string(backendRef.Name))
+			assert.Equal(t, test.wantPort, *backendRef.Port)
+			assert.Equal(t, &group, backendRef.Group)
+			assert.Equal(t, &kind, backendRef.Kind)
+			assert.Equal(t, &weight, backendRef.Weight)
+		})
+	}
+}
+
+func TestReconcileHTTPRouteWhenDisabled(t *testing.T) {
+	tests := []struct {
+		name             string
+		routeExists      bool
+		routeOwned       bool
+		expectedToRemain bool
+	}{
+		{name: "deletes owned route", routeExists: true, routeOwned: true},
+		{name: "preserves unowned route", routeExists: true, expectedToRemain: true},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			scheme := runtime.NewScheme()
+			assert.NoError(t, vaultv1alpha1.AddToScheme(scheme))
+			assert.NoError(t, gatewayv1.Install(scheme))
+
+			vault := &vaultv1alpha1.Vault{
+				Name:      "vault",
+				Namespace: "default",
+				UID:       "vault-uid",
+			}
+			var objects []runtime.Object
+			if test.routeExists {
+				httpRoute := &gatewayv1.HTTPRoute{
+					Name:      vault.Name,
+					Namespace: vault.Namespace,
+				}
+				if test.routeOwned {
+					assert.NoError(t, controllerutil.SetControllerReference(vault, httpRoute, scheme))
+				}
+				objects = append(objects, httpRoute)
+			}
+
+			fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(objects...).Build()
+			reconciler := &ReconcileVault{client: fakeClient, apiReader: fakeClient, scheme: scheme}
+			assert.NoError(t, reconciler.reconcileHTTPRoute(context.Background(), vault))
+
+			route := &gatewayv1.HTTPRoute{}
+			err := fakeClient.Get(context.Background(), types.NamespacedName{Name: vault.Name, Namespace: vault.Namespace}, route)
+			if test.expectedToRemain {
+				assert.NoError(t, err)
+			} else {
+				assert.True(t, apierrors.IsNotFound(err))
+			}
+		})
+	}
+}
+
+func TestReconcileHTTPRouteWhenEnabled(t *testing.T) {
+	scheme := runtime.NewScheme()
+	assert.NoError(t, corev1.AddToScheme(scheme))
+	assert.NoError(t, vaultv1alpha1.AddToScheme(scheme))
+	assert.NoError(t, gatewayv1.Install(scheme))
+
+	pathMatchType := gatewayv1.PathMatchPathPrefix
+	path := "/"
+	vault := &vaultv1alpha1.Vault{
+		Name:      "vault",
+		Namespace: "default",
+		UID:       "vault-uid",
+		Spec: vaultv1alpha1.VaultSpec{
+			HTTPRoute: &vaultv1alpha1.HTTPRoute{
+				Spec: gatewayv1.HTTPRouteSpec{
+					CommonRouteSpec: gatewayv1.CommonRouteSpec{
+						ParentRefs: []gatewayv1.ParentReference{{Name: "gateway"}},
+					},
+					Rules: []gatewayv1.HTTPRouteRule{{
+						Matches: []gatewayv1.HTTPRouteMatch{{
+							Path: &gatewayv1.HTTPPathMatch{Type: &pathMatchType, Value: &path},
+						}},
+					}},
+				},
+			},
+		},
+	}
+
+	updateCalls := 0
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(interceptor.Funcs{
+		Update: func(ctx context.Context, c client.WithWatch, obj client.Object, opts ...client.UpdateOption) error {
+			switch obj.(type) {
+			case *gatewayv1.HTTPRoute, *gatewayv1.BackendTLSPolicy:
+				updateCalls++
+			}
+			return c.Update(ctx, obj, opts...)
+		},
+	}).WithObjects(vault).Build()
+	reconciler := &ReconcileVault{client: fakeClient, apiReader: fakeClient, scheme: scheme}
+	ctx := context.Background()
+
+	assert.NoError(t, reconciler.reconcileGatewayResources(ctx, vault, []byte("test CA")))
+	assert.True(t, controllerutil.ContainsFinalizer(vault, httpRouteCleanupFinalizer))
+
+	route := &gatewayv1.HTTPRoute{}
+	assert.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: vault.Name, Namespace: vault.Namespace}, route))
+	assert.True(t, metav1.IsControlledBy(route, vault))
+	if assert.Len(t, route.Spec.Rules, 1) && assert.Len(t, route.Spec.Rules[0].BackendRefs, 1) {
+		backendRef := route.Spec.Rules[0].BackendRefs[0]
+		assert.Equal(t, vault.Name, string(backendRef.Name))
+		assert.Equal(t, gatewayv1.PortNumber(8200), *backendRef.Port)
+	}
+
+	assert.NoError(t, reconciler.reconcileGatewayResources(ctx, vault, []byte("test CA")))
+	assert.Zero(t, updateCalls)
+}
+
+func TestReconcileBackendTLSPolicy(t *testing.T) {
+	scheme := runtime.NewScheme()
+	assert.NoError(t, corev1.AddToScheme(scheme))
+	assert.NoError(t, vaultv1alpha1.AddToScheme(scheme))
+	assert.NoError(t, gatewayv1.Install(scheme))
+
+	vault := &vaultv1alpha1.Vault{
+		Name:      "vault",
+		Namespace: "default",
+		UID:       "vault-uid",
+		Spec: vaultv1alpha1.VaultSpec{
+			HTTPRoute: &vaultv1alpha1.HTTPRoute{},
+		},
+	}
+	caCertificate := []byte("test CA certificate")
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
+	reconciler := &ReconcileVault{client: fakeClient, apiReader: fakeClient, scheme: scheme}
+	ctx := context.Background()
+
+	assert.NoError(t, reconciler.reconcileBackendTLSPolicy(ctx, vault, caCertificate))
+
+	caConfigMap := &corev1.ConfigMap{}
+	caConfigMapKey := types.NamespacedName{Name: "vault" + backendTLSCAConfigMapSuffix, Namespace: vault.Namespace}
+	assert.NoError(t, fakeClient.Get(ctx, caConfigMapKey, caConfigMap))
+	assert.Equal(t, string(caCertificate), caConfigMap.Data[backendTLSCACertificateKey])
+	assert.True(t, metav1.IsControlledBy(caConfigMap, vault))
+
+	policy := &gatewayv1.BackendTLSPolicy{}
+	assert.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: vault.Name, Namespace: vault.Namespace}, policy))
+	assert.True(t, metav1.IsControlledBy(policy, vault))
+	if assert.Len(t, policy.Spec.TargetRefs, 1) {
+		target := policy.Spec.TargetRefs[0]
+		assert.Equal(t, gatewayv1.Kind("Service"), target.Kind)
+		assert.Equal(t, gatewayv1.ObjectName(vault.Name), target.Name)
+		if assert.NotNil(t, target.SectionName) {
+			assert.Equal(t, gatewayv1.SectionName(vault.Spec.GetAPIPortName()), *target.SectionName)
+		}
+	}
+	assert.Equal(t, gatewayv1.PreciseHostname("vault.default.svc.cluster.local"), policy.Spec.Validation.Hostname)
+	if assert.Len(t, policy.Spec.Validation.CACertificateRefs, 1) {
+		assert.Equal(t, gatewayv1.ObjectName(caConfigMapKey.Name), policy.Spec.Validation.CACertificateRefs[0].Name)
+	}
+
+	vault.Spec.HTTPRoute = nil
+	assert.NoError(t, reconciler.reconcileBackendTLSPolicy(ctx, vault, nil))
+	assert.True(t, apierrors.IsNotFound(fakeClient.Get(ctx, caConfigMapKey, &corev1.ConfigMap{})))
+	assert.True(t, apierrors.IsNotFound(fakeClient.Get(ctx, types.NamespacedName{Name: vault.Name, Namespace: vault.Namespace}, &gatewayv1.BackendTLSPolicy{})))
+
+	vault.Spec.HTTPRoute = &vaultv1alpha1.HTTPRoute{}
+	assert.NoError(t, reconciler.reconcileBackendTLSPolicy(ctx, vault, caCertificate))
+	vault.Spec.Config = extv1beta1.JSON{Raw: []byte(`{"listener":{"tcp":{"tls_disable":1}}}`)}
+	assert.NoError(t, reconciler.reconcileBackendTLSPolicy(ctx, vault, nil))
+	assert.True(t, apierrors.IsNotFound(fakeClient.Get(ctx, caConfigMapKey, &corev1.ConfigMap{})))
+	assert.True(t, apierrors.IsNotFound(fakeClient.Get(ctx, types.NamespacedName{Name: vault.Name, Namespace: vault.Namespace}, &gatewayv1.BackendTLSPolicy{})))
+}
+
+func TestReconcileHTTPRouteWhenAPIUnavailable(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+	}{
+		{
+			name: "Gateway API is not installed",
+			err: &meta.NoKindMatchError{GroupKind: schema.GroupKind{
+				Group: "gateway.networking.k8s.io",
+				Kind:  "HTTPRoute",
+			}},
+		},
+		{
+			name: "cleanup access is forbidden",
+			err: apierrors.NewForbidden(
+				schema.GroupResource{Group: "gateway.networking.k8s.io", Resource: "httproutes"},
+				"vault",
+				errors.New("forbidden"),
+			),
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			scheme := runtime.NewScheme()
+			assert.NoError(t, vaultv1alpha1.AddToScheme(scheme))
+			assert.NoError(t, gatewayv1.Install(scheme))
+
+			apiReader := fake.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(interceptor.Funcs{
+				Get: func(context.Context, client.WithWatch, client.ObjectKey, client.Object, ...client.GetOption) error {
+					return test.err
+				},
+			}).Build()
+			reconciler := &ReconcileVault{
+				client:    fake.NewClientBuilder().WithScheme(scheme).Build(),
+				apiReader: apiReader,
+				scheme:    scheme,
+			}
+
+			vault := &vaultv1alpha1.Vault{Name: "vault", Namespace: "default"}
+			assert.NoError(t, reconciler.reconcileHTTPRoute(context.Background(), vault))
+		})
+	}
+}
+
+func TestReconcileGatewayResourcesWhenCRDsAreMissing(t *testing.T) {
+	scheme := runtime.NewScheme()
+	assert.NoError(t, corev1.AddToScheme(scheme))
+	assert.NoError(t, vaultv1alpha1.AddToScheme(scheme))
+	assert.NoError(t, gatewayv1.Install(scheme))
+
+	noMatch := func(object client.Object) error {
+		kind := "HTTPRoute"
+		if _, ok := object.(*gatewayv1.BackendTLSPolicy); ok {
+			kind = "BackendTLSPolicy"
+		}
+		return &meta.NoKindMatchError{GroupKind: schema.GroupKind{Group: "gateway.networking.k8s.io", Kind: kind}}
+	}
+	apiReader := fake.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(interceptor.Funcs{
+		Get: func(ctx context.Context, c client.WithWatch, key client.ObjectKey, object client.Object, opts ...client.GetOption) error {
+			switch object.(type) {
+			case *gatewayv1.HTTPRoute, *gatewayv1.BackendTLSPolicy:
+				return noMatch(object)
+			default:
+				return c.Get(ctx, key, object, opts...)
+			}
+		},
+	}).Build()
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
+	reconciler := &ReconcileVault{client: fakeClient, apiReader: apiReader, scheme: scheme}
+	vault := &vaultv1alpha1.Vault{
+		Name:      "vault",
+		Namespace: "default",
+		UID:       "vault-uid",
+		Spec:      vaultv1alpha1.VaultSpec{HTTPRoute: &vaultv1alpha1.HTTPRoute{}},
+	}
+	ctx := context.Background()
+
+	assert.NoError(t, reconciler.reconcileHTTPRoute(ctx, vault))
+	assert.NoError(t, reconciler.reconcileBackendTLSPolicy(ctx, vault, []byte("test CA")))
+
+	assert.True(t, apierrors.IsNotFound(fakeClient.Get(ctx, types.NamespacedName{Name: vault.Name, Namespace: vault.Namespace}, &gatewayv1.HTTPRoute{})))
+	assert.True(t, apierrors.IsNotFound(fakeClient.Get(ctx, types.NamespacedName{Name: vault.Name, Namespace: vault.Namespace}, &gatewayv1.BackendTLSPolicy{})))
+	assert.True(t, apierrors.IsNotFound(fakeClient.Get(ctx, types.NamespacedName{Name: vault.Name + backendTLSCAConfigMapSuffix, Namespace: vault.Namespace}, &corev1.ConfigMap{})))
+}
+
+func TestReconcileGatewayResourcesSkipsUnconfiguredVaults(t *testing.T) {
+	scheme := runtime.NewScheme()
+	assert.NoError(t, corev1.AddToScheme(scheme))
+	assert.NoError(t, vaultv1alpha1.AddToScheme(scheme))
+	assert.NoError(t, gatewayv1.Install(scheme))
+
+	apiReaderGets := 0
+	apiReader := fake.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(interceptor.Funcs{
+		Get: func(ctx context.Context, c client.WithWatch, key client.ObjectKey, object client.Object, opts ...client.GetOption) error {
+			apiReaderGets++
+			return c.Get(ctx, key, object, opts...)
+		},
+	}).Build()
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
+	reconciler := &ReconcileVault{client: fakeClient, apiReader: apiReader, scheme: scheme}
+	vault := &vaultv1alpha1.Vault{Name: "vault", Namespace: "default"}
+
+	assert.NoError(t, reconciler.reconcileGatewayResources(context.Background(), vault, nil))
+	assert.Zero(t, apiReaderGets)
+}
+
+func TestReconcileGatewayResourcesCleansFinalizerWhenCRDsAreMissing(t *testing.T) {
+	scheme := runtime.NewScheme()
+	assert.NoError(t, corev1.AddToScheme(scheme))
+	assert.NoError(t, vaultv1alpha1.AddToScheme(scheme))
+	assert.NoError(t, gatewayv1.Install(scheme))
+
+	apiReader := fake.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(interceptor.Funcs{
+		Get: func(ctx context.Context, c client.WithWatch, key client.ObjectKey, object client.Object, opts ...client.GetOption) error {
+			switch object.(type) {
+			case *gatewayv1.HTTPRoute, *gatewayv1.BackendTLSPolicy:
+				kind := "HTTPRoute"
+				if _, ok := object.(*gatewayv1.BackendTLSPolicy); ok {
+					kind = "BackendTLSPolicy"
+				}
+				return &meta.NoKindMatchError{GroupKind: schema.GroupKind{Group: "gateway.networking.k8s.io", Kind: kind}}
+			default:
+				return c.Get(ctx, key, object, opts...)
+			}
+		},
+	}).Build()
+
+	vault := &vaultv1alpha1.Vault{Name: "vault", Namespace: "default"}
+	controllerutil.AddFinalizer(vault, httpRouteCleanupFinalizer)
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(vault).Build()
+	reconciler := &ReconcileVault{client: fakeClient, apiReader: apiReader, scheme: scheme}
+
+	assert.NoError(t, reconciler.reconcileGatewayResources(context.Background(), vault, nil))
+	assert.False(t, controllerutil.ContainsFinalizer(vault, httpRouteCleanupFinalizer))
+	storedVault := &vaultv1alpha1.Vault{}
+	assert.NoError(t, fakeClient.Get(context.Background(), types.NamespacedName{Name: vault.Name, Namespace: vault.Namespace}, storedVault))
+	assert.False(t, controllerutil.ContainsFinalizer(storedVault, httpRouteCleanupFinalizer))
 }
 
 func TestFluentDConfFile(t *testing.T) {
