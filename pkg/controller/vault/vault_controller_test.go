@@ -20,12 +20,14 @@ import (
 	"testing"
 
 	vaultv1alpha1 "github.com/bank-vaults/vault-operator/pkg/apis/vault/v1alpha1"
+	"github.com/cisco-open/k8s-objectmatcher/patch"
 	"github.com/siliconbrain/go-seqs/seqs"
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	extv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
@@ -1144,4 +1146,56 @@ func TestDeploymentForConfigurerExternalConfigHash(t *testing.T) {
 			dep2.Spec.Template.Annotations["vault.banzaicloud.io/external-config-hash"],
 		)
 	})
+}
+
+func TestDistributeCACertificateIsStable(t *testing.T) {
+	ctx := context.Background()
+
+	scheme := runtime.NewScheme()
+	assert.NoError(t, corev1.AddToScheme(scheme))
+	assert.NoError(t, vaultv1alpha1.AddToScheme(scheme))
+
+	source := &corev1.Secret{
+		Name:      "vault-tls",
+		Namespace: "vault",
+		Labels:    map[string]string{"vault_cr": "vault"},
+		Data: map[string][]byte{
+			"ca.crt":     []byte("ca-cert"),
+			"ca.key":     []byte("ca-key"),
+			"server.crt": []byte("server-cert"),
+			"server.key": []byte("server-key"),
+		},
+	}
+	assert.NoError(t, patch.DefaultAnnotator.SetLastAppliedAnnotation(source))
+
+	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(source).Build()
+	r := &ReconcileVault{client: c, nonNamespacedClient: c, scheme: scheme}
+
+	v := &vaultv1alpha1.Vault{
+		Name:      "vault",
+		Namespace: "vault",
+		Spec:      vaultv1alpha1.VaultSpec{CANamespaces: []string{"a", "b", "c"}},
+	}
+	key := client.ObjectKeyFromObject(source)
+
+	assert.NoError(t, r.distributeCACertificate(ctx, v, key))
+
+	versions := map[string]string{}
+	for _, ns := range v.Spec.CANamespaces {
+		var s corev1.Secret
+		assert.NoError(t, c.Get(ctx, client.ObjectKey{Name: "vault-tls", Namespace: ns}, &s))
+		assert.Equal(t, map[string][]byte{"ca.crt": []byte("ca-cert")}, s.Data)
+		versions[ns] = s.ResourceVersion
+	}
+
+	// The operator lists namespaces in no particular order; a second
+	// pass in a different order must not rewrite unchanged Secrets.
+	v.Spec.CANamespaces = []string{"c", "a", "b"}
+	assert.NoError(t, r.distributeCACertificate(ctx, v, key))
+
+	for ns, rv := range versions {
+		var s corev1.Secret
+		assert.NoError(t, c.Get(ctx, client.ObjectKey{Name: "vault-tls", Namespace: ns}, &s))
+		assert.Equal(t, rv, s.ResourceVersion, "secret in namespace %s was rewritten", ns)
+	}
 }
