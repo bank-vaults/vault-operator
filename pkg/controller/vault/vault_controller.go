@@ -2132,12 +2132,20 @@ func (r *ReconcileVault) distributeCACertificate(ctx context.Context, v *vaultv1
 
 	for _, namespace := range namespaces {
 		if namespace != v.Namespace {
-			currentSecret.SetNamespace(namespace)
-			currentSecret.SetResourceVersion("")
-			currentSecret.GetObjectMeta().SetUID("")
-			currentSecret.SetOwnerReferences(nil)
+			// Build a fresh object per namespace: createOrUpdateObjectWithClient
+			// writes the last-applied annotation and the server response back
+			// into its argument, which would otherwise leak into the next
+			// namespace and force an update on every reconcile.
+			caSecret := corev1.Secret{
+				Name:       currentSecret.Name,
+				Namespace:  namespace,
+				Labels:     maps.Clone(currentSecret.Labels),
+				Type:       currentSecret.Type,
+				Data:       maps.Clone(currentSecret.Data),
+				StringData: maps.Clone(currentSecret.StringData),
+			}
 
-			err = createOrUpdateObjectWithClient(ctx, r.nonNamespacedClient, &currentSecret)
+			err = createOrUpdateObjectWithClient(ctx, r.nonNamespacedClient, &caSecret)
 			if apierrors.IsNotFound(err) {
 				log.V(2).Info("can't distribute CA secret, namespace doesn't exist", "namespace", namespace)
 			} else if err != nil {
