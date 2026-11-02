@@ -37,8 +37,8 @@ help: ## Display this help
 check: test lint ## Run tests and lint checks
 
 .PHONY: test
-test: ## Run tests
-	KUBEBUILDER_ASSETS="$(shell $(SETUP_ENVTEST_BIN) use $(TEST_K8S_VERSION) --bin-dir ./bin -p path)" \
+test: bin/setup-envtest ## Run tests
+	KUBEBUILDER_ASSETS="$(abspath $(shell $(SETUP_ENVTEST_BIN) use $(TEST_K8S_VERSION) --bin-dir ./bin -p path))" \
 		go test -race -v ./... -coverprofile cover.out
 
 .PHONY: test-acceptance

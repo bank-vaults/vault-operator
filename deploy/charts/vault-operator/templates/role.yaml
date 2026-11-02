@@ -77,6 +77,16 @@ rules:
   - update
   - watch
 - apiGroups:
+  - gateway.networking.k8s.io
+  resources:
+  - httproutes
+  - backendtlspolicies
+  verbs:
+  - get
+  - create
+  - update
+  - delete
+- apiGroups:
   - monitoring.coreos.com
   resources:
   - servicemonitors

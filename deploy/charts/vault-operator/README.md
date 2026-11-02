@@ -36,7 +36,7 @@ The following table lists the configurable parameters of the Helm chart.
 | `labels` | object | `{}` | Labels to be added to deployments. |
 | `podLabels` | object | `{}` | Labels to be added to pods. |
 | `podAnnotations` | object | `{}` | Annotations to be added to pods. |
-| `serviceAccount.create` | bool | `true` | Enable service account creation. |
+| `serviceAccount.create` | bool | `true` | Create the operator ServiceAccount. When true, the chart binds a cluster-scoped ClusterRole to this account so the operator can reconcile Vaults across namespaces. When false, set `serviceAccount.name` to an existing account and provision an equivalent ClusterRoleBinding externally; the chart omits RBAC resources. |
 | `serviceAccount.annotations` | object | `{}` | Annotations to be added to the service account. |
 | `serviceAccount.name` | string | `""` | The name of the service account to use. If not set and create is true, a name is generated using the fullname template. |
 | `service.annotations` | object | `{}` | Annotations to be added to the service. |

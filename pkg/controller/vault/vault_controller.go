@@ -46,6 +46,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -60,9 +61,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 const defaultConfigFile = "vault-config.yml"
+const backendTLSCAConfigMapSuffix = "-tls-ca"
+const backendTLSCACertificateKey = "ca.crt"
+const gatewayResourcesAnnotation = "vault.banzaicloud.com/gateway-resources"
 
 var (
 	log = logf.Log.WithName("controller_vault")
@@ -88,6 +93,7 @@ func newReconciler(mgr manager.Manager) (reconcile.Reconciler, error) {
 	}
 	return &ReconcileVault{
 		client:              mgr.GetClient(),
+		apiReader:           mgr.GetAPIReader(),
 		nonNamespacedClient: nonNamespacedClient,
 		scheme:              mgr.GetScheme(),
 		httpClient:          newHTTPClient(),
@@ -120,7 +126,8 @@ var _ reconcile.Reconciler = &ReconcileVault{}
 type ReconcileVault struct {
 	// client initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
-	client client.Client
+	client    client.Client
+	apiReader client.Reader
 
 	// nonNamespacedClient since the cache inside the client is namespaced,
 	// we need to create another client which is not namespaced
@@ -136,11 +143,19 @@ func (r *ReconcileVault) createOrUpdateObject(ctx context.Context, o client.Obje
 }
 
 func createOrUpdateObjectWithClient(ctx context.Context, c client.Client, o client.Object) error {
+	return createOrUpdateObjectWithReader(ctx, c, c, o)
+}
+
+func createOrUpdateObjectWithReader(ctx context.Context, reader client.Reader, c client.Client, o client.Object) error {
 	key := client.ObjectKeyFromObject(o)
 
 	current := o.DeepCopyObject().(client.Object)
 
-	err := c.Get(ctx, key, current)
+	err := reader.Get(ctx, key, current)
+	return createOrUpdateObjectWithCurrent(ctx, c, o, current, err)
+}
+
+func createOrUpdateObjectWithCurrent(ctx context.Context, c client.Client, o, current client.Object, err error) error {
 	if apierrors.IsNotFound(err) {
 		err := patch.DefaultAnnotator.SetLastAppliedAnnotation(o)
 		if err != nil {
@@ -204,6 +219,31 @@ func createOrUpdateObjectWithClient(ctx context.Context, c client.Client, o clie
 	return err
 }
 
+func (r *ReconcileVault) createOrUpdateOwnedObject(ctx context.Context, owner *vaultv1alpha1.Vault, o client.Object) error {
+	current, err := r.getOwnedObject(ctx, owner, o)
+	if err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
+	return createOrUpdateObjectWithCurrent(ctx, r.client, o, current, err)
+}
+
+func (r *ReconcileVault) getOwnedObject(ctx context.Context, owner *vaultv1alpha1.Vault, o client.Object) (client.Object, error) {
+	if err := controllerutil.SetControllerReference(owner, o, r.scheme); err != nil {
+		return nil, err
+	}
+
+	current := o.DeepCopyObject().(client.Object)
+	err := r.apiReader.Get(ctx, client.ObjectKeyFromObject(o), current)
+	if err == nil && !metav1.IsControlledBy(current, owner) {
+		return nil, fmt.Errorf("refusing to update existing %T %s because it is not owned by Vault %s/%s", o, client.ObjectKeyFromObject(o), owner.Namespace, owner.Name)
+	}
+	if err != nil && !apierrors.IsNotFound(err) {
+		return nil, fmt.Errorf("failed to check ownership of %T: %w", o, err)
+	}
+
+	return current, err
+}
+
 // Check if secret match the labels or annotations selectors
 // If any of the Labels selector OR Annotation Selector match it will return true
 func secretMatchLabelsOrAnnotations(s corev1.Secret, labelsSelectors []map[string]string, annotationsSelectors []map[string]string) bool {
@@ -259,7 +299,9 @@ func (r *ReconcileVault) Reconcile(ctx context.Context, request reconcile.Reques
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
 	}
-
+	if v.DeletionTimestamp != nil && !v.DeletionTimestamp.IsZero() {
+		return reconcile.Result{}, nil
+	}
 	err = r.handleStorageConfiguration(ctx, v)
 	if err != nil {
 		return reconcile.Result{RequeueAfter: 5 * time.Second}, err
@@ -308,6 +350,7 @@ func (r *ReconcileVault) Reconcile(ctx context.Context, request reconcile.Reques
 	}
 
 	tlsExpiration := time.Time{}
+	var tlsCACertificate []byte
 	if !v.Spec.IsTLSDisabled() {
 		// Check if we have an existing TLS Secret for Vault
 		secretName := v.Name + "-tls"
@@ -373,6 +416,11 @@ func (r *ReconcileVault) Reconcile(ctx context.Context, request reconcile.Reques
 			if err != nil {
 				return reconcile.Result{}, fmt.Errorf("failed to create secret for vault: %v", err)
 			}
+		}
+		if caCertificate := sec.StringData[backendTLSCACertificateKey]; caCertificate != "" {
+			tlsCACertificate = []byte(caCertificate)
+		} else if caCertificate := sec.Data[backendTLSCACertificateKey]; len(caCertificate) > 0 {
+			tlsCACertificate = append([]byte(nil), caCertificate...)
 		}
 
 		// Distribute the CA certificate to every namespace defined
@@ -502,6 +550,10 @@ func (r *ReconcileVault) Reconcile(ctx context.Context, request reconcile.Reques
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to create/update ingress: %v", err)
 		}
+	}
+
+	if err := r.reconcileGatewayResources(ctx, v, tlsCACertificate); err != nil {
+		return reconcile.Result{}, err
 	}
 
 	// Update the Vault status with the pod names
@@ -812,6 +864,200 @@ func ingressForVault(v *vaultv1alpha1.Vault) *netv1.Ingress {
 		}
 	}
 	return nil
+}
+
+func httpRouteForVault(v *vaultv1alpha1.Vault) *gatewayv1.HTTPRoute {
+	if httpRoute := v.GetHTTPRoute(); httpRoute != nil {
+		return &gatewayv1.HTTPRoute{
+			Name:        v.Name,
+			Namespace:   v.Namespace,
+			Labels:      v.LabelsForVault(),
+			Annotations: httpRoute.Annotations,
+			Spec:        httpRoute.Spec,
+		}
+	}
+	return nil
+}
+
+func (r *ReconcileVault) reconcileGatewayResources(ctx context.Context, v *vaultv1alpha1.Vault, caCertificate []byte) error {
+	if v.Spec.HTTPRoute != nil {
+		if v.Annotations[gatewayResourcesAnnotation] != "true" {
+			if err := r.patchGatewayResourcesAnnotation(ctx, v, true); err != nil {
+				return fmt.Errorf("failed to add Gateway resource marker: %w", err)
+			}
+		}
+
+		if err := r.reconcileHTTPRoute(ctx, v); err != nil {
+			return err
+		}
+		return r.reconcileBackendTLSPolicy(ctx, v, caCertificate)
+	}
+
+	if v.Annotations[gatewayResourcesAnnotation] != "true" {
+		return nil
+	}
+	if err := r.reconcileHTTPRoute(ctx, v); err != nil {
+		return err
+	}
+	if err := r.reconcileBackendTLSPolicy(ctx, v, nil); err != nil {
+		return err
+	}
+	return r.patchGatewayResourcesAnnotation(ctx, v, false)
+}
+
+func (r *ReconcileVault) patchGatewayResourcesAnnotation(ctx context.Context, v *vaultv1alpha1.Vault, enabled bool) error {
+	base := v.DeepCopy()
+	if enabled {
+		if v.Annotations == nil {
+			v.Annotations = map[string]string{}
+		}
+		v.Annotations[gatewayResourcesAnnotation] = "true"
+	} else {
+		delete(v.Annotations, gatewayResourcesAnnotation)
+		if len(v.Annotations) == 0 {
+			v.Annotations = nil
+		}
+	}
+	return r.client.Patch(ctx, v, client.MergeFrom(base))
+}
+
+func (r *ReconcileVault) reconcileHTTPRoute(ctx context.Context, v *vaultv1alpha1.Vault) error {
+	httpRoute := httpRouteForVault(v)
+	if httpRoute == nil {
+		existingHTTPRoute := &gatewayv1.HTTPRoute{}
+		err := r.apiReader.Get(ctx, types.NamespacedName{Name: v.Name, Namespace: v.Namespace}, existingHTTPRoute)
+		if apierrors.IsNotFound(err) || meta.IsNoMatchError(err) {
+			return nil
+		}
+		if apierrors.IsForbidden(err) {
+			log.V(1).Info("skipping HTTPRoute cleanup: forbidden", "vault", client.ObjectKeyFromObject(v))
+			return nil
+		}
+		if err != nil {
+			return fmt.Errorf("failed to get HTTPRoute for cleanup: %w", err)
+		}
+		if !metav1.IsControlledBy(existingHTTPRoute, v) {
+			return nil
+		}
+		if err := r.client.Delete(ctx, existingHTTPRoute); err != nil && !apierrors.IsNotFound(err) {
+			return fmt.Errorf("failed to delete HTTPRoute: %w", err)
+		}
+		return nil
+	}
+
+	current, err := r.getOwnedObject(ctx, v, httpRoute)
+	if meta.IsNoMatchError(err) {
+		log.Info("skipping HTTPRoute reconciliation because its Gateway API CRD is not installed", "vault", client.ObjectKeyFromObject(v))
+		return nil
+	}
+	if err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
+	if err := createOrUpdateObjectWithCurrent(ctx, r.client, httpRoute, current, err); meta.IsNoMatchError(err) {
+		log.Info("skipping HTTPRoute reconciliation because its Gateway API CRD is not installed", "vault", client.ObjectKeyFromObject(v))
+		return nil
+	} else if err != nil {
+		return fmt.Errorf("failed to create/update HTTPRoute: %w", err)
+	}
+	return nil
+}
+
+func (r *ReconcileVault) reconcileBackendTLSPolicy(ctx context.Context, v *vaultv1alpha1.Vault, caCertificate []byte) error {
+	policyKey := types.NamespacedName{Name: v.Name, Namespace: v.Namespace}
+	configMapKey := types.NamespacedName{Name: v.Name + backendTLSCAConfigMapSuffix, Namespace: v.Namespace}
+
+	if v.Spec.HTTPRoute == nil || v.Spec.IsTLSDisabled() {
+		canDeleteConfigMap, err := r.deleteOwnedObject(ctx, v, &gatewayv1.BackendTLSPolicy{}, policyKey)
+		if err != nil || !canDeleteConfigMap {
+			return err
+		}
+		_, err = r.deleteOwnedObject(ctx, v, &corev1.ConfigMap{}, configMapKey)
+		return err
+	}
+
+	if len(caCertificate) == 0 {
+		return fmt.Errorf("cannot configure HTTPRoute backend TLS: Vault CA certificate %q is empty", backendTLSCACertificateKey)
+	}
+
+	group := gatewayv1.Group("")
+	serviceKind := gatewayv1.Kind("Service")
+	configMapKind := gatewayv1.Kind("ConfigMap")
+	sectionName := gatewayv1.SectionName(v.Spec.GetAPIPortName())
+	hostname := gatewayv1.PreciseHostname(v.Name + "." + v.Namespace + ".svc.cluster.local")
+	serviceTarget := gatewayv1.LocalPolicyTargetReference{
+		Group: group,
+		Kind:  serviceKind,
+		Name:  gatewayv1.ObjectName(v.Name),
+	}
+	backendTLSPolicy := &gatewayv1.BackendTLSPolicy{
+		Name:      v.Name,
+		Namespace: v.Namespace,
+		Labels:    v.LabelsForVault(),
+		Spec: gatewayv1.BackendTLSPolicySpec{
+			TargetRefs: []gatewayv1.LocalPolicyTargetReferenceWithSectionName{{
+				LocalPolicyTargetReference: serviceTarget,
+				SectionName:                &sectionName,
+			}},
+			Validation: gatewayv1.BackendTLSPolicyValidation{
+				CACertificateRefs: []gatewayv1.LocalObjectReference{{
+					Group: group,
+					Kind:  configMapKind,
+					Name:  gatewayv1.ObjectName(configMapKey.Name),
+				}},
+				Hostname: hostname,
+			},
+		},
+	}
+	policyCurrent, policyErr := r.getOwnedObject(ctx, v, backendTLSPolicy)
+	if meta.IsNoMatchError(policyErr) {
+		log.Info("skipping BackendTLSPolicy reconciliation because its Gateway API CRD is not installed; HTTPRoute backend TLS may fail", "vault", client.ObjectKeyFromObject(v))
+		return nil
+	}
+	if policyErr != nil && !apierrors.IsNotFound(policyErr) {
+		return fmt.Errorf("failed to prepare BackendTLSPolicy: %w", policyErr)
+	}
+
+	caConfigMap := &corev1.ConfigMap{
+		Name:      configMapKey.Name,
+		Namespace: v.Namespace,
+		Labels:    v.LabelsForVault(),
+		Data:      map[string]string{backendTLSCACertificateKey: string(caCertificate)},
+	}
+	if err := r.createOrUpdateOwnedObject(ctx, v, caConfigMap); err != nil {
+		return fmt.Errorf("failed to create/update Vault TLS CA ConfigMap: %w", err)
+	}
+
+	if err := createOrUpdateObjectWithCurrent(ctx, r.client, backendTLSPolicy, policyCurrent, policyErr); meta.IsNoMatchError(err) {
+		if _, cleanupErr := r.deleteOwnedObject(ctx, v, &corev1.ConfigMap{}, configMapKey); cleanupErr != nil {
+			return cleanupErr
+		}
+		log.Info("skipping BackendTLSPolicy reconciliation because its Gateway API CRD is not installed; HTTPRoute backend TLS may fail", "vault", client.ObjectKeyFromObject(v))
+		return nil
+	} else if err != nil {
+		return fmt.Errorf("failed to create/update BackendTLSPolicy: %w", err)
+	}
+	return nil
+}
+
+func (r *ReconcileVault) deleteOwnedObject(ctx context.Context, owner *vaultv1alpha1.Vault, object client.Object, key types.NamespacedName) (bool, error) {
+	err := r.apiReader.Get(ctx, key, object)
+	if apierrors.IsNotFound(err) || meta.IsNoMatchError(err) {
+		return true, nil
+	}
+	if apierrors.IsForbidden(err) {
+		log.V(1).Info("skipping cleanup of optional Gateway API resource: forbidden", "object", key)
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("failed to get %T for cleanup: %w", object, err)
+	}
+	if !metav1.IsControlledBy(object, owner) {
+		return false, nil
+	}
+	if err := r.client.Delete(ctx, object); err != nil && !apierrors.IsNotFound(err) {
+		return false, fmt.Errorf("failed to delete %T: %w", object, err)
+	}
+	return true, nil
 }
 
 func serviceType(v *vaultv1alpha1.Vault) corev1.ServiceType {
