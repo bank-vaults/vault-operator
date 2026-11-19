@@ -1346,11 +1346,6 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 		return nil, err
 	}
 
-	podManagementPolicy := appsv1.ParallelPodManagement
-	if v.Spec.IsRaftStorage() || v.Spec.IsRaftHAStorage() {
-		podManagementPolicy = appsv1.OrderedReadyPodManagement
-	}
-
 	return &appsv1.StatefulSet{
 		Name:        v.Name,
 		Namespace:   v.Namespace,
@@ -1364,7 +1359,7 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 					Partition: new(int32),
 				},
 			},
-			PodManagementPolicy: podManagementPolicy,
+			PodManagementPolicy: v.Spec.GetPodManagementPolicy(),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: ls,
 			},

@@ -29,6 +29,7 @@ import (
 	"github.com/imdario/mergo"
 	"github.com/sagikazarmark/docker-ref/reference"
 	"github.com/spf13/cast"
+	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	extv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
@@ -62,6 +63,16 @@ type VaultSpec struct {
 	// Size defines the number of Vault instances in the cluster (>= 1 means HA)
 	// default: 1
 	Size int32 `json:"size,omitempty"`
+
+	// PodManagementPolicy sets the podManagementPolicy of the Vault StatefulSet.
+	// Raft clusters default to OrderedReady so the first pod can bootstrap the
+	// cluster before the others join. Parallel lets pods start in any order,
+	// e.g. when pod 0 has to be recreated with an empty volume and must join
+	// the existing leader instead of waiting to become ready on its own.
+	// default: OrderedReady for Raft storage, Parallel otherwise
+	// +kubebuilder:validation:Enum=OrderedReady;Parallel
+	// +optional
+	PodManagementPolicy appsv1.PodManagementPolicyType `json:"podManagementPolicy,omitempty"`
 
 	// Image specifies the Vault image to use for the Vault instances
 	// default: hashicorp/vault:latest
@@ -691,6 +702,17 @@ func (spec *VaultSpec) IsAutoUnseal() bool {
 	config := spec.GetVaultConfig()
 	_, ok := config["seal"]
 	return ok
+}
+
+// GetPodManagementPolicy returns the podManagementPolicy for the Vault StatefulSet
+func (spec *VaultSpec) GetPodManagementPolicy() appsv1.PodManagementPolicyType {
+	if spec.PodManagementPolicy != "" {
+		return spec.PodManagementPolicy
+	}
+	if spec.IsRaftStorage() || spec.IsRaftHAStorage() {
+		return appsv1.OrderedReadyPodManagement
+	}
+	return appsv1.ParallelPodManagement
 }
 
 // IsRaftStorage checks if raft storage is configured
