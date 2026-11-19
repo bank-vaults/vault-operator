@@ -844,6 +844,11 @@ spec:
                 type: boolean
               podAntiAffinity:
                 type: string
+              podManagementPolicy:
+                enum:
+                - OrderedReady
+                - Parallel
+                type: string
               raftLeaderAddress:
                 type: string
               raftLeaderApiSchemeOverride:

@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	appsv1 "k8s.io/api/apps/v1"
 	extv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 )
 
@@ -210,6 +211,38 @@ func TestConfigJSON_DisableMlockDefault(t *testing.T) {
 			if tc.wantSet {
 				require.Equal(t, tc.wantBool, val, "disable_mlock value")
 			}
+		})
+	}
+}
+
+func TestGetPodManagementPolicy(t *testing.T) {
+	t.Parallel()
+
+	const (
+		raft   = `{"storage":{"raft":{"path":"/vault/file"}}}`
+		raftHA = `{"storage":{"gcs":{}},"ha_storage":{"raft":{"path":"/vault/file"}}}`
+		file   = `{"storage":{"file":{"path":"/vault/file"}}}`
+	)
+
+	tests := []struct {
+		name   string
+		config string
+		policy appsv1.PodManagementPolicyType
+		want   appsv1.PodManagementPolicyType
+	}{
+		{name: "raft default", config: raft, want: appsv1.OrderedReadyPodManagement},
+		{name: "raft ha_storage default", config: raftHA, want: appsv1.OrderedReadyPodManagement},
+		{name: "file default", config: file, want: appsv1.ParallelPodManagement},
+		{name: "raft set to parallel", config: raft, policy: appsv1.ParallelPodManagement, want: appsv1.ParallelPodManagement},
+		{name: "file set to ordered", config: file, policy: appsv1.OrderedReadyPodManagement, want: appsv1.OrderedReadyPodManagement},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			spec := VaultSpec{Config: extv1beta1.JSON{Raw: []byte(tc.config)}, PodManagementPolicy: tc.policy}
+			require.Equal(t, tc.want, spec.GetPodManagementPolicy())
 		})
 	}
 }
