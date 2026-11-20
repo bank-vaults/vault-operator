@@ -1145,3 +1145,58 @@ func TestDeploymentForConfigurerExternalConfigHash(t *testing.T) {
 		)
 	})
 }
+
+func TestVeleroHookAnnotations(t *testing.T) {
+	service := &corev1.Service{Spec: corev1.ServiceSpec{Type: corev1.ServiceTypeClusterIP}}
+
+	tests := []struct {
+		name        string
+		config      string
+		annotations map[string]string
+		wantFreeze  string
+	}{
+		{
+			name:       "file storage keeps the old hooks",
+			config:     `{"storage": {"file": {"path": "/vault/file"}}}`,
+			wantFreeze: `["/sbin/fsfreeze", "--freeze", "/vault/file/"]`,
+		},
+		{
+			name:       "raft storage freezes the raft path",
+			config:     `{"storage": {"raft": {"path": "/vault/raft"}}}`,
+			wantFreeze: `["/sbin/fsfreeze", "--freeze", "/vault/raft/"]`,
+		},
+		{
+			name:       "no storage path falls back to /vault/file/",
+			config:     `{"storage": {"raft": {}}}`,
+			wantFreeze: `["/sbin/fsfreeze", "--freeze", "/vault/file/"]`,
+		},
+		{
+			name:        "vaultAnnotations override the hooks",
+			config:      `{"storage": {"raft": {"path": "/vault/raft"}}}`,
+			annotations: map[string]string{"pre.hook.backup.velero.io/command": `["/bin/true"]`},
+			wantFreeze:  `["/bin/true"]`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			v := &vaultv1alpha1.Vault{
+				Name:      "test-vault",
+				Namespace: "default",
+				Spec: vaultv1alpha1.VaultSpec{
+					Size:             1,
+					Config:           extv1beta1.JSON{Raw: []byte(tt.config)},
+					VeleroEnabled:    true,
+					VaultAnnotations: tt.annotations,
+				},
+			}
+
+			sts, err := statefulSetForVault(v, []corev1.Secret{}, map[string]string{}, service)
+			assert.NoError(t, err)
+
+			annotations := sts.Spec.Template.Annotations
+			assert.Equal(t, tt.wantFreeze, annotations["pre.hook.backup.velero.io/command"])
+			assert.Equal(t, "velero-fsfreeze", annotations["pre.hook.backup.velero.io/container"])
+		})
+	}
+}

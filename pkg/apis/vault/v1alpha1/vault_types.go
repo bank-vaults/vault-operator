@@ -341,6 +341,11 @@ type VaultSpec struct {
 	// default: velero/fsfreeze-pause:latest
 	VeleroFsfreezeImage string `json:"veleroFsfreezeImage,omitempty"`
 
+	// VeleroFsfreezePath is the directory that the Velero backup hooks freeze
+	// and unfreeze with fsfreeze.
+	// default: the path of the file or raft storage, or /vault/file/
+	VeleroFsfreezePath string `json:"veleroFsfreezePath,omitempty"`
+
 	// VaultContainers add extra containers
 	VaultContainers []v1.Container `json:"vaultContainers,omitempty"`
 
@@ -519,6 +524,26 @@ func (spec *VaultSpec) GetVeleroFsfreezeImage() string {
 		return "ubuntu:bionic"
 	}
 	return spec.VeleroFsfreezeImage
+}
+
+// GetVeleroFsfreezePath returns the directory the Velero backup hooks freeze.
+// Without an explicit value it is the path of the file or raft storage, so
+// that the hooks freeze the volume Vault actually writes to.
+func (spec *VaultSpec) GetVeleroFsfreezePath() string {
+	if spec.VeleroFsfreezePath != "" {
+		return spec.VeleroFsfreezePath
+	}
+	switch spec.GetStorageType() {
+	case "file", "raft":
+		if path := cast.ToString(spec.GetStorage()["path"]); path != "" {
+			// With the trailing slash the hooks of the usual /vault/file
+			// setup stay exactly what they were.
+			return strings.TrimSuffix(path, "/") + "/"
+		}
+	}
+	// Keeps the trailing slash the hooks always had, so that the pod template
+	// of existing clusters doesn't change.
+	return "/vault/file/"
 }
 
 // GetVolumeClaimTemplates fixes the "status diff" in PVC templates

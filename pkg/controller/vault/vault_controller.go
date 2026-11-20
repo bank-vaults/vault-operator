@@ -20,6 +20,7 @@ import (
 	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"maps"
@@ -705,24 +706,24 @@ func getServicePorts(v *vaultv1alpha1.Vault) ([]corev1.ServicePort, []corev1.Con
 
 	if len(v.Spec.ServicePorts) == 0 {
 		return []corev1.ServicePort{
-			{
-				Name: v.Spec.GetAPIPortName(),
-				Port: 8200,
-			},
-			{
-				Name: "cluster-port",
-				Port: 8201,
-			},
-		}, []corev1.ContainerPort{
-			{
-				Name:          v.Spec.GetAPIPortName(),
-				ContainerPort: 8200,
-			},
-			{
-				Name:          "cluster-port",
-				ContainerPort: 8201,
-			},
-		}
+				{
+					Name: v.Spec.GetAPIPortName(),
+					Port: 8200,
+				},
+				{
+					Name: "cluster-port",
+					Port: 8201,
+				},
+			}, []corev1.ContainerPort{
+				{
+					Name:          v.Spec.GetAPIPortName(),
+					ContainerPort: 8200,
+				},
+				{
+					Name:          "cluster-port",
+					ContainerPort: 8201,
+				},
+			}
 	}
 
 	for k, i := range v.Spec.ServicePorts {
@@ -1371,9 +1372,11 @@ func statefulSetForVault(v *vaultv1alpha1.Vault, externalSecretsToWatchItems []c
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: withVaultLabels(v, ls),
-					Annotations: withVeleroAnnotations(v,
-						withRestartAnnotations(restartAnnotations,
-							withVaultAnnotations(v,
+					// The Velero hooks go before vaultAnnotations so that they
+					// can be overridden there.
+					Annotations: withRestartAnnotations(restartAnnotations,
+						withVaultAnnotations(v,
+							withVeleroAnnotations(v,
 								withVaultWatchedExternalSecrets(v, externalSecretsToWatchItems,
 									withPrometheusAnnotations("9102",
 										getCommonAnnotations(v, map[string]string{})))))),
@@ -1413,17 +1416,31 @@ func withVaultAnnotations(v *vaultv1alpha1.Vault, annotations map[string]string)
 
 func withVeleroAnnotations(v *vaultv1alpha1.Vault, annotations map[string]string) map[string]string {
 	if v.Spec.VeleroEnabled {
+		path := v.Spec.GetVeleroFsfreezePath()
 		veleroAnnotations := map[string]string{
 			"pre.hook.backup.velero.io/container":  "velero-fsfreeze",
-			"pre.hook.backup.velero.io/command":    "[\"/sbin/fsfreeze\", \"--freeze\", \"/vault/file/\"]",
+			"pre.hook.backup.velero.io/command":    fsfreezeCommand("--freeze", path),
 			"post.hook.backup.velero.io/container": "velero-fsfreeze",
-			"post.hook.backup.velero.io/command":   "[\"/sbin/fsfreeze\", \"--unfreeze\", \"/vault/file/\"]",
+			"post.hook.backup.velero.io/command":   fsfreezeCommand("--unfreeze", path),
 		}
 
 		maps.Copy(annotations, veleroAnnotations)
 	}
 
 	return annotations
+}
+
+// fsfreezeCommand returns the fsfreeze command of a Velero hook as the JSON
+// array Velero expects. The elements are joined with ", " as the hooks always
+// were, so that the pod template of existing clusters doesn't change.
+func fsfreezeCommand(flag, path string) string {
+	args := []string{"/sbin/fsfreeze", flag, path}
+	quoted := make([]string, len(args))
+	for i, arg := range args {
+		b, _ := json.Marshal(arg)
+		quoted[i] = string(b)
+	}
+	return "[" + strings.Join(quoted, ", ") + "]"
 }
 
 func withVaultConfigurerAnnotations(v *vaultv1alpha1.Vault, annotations map[string]string) map[string]string {
