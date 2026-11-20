@@ -1158,12 +1158,12 @@ func TestVeleroHookAnnotations(t *testing.T) {
 		{
 			name:       "file storage keeps the old hooks",
 			config:     `{"storage": {"file": {"path": "/vault/file"}}}`,
-			wantFreeze: `["/sbin/fsfreeze", "--freeze", "/vault/file"]`,
+			wantFreeze: `["/sbin/fsfreeze", "--freeze", "/vault/file/"]`,
 		},
 		{
 			name:       "raft storage freezes the raft path",
 			config:     `{"storage": {"raft": {"path": "/vault/raft"}}}`,
-			wantFreeze: `["/sbin/fsfreeze", "--freeze", "/vault/raft"]`,
+			wantFreeze: `["/sbin/fsfreeze", "--freeze", "/vault/raft/"]`,
 		},
 		{
 			name:       "no storage path falls back to /vault/file/",

@@ -536,7 +536,9 @@ func (spec *VaultSpec) GetVeleroFsfreezePath() string {
 	switch spec.GetStorageType() {
 	case "file", "raft":
 		if path := cast.ToString(spec.GetStorage()["path"]); path != "" {
-			return path
+			// With the trailing slash the hooks of the usual /vault/file
+			// setup stay exactly what they were.
+			return strings.TrimSuffix(path, "/") + "/"
 		}
 	}
 	// Keeps the trailing slash the hooks always had, so that the pod template

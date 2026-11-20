@@ -222,8 +222,8 @@ func TestGetVeleroFsfreezePath(t *testing.T) {
 		want   string
 	}{
 		{name: "no storage", config: `{}`, want: "/vault/file/"},
-		{name: "file storage", config: `{"storage": {"file": {"path": "/data/file"}}}`, want: "/data/file"},
-		{name: "raft storage", config: `{"storage": {"raft": {"path": "/vault/raft"}}}`, want: "/vault/raft"},
+		{name: "file storage", config: `{"storage": {"file": {"path": "/data/file"}}}`, want: "/data/file/"},
+		{name: "raft storage", config: `{"storage": {"raft": {"path": "/vault/raft"}}}`, want: "/vault/raft/"},
 		{name: "raft storage without a path", config: `{"storage": {"raft": {}}}`, want: "/vault/file/"},
 		{name: "other storage", config: `{"storage": {"consul": {"path": "vault/"}}}`, want: "/vault/file/"},
 		{name: "explicit path wins", config: `{"storage": {"raft": {"path": "/vault/raft"}}}`, path: "/vault/data", want: "/vault/data"},
