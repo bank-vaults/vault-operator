@@ -213,3 +213,28 @@ func TestConfigJSON_DisableMlockDefault(t *testing.T) {
 		})
 	}
 }
+
+func TestGetVeleroFsfreezePath(t *testing.T) {
+	tests := []struct {
+		name   string
+		config string
+		path   string
+		want   string
+	}{
+		{name: "no storage", config: `{}`, want: "/vault/file/"},
+		{name: "file storage", config: `{"storage": {"file": {"path": "/data/file"}}}`, want: "/data/file"},
+		{name: "raft storage", config: `{"storage": {"raft": {"path": "/vault/raft"}}}`, want: "/vault/raft"},
+		{name: "raft storage without a path", config: `{"storage": {"raft": {}}}`, want: "/vault/file/"},
+		{name: "other storage", config: `{"storage": {"consul": {"path": "vault/"}}}`, want: "/vault/file/"},
+		{name: "explicit path wins", config: `{"storage": {"raft": {"path": "/vault/raft"}}}`, path: "/vault/data", want: "/vault/data"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			spec := &VaultSpec{
+				Config:             extv1beta1.JSON{Raw: []byte(tt.config)},
+				VeleroFsfreezePath: tt.path,
+			}
+			require.Equal(t, tt.want, spec.GetVeleroFsfreezePath())
+		})
+	}
+}

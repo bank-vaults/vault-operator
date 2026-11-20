@@ -11218,6 +11218,8 @@ spec:
                 type: boolean
               veleroFsfreezeImage:
                 type: string
+              veleroFsfreezePath:
+                type: string
               volumeClaimTemplates:
                 items:
                   properties:
