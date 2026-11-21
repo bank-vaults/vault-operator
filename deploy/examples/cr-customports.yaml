@@ -31,6 +31,14 @@ spec:
     cluster-port: 8201
     external-port: 8300
 
+  # Expose extra ports only on the Vault Service, forwarding to a named port of
+  # the Vault container, e.g. to reach the API on 443 while Vault keeps
+  # listening on 8200
+  extraServicePorts:
+    - name: https
+      port: 443
+      targetPort: api-port
+
   # Request an Ingress controller with the default configuration
   ingress:
     # Specify Ingress object annotations here, if TLS is enabled (which is by default)
