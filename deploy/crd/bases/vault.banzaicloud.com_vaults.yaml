@@ -601,6 +601,22 @@ spec:
                 type: string
               externalConfig:
                 x-kubernetes-preserve-unknown-fields: true
+              extraServicePorts:
+                items:
+                  properties:
+                    name:
+                      type: string
+                    port:
+                      format: int32
+                      type: integer
+                    targetPort:
+                      type: string
+                  required:
+                  - name
+                  - port
+                  - targetPort
+                  type: object
+                type: array
               fluentdConfFile:
                 type: string
               fluentdConfLocation:

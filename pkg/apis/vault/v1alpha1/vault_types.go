@@ -243,6 +243,13 @@ type VaultSpec struct {
 	// default:
 	ServicePorts map[string]int32 `json:"servicePorts,omitempty"`
 
+	// ExtraServicePorts are additional ports of the Vault Service, each one
+	// forwarding to a named port of the Vault container. Unlike ServicePorts
+	// they are not opened on the pods, so Vault can for example be reached on
+	// 443 while it keeps listening on 8200.
+	// default:
+	ExtraServicePorts []ExtraServicePort `json:"extraServicePorts,omitempty"`
+
 	// Affinity is a group of affinity scheduling rules applied to all Vault Pods.
 	// default:
 	Affinity *v1.Affinity `json:"affinity,omitempty"`
@@ -709,6 +716,18 @@ func (spec *VaultSpec) IsRaftBootstrapFollower() bool {
 }
 
 // VaultStatus defines the observed state of Vault
+// ExtraServicePort is a port of the Vault Service that forwards to a named port
+// of the Vault container.
+type ExtraServicePort struct {
+	// Name of the port on the Service.
+	Name string `json:"name"`
+	// Port the Service listens on.
+	Port int32 `json:"port"`
+	// TargetPort is the name of the Vault container port the traffic is
+	// forwarded to, e.g. api-port.
+	TargetPort string `json:"targetPort"`
+}
+
 type VaultStatus struct {
 	// Important: Run "make generate-code" to regenerate code after modifying this file
 	Nodes      []string                `json:"nodes"`

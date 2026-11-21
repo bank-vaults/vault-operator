@@ -1145,3 +1145,40 @@ func TestDeploymentForConfigurerExternalConfigHash(t *testing.T) {
 		)
 	})
 }
+
+func TestServiceForVaultExtraServicePorts(t *testing.T) {
+	v := &vaultv1alpha1.Vault{
+		Spec: vaultv1alpha1.VaultSpec{
+			ExtraServicePorts: []vaultv1alpha1.ExtraServicePort{
+				{Name: "https", Port: 443, TargetPort: "api-port"},
+			},
+		},
+	}
+	v.Name = "vault"
+
+	service := serviceForVault(v)
+
+	var https *corev1.ServicePort
+	for i, p := range service.Spec.Ports {
+		if p.Name == "https" {
+			https = &service.Spec.Ports[i]
+		}
+	}
+	if assert.NotNil(t, https) {
+		assert.Equal(t, int32(443), https.Port)
+		assert.Equal(t, "api-port", https.TargetPort.String())
+	}
+	// The API port stays on 8200, which the operator and the configurer use.
+	assert.Contains(t, service.Spec.Ports, corev1.ServicePort{Name: "api-port", Port: 8200})
+
+	// The extra ports are not opened on the pods or the per-instance services.
+	_, containerPorts := getServicePorts(v)
+	for _, p := range containerPorts {
+		assert.NotEqual(t, int32(443), p.ContainerPort)
+	}
+	for _, svc := range perInstanceServicesForVault(v) {
+		for _, p := range svc.Spec.Ports {
+			assert.NotEqual(t, "https", p.Name)
+		}
+	}
+}

@@ -629,6 +629,13 @@ func serviceForVault(v *vaultv1alpha1.Vault) *corev1.Service {
 
 	servicePorts = append(servicePorts, corev1.ServicePort{Name: "metrics", Port: 9091})
 	servicePorts = append(servicePorts, corev1.ServicePort{Name: "statsd", Port: 9102})
+	for _, p := range v.Spec.ExtraServicePorts {
+		servicePorts = append(servicePorts, corev1.ServicePort{
+			Name:       p.Name,
+			Port:       p.Port,
+			TargetPort: intstr.FromString(p.TargetPort),
+		})
+	}
 	service := &corev1.Service{
 		Name:        v.Name,
 		Namespace:   v.Namespace,
